@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc";
+package grpc;
+
+import "billing/billing.proto";
+
+service BillingService {
+    rpc OrderCreateProcess(billing.OrderCreateRequest) returns (billing.Order) {}
+    rpc InitCache(EmptyRequest) returns (EmptyResponse) {}
+}
+
+message EmptyRequest{}
+message EmptyResponse{}

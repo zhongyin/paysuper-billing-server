@@ -1,0 +1,373 @@
+syntax = "proto3";
+
+option go_package = "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing";
+package billing;
+
+import "google/protobuf/timestamp.proto";
+
+message Name {
+    // @inject_tag: bson:"EN" json:"EN" structure:"EN"
+    string en = 1;
+    // @inject_tag: bson:"RU" json:"RU" structure:"RU"
+    string ru = 2;
+}
+
+message OrderCreateRequest {
+    // @inject_tag: query:"PO_PROJECT_ID" form:"PO_PROJECT_ID" json:"project" validate:"required,hexadecimal"
+    string project_id = 1;
+    // @inject_tag: query:"PO_SIGNATURE" form:"PO_SIGNATURE" json:"signature" validate:"omitempty,alphanum"
+    string signature = 2;
+    // @inject_tag: query:"PO_AMOUNT" form:"PO_AMOUNT" json:"amount" validate:"required,numeric"
+    double amount = 3;
+    // @inject_tag: query:"PO_CURRENCY" form:"PO_CURRENCY" json:"currency" validate:"omitempty,alpha,len=3"
+    string currency = 4;
+    // @inject_tag: "PO_ACCOUNT" form:"PO_ACCOUNT" json:"account"` validate:"omitempty,len=255"
+    string account = 5;
+    // @inject_tag: query:"PO_ORDER_ID" form:"PO_ORDER_ID" json:"order_id" validate:"omitempty,len=255"
+    string order_id = 6;
+    // @inject_tag: query:"PO_DESCRIPTION" form:"PO_DESCRIPTION" json:"description" validate:"omitempty,len=255"
+    string description = 7;
+    // @inject_tag: query:"PO_PAYMENT_METHOD" form:"PO_PAYMENT_METHOD" json:"payment_method" validate:"omitempty,len=255"
+    string payment_method = 8;
+    // @inject_tag: query:"PO_URL_VERIFY" form:"PO_URL_VERIFY" json:"url_verify" validate:"omitempty,url"
+    string url_verify = 9;
+    // @inject_tag: query:"PO_URL_NOTIFY" form:"PO_URL_NOTIFY" json:"url_notify" validate:"omitempty,url"
+    string url_notify = 10;
+    // @inject_tag: query:"PO_URL_SUCCESS" form:"PO_URL_SUCCESS" json:"url_success" validate:"omitempty,url"
+    string url_success = 11;
+    // @inject_tag: query:"PP_URL_FAIL" form:"PP_URL_FAIL" json:"url_fail" validate:"omitempty,url"
+    string url_fail = 12;
+    // @inject_tag: query:"PP_PAYER_EMAIL" form:"PP_PAYER_EMAIL" json:"payer_email" validate:"omitempty,email"
+    string payer_email = 13;
+    // @inject_tag: query:"PP_PAYER_PHONE" form:"PP_PAYER_PHONE" json:"payer_phone" validate:"omitempty,len=255"
+    string payer_phone = 14;
+    // @inject_tag: query:"PP_REGION" form:"PP_REGION" json:"region" validate:"omitempty,alpha,len=2"
+    string region = 15;
+    string payer_ip = 16;
+    map<string, string> other = 17;
+    // @inject_tag: json:"-"
+    map<string, string> raw_params = 18;
+    // @inject_tag: json:"-"
+    string raw_body = 19; //`json:"-"`
+    // @inject_tag: json:"-"
+    bool is_json = 20;
+}
+
+message Project {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    string id = 1; // unique project identifier
+    // @inject_tag: bson:"callback_currency" structure:"callback_currency"
+    Currency callback_currency = 2; // full object of currency which described currency to send payment notification
+    // @inject_tag: bson:"callback_protocol" structure:"callback_protocol"
+    string callback_protocol = 3; // protocol identifier to send payment notification. possible values: default, cardpay, xsolla
+    // @inject_tag: bson:"create_invoice_allowed_urls" structure:"create_invoice_allowed_urls"
+    repeated string create_invoice_allowed_urls = 4; // list of urls rom which you can send a request to create an order
+    // @inject_tag: bson:"merchant" json:"-" structure:"merchant"
+    Merchant merchant = 5; // full object of merchant which describes project's owner
+    // @inject_tag: bson:"is_allow_dynamic_notify_urls" structure:"is_allow_dynamic_notify_urls"
+    bool is_allow_dynamic_notify_urls = 6; // is allow send dynamic notification urls in request to create an order
+    // @inject_tag: bson:"is_allow_dynamic_redirect_urls" structure:"is_allow_dynamic_redirect_urls"
+    bool is_allow_dynamic_redirect_urls = 7; // is allow send dynamic user's redirect urls in request to create an order
+    // @inject_tag: bson:"limits_currency" structure:"limits_currency"
+    Currency limits_currency = 8; // full object of currency which describes currency for amount's limit
+    // @inject_tag: bson:"max_payment_amount" structure:"max_payment_amount"
+    double max_payment_amount = 9; // maximal amount allowed for create order
+    // @inject_tag: bson:"min_payment_amount" structure:"min_payment_amount"
+    double min_payment_amount = 10; // minimal amount allowed for create order
+    // @inject_tag: bson:"name" structure:"name"
+    string name = 11; // project name
+    // @inject_tag: bson:"notify_emails" structure:"notify_emails"
+    repeated string notify_emails = 12; // list of emails to send notifications about successfully completed payment operations
+    // @inject_tag: bson:"only_fixed_amounts" structure:"only_fixed_amounts"
+    bool only_fixed_amounts = 13; // is allow create order only with amounts from fixed packages list
+    // @inject_tag: bson:"secret_key" structure:"secret_key"
+    string secret_key = 14; // secret key for create check hash for request about order statuses changes
+    // @inject_tag: bson:"send_notify_email" structure:"send_notify_email"
+    bool send_notify_email = 15; // is allow send notifications about successfully completed payment operations to user's emails
+    // @inject_tag: bson:"url_check_account" structure:"url_check_account"
+    string url_check_account = 16; // default url to send request for verification payment data to project
+    // @inject_tag: bson:"url_process_payment" structure:"url_process_payment"
+    string url_process_payment = 17; // default url to send request for notification about successfully completed payment to project
+    // @inject_tag: bson:"url_redirect_fail" structure:"url_redirect_fail"
+    string url_redirect_fail = 18; // default url to redirect user after failed payment
+    // @inject_tag: bson:"url_redirect_success" structure:"url_redirect_success"
+    string url_redirect_success = 19; // default url to redirect user after successfully completed payment
+    // @inject_tag: bson:"fixed_package" structure:"fixed_package"
+    map<string, FixedPackages> fixed_package = 23; // list of project's fixed packages
+    // @inject_tag: bson:"payment_methods" structure:"payment_methods"
+    map<string, ProjectPaymentMethods> payment_methods = 24; // list of payment methods allowed to project
+    // @inject_tag: bson:"is_active" structure:"is_active"
+    bool is_active = 20; // is project active
+}
+
+message ProjectOrder {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    bytes id = 1;
+    // @inject_tag: bson:"name" structure:"name"
+    string name = 2;
+    // @inject_tag: bson:"url_redirect_success" structure:"url_redirect_success"
+    string url_success = 3;
+    // @inject_tag: bson:"url_redirect_fail" structure:"url_redirect_fail"
+    string url_fail = 4;
+    // @inject_tag: bson:"notify_emails" structure:"notify_emails"
+    repeated string notify_emails = 5;
+    // @inject_tag: bson:"secret_key" structure:"secret_key"
+    string secret_key = 6;
+    // @inject_tag: bson:"send_notify_email" structure:"send_notify_email"
+    bool send_notify_email = 7;
+    // @inject_tag: bson:"url_check_account" structure:"url_check_account"
+    string url_check_account = 8;
+    // @inject_tag: bson:"url_process_payment" structure:"url_process_payment"
+    string url_process_payment = 9;
+    // @inject_tag: bson:"callback_protocol" structure:"callback_protocol"
+    string callback_protocol = 10;
+    // @inject_tag: bson:"merchant" structure:"merchant"
+    Merchant merchant = 12;
+}
+
+message Merchant {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    bytes id = 1; // unique merchant identifier
+    // @inject_tag: bson:"external_id" structure:"external_id"
+    string external_id = 2; //// unique merchant identifier in auth system
+    // @inject_tag: bson:"currency" structure:"currency"
+    Currency currency = 3; // full object describes merchant's accounting currency
+    // @inject_tag: bson:"is_vat_enabled" structure:"is_vat_enabled"
+    bool is_vat_enabled = 4; // vat calculation enabled
+    // @inject_tag: bson:"is_commission_to_user_enabled" structure:"is_commission_to_user_enabled"
+    bool is_commission_to_user_enabled = 5; // enable to add commission payment method and commission PSP (P1) to payment amount
+    // @inject_tag: bson:"status" structure:"status"
+    int32 status = 6; // merchant status in system. Now available next statuses: 0 - created, 1 - verified, 2 - active, 3 - deleted
+    // @inject_tag: bson:"first_payment_at" structure:"first_payment_at,timestamp"
+    google.protobuf.Timestamp first_payment_at = 7; // date of first payment to merchant
+}
+
+message Order {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    string id = 1; // unique order identifier in Protocol One
+    // @inject_tag: bson:"project" structure:"project"
+    ProjectOrder project = 2; // object described main entities of project in Protocol One payment solution
+    // @inject_tag: bson:"project_order_id" structure:"project_order_id"
+    string project_order_id = 3; // unique order identifier in project. if was send in create order process
+    // @inject_tag: bson:"project_account" structure:"project_account"
+    string project_account = 4; // user unique account in project
+    // @inject_tag: bson:"description" structure:"description"
+    string description = 5; // order description
+    // @inject_tag: bson:"project_income_amount" structure:"project_income_amount"
+    double project_income_amount = 6; // order amount received from project
+    // @inject_tag: bson:"project_income_currency" structure:"project_income_currency"
+    Currency project_income_currency = 7; // order currency received from project
+    // @inject_tag: bson:"project_outcome_amount" structure:"project_outcome_amount"
+    double project_outcome_amount = 8; // order amount send to project in notification request
+    // @inject_tag: bson:"project_outcome_currency" structure:"project_outcome_currency"
+    Currency project_outcome_currency = 9; // order currency send to project in notification request
+    // @inject_tag: bson:"project_last_requested_at" structure:"project_last_requested_at,timestamp"
+    google.protobuf.Timestamp project_last_requested_at = 10; // date of last notification request to project
+    // @inject_tag: bson:"project_params" structure:"project_params"
+    map<string, string> project_params = 11; // any project params which received from project in request of create of order
+    // @inject_tag: bson:"payer_data" structure:"payer_data"
+    PayerData payer_data = 12; // information about payer, for example: ip, email,phone and etc
+    // @inject_tag: bson:"payment_method" structure:"payment_method"
+    PaymentMethodOrder payment_method = 13; // payment method unique identifier
+    // @inject_tag: bson:"pm_terminal_id" structure:"pm_terminal_id"
+    string payment_method_terminal_id = 14; // identifier of terminal for process payment in payment system side
+    // @inject_tag: bson:"pm_order_id" structure:"pm_order_id"
+    string payment_method_order_id = 15; // unique order id in payment system
+    // @inject_tag: bson:"pm_outcome_amount" structure:"pm_outcome_amount"
+    double payment_method_outcome_amount = 16; // order amount send to payment system
+    // @inject_tag: bson:"pm_outcome_currency" structure:"pm_outcome_currency"
+    Currency payment_method_outcome_currency = 17; // order currency send to payment system
+    // @inject_tag: bson:"pm_income_amount" structure:"pm_income_amount"
+    double payment_method_income_amount = 18; // order amount received from payment system in notification request
+    // @inject_tag: bson:"pm_income_currency" structure:"pm_income_currency"
+    Currency payment_method_income_currency = 19; // order currency received from payment system in notification request
+    // @inject_tag: bson:"-" json:"-" structure:"-"
+    string payment_method_income_currency_a3 = 20;
+    // @inject_tag: bson:"pm_order_close_date" structure:"pm_order_close_date,timestamp"
+    google.protobuf.Timestamp payment_method_order_closed_at = 21; // date of ended payment operation in payment system
+    // @inject_tag: bson:"status" structure:"status"
+    int32 status = 22; // order status
+    // @inject_tag: bson:"created_at" structure:"created_at,timestamp"
+    google.protobuf.Timestamp created_at = 23; // date of create order
+    // @inject_tag: bson:"updated_at" structure:"updated_at,timestamp"
+    google.protobuf.Timestamp updated_at = 24; // date of last update order data
+    // @inject_tag: bson:"created_by_json" structure:"created_by_json"
+    bool is_json_request = 25; // is order create by json request
+    // @inject_tag: bson:"amount_psp_ac" structure:"amount_psp_ac"
+    double amount_in_psp_accounting_currency = 26; // operation amount in accounting currency of PSP
+    // @inject_tag: bson:"amount_in_merchant_ac" structure:"amount_in_merchant_ac"
+    double amount_in_merchant_accounting_currency = 27; // received from project operation amount in project owner (merchant) accounting currency
+    // @inject_tag: bson:"amount_out_merchant_ac" structure:"amount_out_merchant_ac"
+    double amount_out_merchant_accounting_currency = 28; // received from payment system operation amount in project owner (merchant) accounting currency
+    // @inject_tag: bson:"amount_ps_ac" structure:"amount_ps_ac"
+    double amount_in_payment_system_accounting_currency = 29; // operation amount in payment system accounting currency
+    // @inject_tag: bson:"pm_account" structure:"pm_account"
+    string payment_method_payer_account = 30; // account of payer in payment system
+    // @inject_tag: bson:"pm_txn_params" structure:"pm_txn_params"
+    map<string, string> payment_method_txn_params = 31; // any params received in request of payment system about payment
+    // @inject_tag: bson:"fixed_package" structure:"fixed_package"
+    FixedPackage fixed_package = 32; // fixed package which buy payer
+    // @inject_tag: bson:"payment_requisites" json:"-" structure:"payment_requisites"
+    map<string, string> payment_requisites = 33;
+    // @inject_tag: bson:"psp_fee_amount" structure:"psp_fee_amount"
+    OrderFeePsp psp_fee_amount = 34; // PSP (P1) fee amount
+    // @inject_tag: bson:"project_fee_amount" structure:"project_fee_amount"
+    OrderFee project_fee_amount = 35; // fee is charged with the project for the operation
+    // @inject_tag: bson:"to_payer_fee_amount" structure:"to_payer_fee_amount"
+    OrderFee to_payer_fee_amount = 36; // value of fee which added to payer amount
+    // @inject_tag: bson:"vat_amount" structure:"vat_amount"
+    double vat_amount = 37; // vat amount
+    // @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
+    OrderFeePaymentSystem payment_system_fee_amount = 38; // payment system fee for payment operation
+}
+
+message Currency {
+    // @inject_tag: bson:"code_int" structure:"code_int"
+    int32 code_int = 1;
+    // @inject_tag: bson:"code_a3" structure:"code_a3"
+    string code_a3 = 2;
+    // @inject_tag: bson:"is_active" structure:"is_active"
+    bool is_active = 5;
+}
+
+message PayerData {
+    // @inject_tag: bson:"ip" structure:"ip"
+    string ip = 1; // payer ip from create order request
+    // @inject_tag: bson:"country_code_a2" structure:"country_code_a2"
+    string country_code_a2 = 2; // payer country code by ISO 3166-1 from create order request
+    // @inject_tag: bson:"country_name" structure:"country_name"
+    Name country_name = 3; // payer country names
+    // @inject_tag: bson:"city" structure:"city"
+    Name city = 4; // payer city names, get from ip geo location
+    // @inject_tag: bson:"subdivision" structure:"subdivision"
+    string subdivision = 5; // payer subdivision code by ISO-3166-2
+    // @inject_tag: bson:"timezone" structure:"timezone"
+    string timezone = 6; // payer timezone name, get from ip geo location
+    // @inject_tag: bson:"phone" structure:"phone"
+    string phone = 7; // payer phone from create order request
+    // @inject_tag: bson:"email" structure:"email"
+    string email = 8; // payer email from create order request
+}
+
+message PaymentMethodOrder {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    string id = 1;
+    // @inject_tag: bson:"name" structure:"name"
+    string name = 2;
+    // @inject_tag: bson:"params" structure:"params"
+    PaymentMethodParams params = 3;
+    // @inject_tag: bson:"payment_system" structure:"payment_system"
+    PaymentSystem payment_system = 4;
+    // @inject_tag: bson:"group_alias" structure:"group_alias"
+    string group_alias = 5;
+}
+
+message PaymentMethodParams {
+    // @inject_tag: bson:"handler" structure:"handler"
+    string handler = 1;
+    // @inject_tag: bson:"terminal" structure:"terminal"
+    string terminal = 2;
+    // @inject_tag: bson:"external_id" structure:"external_id"
+    string external_id = 3;
+    // @inject_tag: bson:"other" structure:"other"
+    map<string, string> other = 4;
+}
+
+message PaymentSystem {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    bytes id = 1;
+    // @inject_tag: bson:"accounting_currency" structure:"accounting_currency"
+    Currency accounting_currency = 4;
+    // @inject_tag: bson:"is_active" structure:"is_active"
+    bool is_active = 6;
+}
+
+message FixedPackage {
+    // @inject_tag: bson:"id" structure:"id"
+    string id = 1; // unique identifier of package
+    // @inject_tag: bson:"name" structure:"name"
+    string name = 2; // package name
+    // @inject_tag: bson:"currency_int" structure:"currency_int"
+    int32 currency_int = 3; // numeric ISO 4217 currency code to package price
+    // @inject_tag: bson:"price" structure:"price"
+    double price = 4; // package price in chosen currency
+    // @inject_tag: bson:"is_active" structure:"is_active"
+    bool is_active = 5; // is package active
+}
+
+message FixedPackages {
+    repeated FixedPackage fixed_package = 1;
+}
+
+message OrderFee {
+    // @inject_tag: bson:"amount_payment_method_currency" structure:"amount_payment_method_currency"
+    double AmountPaymentMethodCurrency = 1; // amount of fee of payment system in payment currency
+    // @inject_tag: bson:"amount_merchant_currency" structure:"amount_merchant_currency"
+    double AmountMerchantCurrency = 2; // amount of fee of payment system in accounting currency of merchant
+}
+
+message OrderFeePsp {
+    // @inject_tag: bson:"amount_payment_method_currency" structure:"amount_payment_method_currency"
+    double AmountPaymentMethodCurrency = 1; // amount of fee of payment system in payment currency
+    // @inject_tag: bson:"amount_merchant_currency" structure:"amount_merchant_currency"
+    double AmountMerchantCurrency = 2; // amount of fee of payment system in accounting currency of merchant
+    // @inject_tag: bson:"amount_psp_currency" structure:"amount_psp_currency"
+    double AmountPspCurrency = 3; // amount of fee of PSP (P1) in PSP (P1) accounting currencies
+}
+
+// Contain information about payment system commission in other currencies
+message OrderFeePaymentSystem {
+    // @inject_tag: bson:"amount_payment_method_currency" structure:"amount_payment_method_currency"
+    double AmountPaymentMethodCurrency = 1; // amount of fee of payment system in payment currency
+    // @inject_tag: bson:"amount_merchant_currency" structure:"amount_merchant_currency"
+    double AmountMerchantCurrency = 2; // amount of fee of payment system in accounting currency of merchant
+    // @inject_tag: bson:"amount_payment_system_currency" structure:"amount_payment_system_currency"
+    double AmountPaymentSystemCurrency = 3; // amount of fee of payment system in accounting currency of payment system
+}
+
+message ProjectPaymentMethod {
+    string id = 1;
+    google.protobuf.Timestamp added_at = 2;
+}
+
+message ProjectPaymentMethods {
+    repeated ProjectPaymentMethod payment_methods = 1;
+}
+
+message CurrencyRate {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    bytes id = 1;
+    // @inject_tag: bson:"currency_from" structure:"currency_from"
+    int32 currency_from = 2;
+    // @inject_tag: bson:"currency_to" structure:"currency_to"
+    int32 currency_to = 3;
+    // @inject_tag: bson:"rate" structure:"rate"
+    double rate = 4;
+    // @inject_tag: bson:"is_active" structure:"rate"
+    bool is_active = 5;
+}
+
+message PaymentMethod {
+    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
+    bytes id = 1;
+    // @inject_tag: bson:"group_alias" structure:"group_alias"
+    string group = 2;
+    // @inject_tag: bson:"currencies" structure:"currencies"
+    repeated int32 currencies = 3; // list of currencies allowed for payments through the payment method
+    // @inject_tag: bson:"min_payment_amount" structure:"min_payment_amount"
+    double min_payment_amount = 4;
+    // @inject_tag: bson:"max_payment_amount" structure:"max_payment_amount"
+    double max_payment_amount = 5;
+    // @inject_tag: bson:"params" structure:"params"
+    PaymentMethodParams params = 6;
+    // @inject_tag: bson:"icon" structure:"icon"
+    string Icon = 7;
+    // @inject_tag: bson:"payment_system" structure:"payment_system"
+    PaymentSystem payment_system = 8;
+    // @inject_tag: bson:"type" structure:"type"
+    string type = 9; // type of payment method. allowed at current time: bank_card, ewallet, crypto
+    // @inject_tag: bson:"account_regexp" structure:"account_regexp"
+    string account_regexp = 10; // regexp mask for check main requisite of payment method
+    // @inject_tag: bson:"is_active" structure:"is_active"
+    bool is_active = 11;
+}
