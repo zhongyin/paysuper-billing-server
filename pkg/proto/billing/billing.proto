@@ -64,10 +64,10 @@ message Project {
     repeated string create_invoice_allowed_urls = 4; // list of urls rom which you can send a request to create an order
     // @inject_tag: bson:"merchant" json:"-" structure:"merchant"
     Merchant merchant = 5; // full object of merchant which describes project's owner
-    // @inject_tag: bson:"is_allow_dynamic_notify_urls" structure:"is_allow_dynamic_notify_urls"
-    bool is_allow_dynamic_notify_urls = 6; // is allow send dynamic notification urls in request to create an order
-    // @inject_tag: bson:"is_allow_dynamic_redirect_urls" structure:"is_allow_dynamic_redirect_urls"
-    bool is_allow_dynamic_redirect_urls = 7; // is allow send dynamic user's redirect urls in request to create an order
+    // @inject_tag: bson:"allow_dynamic_notify_urls"
+    bool allow_dynamic_notify_urls = 6; // is allow send dynamic notification urls in request to create an order
+    // @inject_tag: bson:"allow_dynamic_redirect_urls"
+    bool allow_dynamic_redirect_urls = 7; // is allow send dynamic user's redirect urls in request to create an order
     // @inject_tag: bson:"limits_currency" structure:"limits_currency"
     Currency limits_currency = 8; // full object of currency which describes currency for amount's limit
     // @inject_tag: bson:"max_payment_amount" structure:"max_payment_amount"
@@ -95,9 +95,13 @@ message Project {
     // @inject_tag: bson:"fixed_package" structure:"fixed_package"
     map<string, FixedPackages> fixed_package = 23; // list of project's fixed packages
     // @inject_tag: bson:"payment_methods" structure:"payment_methods"
-    map<string, ProjectPaymentMethods> payment_methods = 24; // list of payment methods allowed to project
+    map<string, ProjectPaymentMethod> payment_methods = 24; // list of payment methods allowed to project
     // @inject_tag: bson:"is_active" structure:"is_active"
     bool is_active = 20; // is project active
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 21;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 22;
 }
 
 message ProjectOrder {
@@ -222,12 +226,18 @@ message Order {
 }
 
 message Currency {
-    // @inject_tag: bson:"code_int" structure:"code_int"
+    // @inject_tag: bson:"code_int"
     int32 code_int = 1;
-    // @inject_tag: bson:"code_a3" structure:"code_a3"
+    // @inject_tag: bson:"code_a3"
     string code_a3 = 2;
-    // @inject_tag: bson:"is_active" structure:"is_active"
+    // @inject_tag: bson:"name"
+    Name name = 4;
+    // @inject_tag: bson:"is_active"
     bool is_active = 5;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 6;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 7;
 }
 
 message PayerData {
@@ -326,25 +336,31 @@ message OrderFeePaymentSystem {
 }
 
 message ProjectPaymentMethod {
+    // @inject_tag: bson:"_id"
     string id = 1;
-    google.protobuf.Timestamp added_at = 2;
-}
-
-message ProjectPaymentMethods {
-    repeated ProjectPaymentMethod payment_methods = 1;
+    // @inject_tag: bson:"terminal"
+    string terminal = 2;
+    // @inject_tag: bson:"password"
+    string password = 3;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 4;
 }
 
 message CurrencyRate {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    bytes id = 1;
-    // @inject_tag: bson:"currency_from" structure:"currency_from"
+    // @inject_tag: bson:"_id"
+    string id = 1;
+    // @inject_tag: bson:"currency_from"
     int32 currency_from = 2;
-    // @inject_tag: bson:"currency_to" structure:"currency_to"
+    // @inject_tag: bson:"currency_to"
     int32 currency_to = 3;
-    // @inject_tag: bson:"rate" structure:"rate"
+    // @inject_tag: bson:"rate"
     double rate = 4;
-    // @inject_tag: bson:"is_active" structure:"rate"
+    // @inject_tag: bson:"is_active"
     bool is_active = 5;
+    // @inject_tag: bson:"date"
+    google.protobuf.Timestamp date = 6;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 7;
 }
 
 message PaymentMethod {
@@ -370,4 +386,38 @@ message PaymentMethod {
     string account_regexp = 10; // regexp mask for check main requisite of payment method
     // @inject_tag: bson:"is_active" structure:"is_active"
     bool is_active = 11;
+}
+
+message Country {
+    // @inject_tag: bson:"code_int"
+    int32 code_int = 1;
+    // @inject_tag: bson:"code_a2"
+    string code_a2 = 2;
+    // @inject_tag: bson:"code_a3"
+    string code_a3 = 3;
+    // @inject_tag: bson:"name"
+    Name name = 4;
+    // @inject_tag: bson:"is_active"
+    bool is_active = 5;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 6;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 7;
+}
+
+message Vat {
+    // @inject_tag: bson:"_id"
+    string id = 1;
+    // @inject_tag: bson:"country"
+    string country = 2;
+    // @inject_tag: bson:"subdivision_code"
+    string subdivision = 3;
+    // @inject_tag: bson:"vat"
+    double vat = 4;
+    // @inject_tag: bson:"is_active"
+    bool is_active = 5;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 8;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 9;
 }

@@ -25,9 +25,10 @@ It has these top-level messages:
 	OrderFeePsp
 	OrderFeePaymentSystem
 	ProjectPaymentMethod
-	ProjectPaymentMethods
 	CurrencyRate
 	PaymentMethod
+	Country
+	Vat
 */
 package billing
 

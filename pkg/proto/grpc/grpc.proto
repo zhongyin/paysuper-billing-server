@@ -7,7 +7,7 @@ import "billing/billing.proto";
 
 service BillingService {
     rpc OrderCreateProcess(billing.OrderCreateRequest) returns (billing.Order) {}
-    rpc InitCache(EmptyRequest) returns (EmptyResponse) {}
+    rpc RebuildCache(EmptyRequest) returns (EmptyResponse) {}
 }
 
 message EmptyRequest{}

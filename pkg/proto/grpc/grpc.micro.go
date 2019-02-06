@@ -8,6 +8,8 @@ It is generated from these files:
 	grpc/grpc.proto
 
 It has these top-level messages:
+	EmptyRequest
+	EmptyResponse
 */
 package grpc
 
@@ -43,6 +45,7 @@ var _ server.Option
 
 type BillingService interface {
 	OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, opts ...client.CallOption) (*billing.Order, error)
+	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
 type billingService struct {
@@ -73,15 +76,27 @@ func (c *billingService) OrderCreateProcess(ctx context.Context, in *billing.Ord
 	return out, nil
 }
 
+func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.RebuildCache", in)
+	out := new(EmptyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
 	OrderCreateProcess(context.Context, *billing.OrderCreateRequest, *billing.Order) error
+	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
 	type billingService interface {
 		OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error
+		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -96,4 +111,8 @@ type billingServiceHandler struct {
 
 func (h *billingServiceHandler) OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error {
 	return h.BillingServiceHandler.OrderCreateProcess(ctx, in, out)
+}
+
+func (h *billingServiceHandler) RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error {
+	return h.BillingServiceHandler.RebuildCache(ctx, in, out)
 }

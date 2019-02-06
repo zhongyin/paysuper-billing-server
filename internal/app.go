@@ -5,11 +5,11 @@ import (
 	"github.com/InVisionApp/go-health"
 	"github.com/InVisionApp/go-health/handlers"
 	metrics "github.com/ProtocolONE/go-micro-plugins/wrapper/monitoring/prometheus"
+	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/internal/service"
 	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/micro/go-micro"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -18,19 +18,8 @@ import (
 	"time"
 )
 
-type Config struct {
-	MongoHost          string `envconfig:"MONGO_HOST" required:"true"`
-	MongoDatabase      string `envconfig:"MONGO_DB" required:"true"`
-	MongoUser          string `envconfig:"MONGO_USER" required:"true"`
-	MongoPassword      string `envconfig:"MONGO_PASSWORD" required:"true"`
-	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" required:"true" default:"EUR"`
-	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8085"`
-
-	*service.CacheConfig
-}
-
 type Application struct {
-	cfg        *Config
+	cfg        *config.Config
 	database   *database.Source
 	service    micro.Service
 	httpServer *http.Server
@@ -50,21 +39,15 @@ func NewApplication() *Application {
 
 func (app *Application) Init() {
 	app.initLogger()
-	app.initConfig()
 
-	settings := database.Connection{
-		Host:     app.cfg.MongoHost,
-		Database: app.cfg.MongoDatabase,
-		User:     app.cfg.MongoUser,
-		Password: app.cfg.MongoPassword,
-	}
-	db, err := database.GetDatabase(settings)
+	cfg, err := config.NewConfig()
 
 	if err != nil {
-		app.logger.Fatal("[PAYONE_BILLING] Database connection failed", zap.Error(err))
+		app.logger.Fatal("[PAYONE_BILLING] Config load failed", zap.Error(err))
 	}
 
-	app.database = db
+	app.cfg = cfg
+	app.initDatabase()
 
 	app.service = micro.NewService(
 		micro.Name(pkg.ServiceName),
@@ -106,14 +89,21 @@ func (app *Application) initLogger() {
 	app.sugLogger = app.logger.Sugar()
 }
 
-func (app *Application) initConfig() {
-	cfg := &Config{}
-
-	if err := envconfig.Process("", cfg); err != nil {
-		app.logger.Fatal("[PAYONE_BILLING] Config init failed", zap.Error(err))
+func (app *Application) initDatabase() {
+	settings := database.Connection{
+		Host:     app.cfg.MongoHost,
+		Database: app.cfg.MongoDatabase,
+		User:     app.cfg.MongoUser,
+		Password: app.cfg.MongoPassword,
 	}
 
-	app.cfg = cfg
+	db, err := database.NewDatabase(settings)
+
+	if err != nil {
+		app.logger.Fatal("[PAYONE_BILLING] Database connection failed", zap.Error(err))
+	}
+
+	app.database = db
 }
 
 func (app *Application) initHealth() {

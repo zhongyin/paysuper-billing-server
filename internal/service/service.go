@@ -1,16 +1,22 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"go.uber.org/zap"
 	"sync"
 	"time"
 )
 
 const (
-	collectionCurrency = "currency"
+	collectionCurrency     = "currency"
+	collectionProject      = "project"
+	collectionCurrencyRate = "currency_rate"
+	collectionVat          = "vat"
 
 	errorNotFound          = "[PAYONE_BILLING] %s not found"
 	initCacheErrorNotFound = "[PAYONE_BILLING] %s query result is empty"
@@ -18,22 +24,27 @@ const (
 
 var (
 	handlers = map[string]func(*Service) Cacher{
-		collectionCurrency: newCurrencyHandler,
+		collectionCurrency:     newCurrencyHandler,
+		collectionProject:      newProjectHandler,
+		collectionCurrencyRate: newCurrencyRateHandler,
+		collectionVat:          newVatHandler,
 	}
-)
 
-type CacheConfig struct {
-	CurrencyTimeout int64 `envconfig:"CACHE_CURRENCY_TIMEOUT" default:"86400"`
-}
+	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
+)
 
 type Service struct {
 	db     *database.Source
 	log    *zap.SugaredLogger
 	mx     sync.Mutex
-	cCfg   *CacheConfig
+	cCfg   *config.CacheConfig
 	exitCh chan bool
+	ctx    context.Context
 
-	curCache map[string]*billing.Currency
+	currencyCache     map[string]*billing.Currency
+	projectCache      map[string]*billing.Project
+	currencyRateCache map[int32]map[int32]*billing.CurrencyRate //todo
+	vatCache          map[string]map[string]*billing.Vat        //todo
 }
 
 type Cacher interface {
@@ -44,7 +55,7 @@ type Cacher interface {
 func NewBillingService(
 	db *database.Source,
 	log *zap.SugaredLogger,
-	cCfg *CacheConfig,
+	cCfg *config.CacheConfig,
 	exitCh chan bool,
 ) (svc *Service, err error) {
 	svc = &Service{
@@ -107,5 +118,9 @@ func (s *Service) initCache() error {
 
 	go s.reBuildCache()
 
+	return nil
+}
+
+func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {
 	return nil
 }
