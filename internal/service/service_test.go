@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
@@ -9,6 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"testing"
+	"time"
 )
 
 type BillingServiceTestSuite struct {
@@ -17,6 +20,35 @@ type BillingServiceTestSuite struct {
 	log  *zap.SugaredLogger
 	cfg  *config.Config
 	exCh chan bool
+}
+
+type getAllEmptyResultTest Currency
+type getAllErrorTest Currency
+
+func newGetAllEmptyResultTest(svc *Service) Cacher {
+	return &getAllEmptyResultTest{svc: svc}
+}
+
+func (h *getAllEmptyResultTest) setCache(recs []interface{}) {
+	return
+}
+
+func (h *getAllEmptyResultTest) getAll() (recs []interface{}, err error) {
+	return
+}
+
+func newGetAllErrorTest(svc *Service) Cacher {
+	return &getAllErrorTest{svc: svc}
+}
+
+func (h *getAllErrorTest) setCache(recs []interface{}) {
+	return
+}
+
+func (h *getAllErrorTest) getAll() (recs []interface{}, err error) {
+	err = errors.New("unit test")
+
+	return
 }
 
 func Test_BillingService(t *testing.T) {
@@ -226,11 +258,137 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
-	service, err := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err := service.Init()
 
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(service.currencyCache) > 0)
 	assert.True(suite.T(), len(service.projectCache) > 0)
 	assert.True(suite.T(), len(service.currencyRateCache) > 0)
 	assert.True(suite.T(), len(service.vatCache) > 0)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
+	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+
+	key := "unit"
+	err := svc.cache(key, newGetAllEmptyResultTest(svc))
+
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), fmt.Sprintf(initCacheErrorNotFound, key), err.Error())
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
+	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+
+	key := "unit"
+	err := svc.cache(key, newGetAllErrorTest(svc))
+
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), "unit test", err.Error())
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
+	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+
+	key := "unit"
+	handlers[key] = newGetAllEmptyResultTest
+
+	err := svc.Init()
+
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), fmt.Sprintf(initCacheErrorNotFound, key), err.Error())
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
+	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err := service.Init()
+
+	assert.Nil(suite.T(), err)
+	time.Sleep(time.Second * 1)
+	assert.True(suite.T(), service.rebuild)
+
+	tp := time.NewTimer(time.Second * 2)
+	exit := make(chan bool, 1)
+
+	select {
+	case <-tp.C:
+		suite.exCh <- true
+		exit <- true
+	}
+	<-exit
+
+	time.Sleep(time.Second * 1)
+	assert.False(suite.T(), service.rebuild)
+	assert.Nil(suite.T(), service.rebuildError)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
+	cacheCfg := suite.cfg.CacheConfig
+	cacheCfg.CurrencyTimeout = 3
+
+	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh)
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err := service.Init()
+	assert.Nil(suite.T(), err)
+
+	c := &billing.Currency{
+		CodeInt:   826,
+		CodeA3:    "GBP",
+		Name:      &billing.Name{Ru: "Фунт стерлингов Соединенного королевства", En: "British Pound Sterling"},
+		IsActive:  true,
+	}
+
+	err = suite.db.Collection(collectionCurrency).Insert(c)
+	assert.Nil(suite.T(), err)
+
+	_, ok := service.currencyCache[c.CodeA3]
+	assert.False(suite.T(), ok)
+
+	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout + 1))
+
+	_, ok = service.currencyCache[c.CodeA3]
+	assert.True(suite.T(), ok)
+	assert.True(suite.T(), service.rebuild)
+	assert.Nil(suite.T(), service.rebuildError)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerError() {
+	cacheCfg := suite.cfg.CacheConfig
+	cacheCfg.CurrencyTimeout = 3
+
+	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh)
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err := service.Init()
+	assert.Nil(suite.T(), err)
+
+	time.Sleep(time.Second * 1)
+
+	assert.True(suite.T(), service.rebuild)
+	assert.Nil(suite.T(), service.rebuildError)
+
+	assert.Nil(suite.T(), suite.db.Collection(collectionCurrency).DropCollection())
+
+	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout + 1))
+
+	assert.False(suite.T(), service.rebuild)
+	assert.Error(suite.T(), service.rebuildError)
 }

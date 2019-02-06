@@ -60,9 +60,9 @@ func (app *Application) Init() {
 	)
 	app.service.Init()
 
-	svc, err := service.NewBillingService(app.database, app.sugLogger, app.cfg.CacheConfig, app.cacheExit)
+	svc := service.NewBillingService(app.database, app.sugLogger, app.cfg.CacheConfig, app.cacheExit)
 
-	if err != nil {
+	if err := svc.Init(); err != nil {
 		app.logger.Fatal("[PAYONE_BILLING] Create service instance failed", zap.Error(err))
 	}
 

@@ -43,8 +43,11 @@ type Service struct {
 
 	currencyCache     map[string]*billing.Currency
 	projectCache      map[string]*billing.Project
-	currencyRateCache map[int32]map[int32]*billing.CurrencyRate //todo
-	vatCache          map[string]map[string]*billing.Vat        //todo
+	currencyRateCache map[int32]map[int32]*billing.CurrencyRate
+	vatCache          map[string]map[string]*billing.Vat
+
+	rebuild      bool
+	rebuildError error
 }
 
 type Cacher interface {
@@ -52,20 +55,16 @@ type Cacher interface {
 	setCache([]interface{})
 }
 
-func NewBillingService(
-	db *database.Source,
-	log *zap.SugaredLogger,
-	cCfg *config.CacheConfig,
-	exitCh chan bool,
-) (svc *Service, err error) {
-	svc = &Service{
-		db:     db,
-		log:    log,
-		cCfg:   cCfg,
-		exitCh: exitCh,
-	}
+func NewBillingService(db *database.Source, log *zap.SugaredLogger, cCfg *config.CacheConfig, exitCh chan bool) *Service {
+	return &Service{db: db, log: log, cCfg: cCfg, exitCh: exitCh}
+}
 
-	err = svc.initCache()
+func (s *Service) Init() (err error) {
+	err = s.initCache()
+
+	if err == nil {
+		go s.reBuildCache()
+	}
 
 	return
 }
@@ -75,6 +74,7 @@ func (s *Service) reBuildCache() {
 	var key string
 
 	curTicker := time.NewTicker(time.Second * time.Duration(s.cCfg.CurrencyTimeout))
+	s.rebuild = true
 
 	for {
 		select {
@@ -82,11 +82,15 @@ func (s *Service) reBuildCache() {
 			err = s.cache(collectionCurrency, handlers[collectionCurrency](s))
 			key = collectionCurrency
 		case <-s.exitCh:
+			s.rebuild = false
 			return
 		}
 
 		if err != nil {
-			s.log.Fatalw("Rebuild cache failed", "error", err, "cached_collection", key)
+			s.rebuild = false
+			s.rebuildError = err
+
+			s.log.Errorw("Rebuild cache failed", "error", err, "cached_collection", key)
 		}
 	}
 }
@@ -115,8 +119,6 @@ func (s *Service) initCache() error {
 			return err
 		}
 	}
-
-	go s.reBuildCache()
 
 	return nil
 }
