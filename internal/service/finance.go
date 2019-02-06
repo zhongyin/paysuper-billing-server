@@ -64,7 +64,13 @@ func (h *CurrencyRate) setCache(recs []interface{}) {
 		rate := c.(*billing.CurrencyRate)
 
 		h.svc.mx.Lock()
+
+		if _, ok := h.svc.currencyRateCache[rate.CurrencyFrom]; !ok {
+			h.svc.currencyRateCache[rate.CurrencyFrom] = make(map[int32]*billing.CurrencyRate)
+		}
+
 		h.svc.currencyRateCache[rate.CurrencyFrom][rate.CurrencyTo] = rate
+
 		h.svc.mx.Unlock()
 	}
 }
@@ -112,7 +118,13 @@ func (h *Vat) setCache(recs []interface{}) {
 		vat := c.(*billing.Vat)
 
 		h.svc.mx.Lock()
+
+		if _, ok := h.svc.vatCache[vat.Country]; !ok {
+			h.svc.vatCache[vat.Country] = make(map[string]*billing.Vat)
+		}
+
 		h.svc.vatCache[vat.Country][vat.Subdivision] = vat
+
 		h.svc.mx.Unlock()
 	}
 }
