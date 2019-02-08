@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/InVisionApp/go-health"
 	"github.com/InVisionApp/go-health/handlers"
+	"github.com/ProtocolONE/geoip-service/pkg"
+	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	metrics "github.com/ProtocolONE/go-micro-plugins/wrapper/monitoring/prometheus"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
@@ -60,7 +62,16 @@ func (app *Application) Init() {
 	)
 	app.service.Init()
 
-	svc := service.NewBillingService(app.database, app.sugLogger, app.cfg.CacheConfig, app.cacheExit)
+	geoService := proto.NewGeoIpService(geoip.ServiceName, app.service.Client())
+	svc := service.NewBillingService(
+		app.database,
+		app.sugLogger,
+		app.cfg.CacheConfig,
+		app.cacheExit,
+		geoService,
+		app.cfg.Environment,
+		app.cfg.AccountingCurrency,
+	)
 
 	if err := svc.Init(); err != nil {
 		app.logger.Fatal("[PAYONE_BILLING] Create service instance failed", zap.Error(err))

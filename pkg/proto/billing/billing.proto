@@ -15,7 +15,7 @@ message Name {
 message OrderCreateRequest {
     // @inject_tag: query:"PO_PROJECT_ID" form:"PO_PROJECT_ID" json:"project" validate:"required,hexadecimal"
     string project_id = 1;
-    // @inject_tag: query:"PO_SIGNATURE" form:"PO_SIGNATURE" json:"signature" validate:"omitempty,alphanum"
+    // @inject_tag: query:"PO_SIGNATURE" form:"PO_SIGNATURE" validate:"omitempty,alphanum"
     string signature = 2;
     // @inject_tag: query:"PO_AMOUNT" form:"PO_AMOUNT" json:"amount" validate:"required,numeric"
     double amount = 3;
@@ -82,31 +82,33 @@ message Project {
     bool only_fixed_amounts = 13; // is allow create order only with amounts from fixed packages list
     // @inject_tag: bson:"secret_key" structure:"secret_key"
     string secret_key = 14; // secret key for create check hash for request about order statuses changes
+    // @inject_tag: bson:"signature_required"
+    bool signature_required = 15;
     // @inject_tag: bson:"send_notify_email" structure:"send_notify_email"
-    bool send_notify_email = 15; // is allow send notifications about successfully completed payment operations to user's emails
+    bool send_notify_email = 16; // is allow send notifications about successfully completed payment operations to user's emails
     // @inject_tag: bson:"url_check_account" structure:"url_check_account"
-    string url_check_account = 16; // default url to send request for verification payment data to project
+    string url_check_account = 17; // default url to send request for verification payment data to project
     // @inject_tag: bson:"url_process_payment" structure:"url_process_payment"
-    string url_process_payment = 17; // default url to send request for notification about successfully completed payment to project
+    string url_process_payment = 18; // default url to send request for notification about successfully completed payment to project
     // @inject_tag: bson:"url_redirect_fail" structure:"url_redirect_fail"
-    string url_redirect_fail = 18; // default url to redirect user after failed payment
+    string url_redirect_fail = 19; // default url to redirect user after failed payment
     // @inject_tag: bson:"url_redirect_success" structure:"url_redirect_success"
-    string url_redirect_success = 19; // default url to redirect user after successfully completed payment
+    string url_redirect_success = 20; // default url to redirect user after successfully completed payment
     // @inject_tag: bson:"fixed_package" structure:"fixed_package"
-    map<string, FixedPackages> fixed_package = 23; // list of project's fixed packages
+    map<string, FixedPackages> fixed_package = 21; // list of project's fixed packages
     // @inject_tag: bson:"payment_methods" structure:"payment_methods"
-    map<string, ProjectPaymentMethod> payment_methods = 24; // list of payment methods allowed to project
+    map<string, ProjectPaymentMethod> payment_methods = 22; // list of payment methods allowed to project
     // @inject_tag: bson:"is_active" structure:"is_active"
-    bool is_active = 20; // is project active
+    bool is_active = 23; // is project active
     // @inject_tag: bson:"created_at"
-    google.protobuf.Timestamp created_at = 21;
+    google.protobuf.Timestamp created_at = 24;
     // @inject_tag: bson:"updated_at"
-    google.protobuf.Timestamp updated_at = 22;
+    google.protobuf.Timestamp updated_at = 25;
 }
 
 message ProjectOrder {
     // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    bytes id = 1;
+    string id = 1;
     // @inject_tag: bson:"name" structure:"name"
     string name = 2;
     // @inject_tag: bson:"url_redirect_success" structure:"url_redirect_success"
@@ -297,8 +299,8 @@ message FixedPackage {
     string id = 1; // unique identifier of package
     // @inject_tag: bson:"name" structure:"name"
     string name = 2; // package name
-    // @inject_tag: bson:"currency_int" structure:"currency_int"
-    int32 currency_int = 3; // numeric ISO 4217 currency code to package price
+    // @inject_tag: bson:"currency_a3"
+    string currency_a3 = 3;
     // @inject_tag: bson:"price" structure:"price"
     double price = 4; // package price in chosen currency
     // @inject_tag: bson:"is_active" structure:"is_active"
@@ -364,28 +366,34 @@ message CurrencyRate {
 }
 
 message PaymentMethod {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    bytes id = 1;
-    // @inject_tag: bson:"group_alias" structure:"group_alias"
-    string group = 2;
-    // @inject_tag: bson:"currencies" structure:"currencies"
-    repeated int32 currencies = 3; // list of currencies allowed for payments through the payment method
-    // @inject_tag: bson:"min_payment_amount" structure:"min_payment_amount"
-    double min_payment_amount = 4;
-    // @inject_tag: bson:"max_payment_amount" structure:"max_payment_amount"
-    double max_payment_amount = 5;
-    // @inject_tag: bson:"params" structure:"params"
-    PaymentMethodParams params = 6;
-    // @inject_tag: bson:"icon" structure:"icon"
-    string Icon = 7;
-    // @inject_tag: bson:"payment_system" structure:"payment_system"
-    PaymentSystem payment_system = 8;
-    // @inject_tag: bson:"type" structure:"type"
-    string type = 9; // type of payment method. allowed at current time: bank_card, ewallet, crypto
-    // @inject_tag: bson:"account_regexp" structure:"account_regexp"
-    string account_regexp = 10; // regexp mask for check main requisite of payment method
-    // @inject_tag: bson:"is_active" structure:"is_active"
-    bool is_active = 11;
+    // @inject_tag: bson:"_id"
+    string id = 1;
+    // @inject_tag: bson:"name"
+    string name = 2;
+    // @inject_tag: bson:"group_alias"
+    string group = 3;
+    // @inject_tag: bson:"currencies"
+    repeated int32 currencies = 5;
+    // @inject_tag: bson:"min_payment_amount"
+    double min_payment_amount = 6;
+    // @inject_tag: bson:"max_payment_amount"
+    double max_payment_amount = 7;
+    // @inject_tag: bson:"params"
+    PaymentMethodParams params = 8;
+    // @inject_tag: bson:"icon"
+    string Icon = 9;
+    // @inject_tag: bson:"payment_system"
+    PaymentSystem payment_system = 10;
+    // @inject_tag: bson:"type"
+    string type = 11;
+    // @inject_tag: bson:"account_regexp"
+    string account_regexp = 12;
+    // @inject_tag: bson:"is_active"
+    bool is_active = 13;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 14;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 15;
 }
 
 message Country {
@@ -421,3 +429,25 @@ message Vat {
     // @inject_tag: bson:"updated_at"
     google.protobuf.Timestamp updated_at = 9;
 }
+
+message Commission {
+    // @inject_tag: bson:"_id"
+    string id = 1;
+    // @inject_tag: bson:"pm_id"
+    string payment_method_id = 2;
+    // @inject_tag: bson:"project_id"
+    string project_id = 3;
+    // @inject_tag: bson:"pm_commission"
+    double payment_method_commission = 4;
+    // @inject_tag: bson:"psp_commission"
+    double psp_commission = 5;
+    // @inject_tag: bson:"total_commission_to_user"
+    double total_commission_to_user = 6;
+    // @inject_tag: bson:"start_date"
+    google.protobuf.Timestamp start_date = 7;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 8;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 9;
+}
+

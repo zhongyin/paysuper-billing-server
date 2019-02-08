@@ -29,6 +29,7 @@ It has these top-level messages:
 	PaymentMethod
 	Country
 	Vat
+	Commission
 */
 package billing
 

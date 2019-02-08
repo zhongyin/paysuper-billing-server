@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
@@ -13,21 +15,30 @@ import (
 )
 
 const (
-	collectionCurrency     = "currency"
-	collectionProject      = "project"
-	collectionCurrencyRate = "currency_rate"
-	collectionVat          = "vat"
+	collectionCurrency      = "currency"
+	collectionProject       = "project"
+	collectionCurrencyRate  = "currency_rate"
+	collectionVat           = "vat"
+	collectionOrder         = "order"
+	collectionPaymentMethod = "payment_method"
+	collectionCommission    = "commission"
 
-	errorNotFound          = "[PAYONE_BILLING] %s not found"
-	initCacheErrorNotFound = "[PAYONE_BILLING] %s query result is empty"
+	errorNotFound                   = "[PAYONE_BILLING] %s not found"
+	initCacheErrorNotFound          = "[PAYONE_BILLING] %s query result is empty"
+	errorQueryMask                  = "[PAYONE_BILLING] Query from collection \"%s\" failed"
+	errorAccountingCurrencyNotFound = "[PAYONE_BILLING] Accounting currency not found"
+
+	environmentProd = "prod"
 )
 
 var (
 	handlers = map[string]func(*Service) Cacher{
-		collectionCurrency:     newCurrencyHandler,
-		collectionProject:      newProjectHandler,
-		collectionCurrencyRate: newCurrencyRateHandler,
-		collectionVat:          newVatHandler,
+		collectionCurrency:      newCurrencyHandler,
+		collectionProject:       newProjectHandler,
+		collectionCurrencyRate:  newCurrencyRateHandler,
+		collectionVat:           newVatHandler,
+		collectionPaymentMethod: newPaymentMethodHandler,
+		collectionCommission:    newCommissionHandler,
 	}
 
 	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
@@ -40,11 +51,18 @@ type Service struct {
 	cCfg   *config.CacheConfig
 	exitCh chan bool
 	ctx    context.Context
+	geo    proto.GeoIpService
+	env    string
 
-	currencyCache     map[string]*billing.Currency
-	projectCache      map[string]*billing.Project
-	currencyRateCache map[int32]map[int32]*billing.CurrencyRate
-	vatCache          map[string]map[string]*billing.Vat
+	accountingCurrencyA3 string
+	accountingCurrency   *billing.Currency
+
+	currencyCache      map[string]*billing.Currency
+	projectCache       map[string]*billing.Project
+	currencyRateCache  map[int32]map[int32]*billing.CurrencyRate
+	vatCache           map[string]map[string]*billing.Vat
+	paymentMethodCache map[string]map[int32]*billing.PaymentMethod
+	commissionCache    map[string]map[string]*billing.MgoCommission
 
 	rebuild      bool
 	rebuildError error
@@ -55,11 +73,33 @@ type Cacher interface {
 	setCache([]interface{})
 }
 
-func NewBillingService(db *database.Source, log *zap.SugaredLogger, cCfg *config.CacheConfig, exitCh chan bool) *Service {
-	return &Service{db: db, log: log, cCfg: cCfg, exitCh: exitCh}
+func NewBillingService(
+	db *database.Source,
+	log *zap.SugaredLogger,
+	cCfg *config.CacheConfig,
+	exitCh chan bool,
+	geo proto.GeoIpService,
+	env string,
+	accountingCurrency string,
+) *Service {
+	return &Service{
+		db:                   db,
+		log:                  log,
+		cCfg:                 cCfg,
+		exitCh:               exitCh,
+		geo:                  geo,
+		env:                  env,
+		accountingCurrencyA3: accountingCurrency,
+	}
 }
 
 func (s *Service) Init() (err error) {
+	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.accountingCurrencyA3)
+
+	if err != nil {
+		return errors.New(errorAccountingCurrencyNotFound)
+	}
+
 	err = s.initCache()
 
 	if err == nil {
@@ -121,6 +161,10 @@ func (s *Service) initCache() error {
 	}
 
 	return nil
+}
+
+func (s *Service) isProductionEnvironment() bool {
+	return s.env == environmentProd
 }
 
 func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {

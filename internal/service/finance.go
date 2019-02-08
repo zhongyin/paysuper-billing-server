@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
+	"time"
 )
 
 type Currency struct {
@@ -12,6 +13,13 @@ type Currency struct {
 
 type CurrencyRate Currency
 type Vat Currency
+type Commission Currency
+
+type OrderCommission struct {
+	PMCommission     float64
+	PspCommission    float64
+	ToUserCommission float64
+}
 
 func newCurrencyHandler(svc *Service) Cacher {
 	return &Currency{svc: svc}
@@ -163,4 +171,76 @@ func (s *Service) CalculateVat(amount float64, country, subdivision string) (flo
 	amount = amount * (vat.Vat / 100)
 
 	return amount, nil
+}
+
+func newCommissionHandler(svc *Service) Cacher {
+	return &Commission{svc: svc}
+}
+
+func (h *Commission) setCache(recs []interface{}) {
+	h.svc.commissionCache = make(map[string]map[string]*billing.MgoCommission)
+
+	for _, c := range recs {
+		commission := c.(*billing.MgoCommission)
+
+		h.svc.mx.Lock()
+
+		if _, ok := h.svc.commissionCache[commission.Id.ProjectId.Hex()]; !ok {
+			h.svc.commissionCache[commission.Id.ProjectId.Hex()] = make(map[string]*billing.MgoCommission)
+		}
+
+		h.svc.commissionCache[commission.Id.ProjectId.Hex()][commission.Id.PaymentMethodId.Hex()] = commission
+
+		h.svc.mx.Unlock()
+	}
+}
+
+func (h *Commission) getAll() (recs []interface{}, err error) {
+	var data []*billing.MgoCommission
+
+	q := []bson.M{
+		{"$match": bson.M{"start_date": bson.M{"$lte": time.Now()}}},
+		{"$sort": bson.M{"start_date": -1}},
+		{
+			"$group": bson.M{
+				"_id":                      bson.M{"pm_id": "$pm_id", "project_id": "$project_id"},
+				"pm_commission":            bson.M{"$first": "$pm_commission"},
+				"psp_commission":           bson.M{"$first": "$psp_commission"},
+				"total_commission_to_user": bson.M{"$first": "$total_commission_to_user"},
+				"start_date":               bson.M{"$first": "$start_date"},
+			},
+		},
+	}
+
+	err = h.svc.db.Collection(collectionCommission).Pipe(q).All(&data)
+
+	if data != nil {
+		for _, v := range data {
+			recs = append(recs, v)
+		}
+	}
+
+	return
+}
+
+func (s *Service) CalculateCommission(projectId, pmId string, amount float64) (*OrderCommission, error) {
+	projectCommissions, ok := s.commissionCache[projectId]
+
+	if !ok {
+		return nil, fmt.Errorf(errorNotFound, collectionCommission)
+	}
+
+	commission, ok := projectCommissions[pmId]
+
+	if !ok {
+		return nil, fmt.Errorf(errorNotFound, collectionCommission)
+	}
+
+	c := &OrderCommission{
+		PMCommission:     amount * (commission.PaymentMethodCommission / 100),
+		PspCommission:    amount * (commission.PspCommission / 100),
+		ToUserCommission: amount * (commission.ToUserCommission / 100),
+	}
+
+	return c, nil
 }

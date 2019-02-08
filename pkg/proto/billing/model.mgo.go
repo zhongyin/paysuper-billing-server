@@ -60,6 +60,17 @@ type MgoCurrencyRate struct {
 	CreatedAt    time.Time     `bson:"created_at"`
 }
 
+type MgoCommission struct {
+	Id struct {
+		PaymentMethodId bson.ObjectId `bson:"pm_id"`
+		ProjectId       bson.ObjectId `bson:"project_id"`
+	} `bson:"_id"`
+	PaymentMethodCommission float64   `bson:"pm_commission"`
+	PspCommission           float64   `bson:"psp_commission"`
+	ToUserCommission        float64   `bson:"total_commission_to_user"`
+	StartDate               time.Time `bson:"start_date"`
+}
+
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
