@@ -6,6 +6,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -121,41 +122,44 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Insert currency test data failed", "%v", err)
 	}
 
-	project := []interface{}{
-		&billing.Project{
-			CallbackCurrency: rub,
-			CallbackProtocol: "default",
-			LimitsCurrency:   rub,
-			MaxPaymentAmount: 15000,
-			MinPaymentAmount: 0,
-			Name:             "test project 1",
-			OnlyFixedAmounts: true,
-			SecretKey:        "test project 1 secret key",
-			IsActive:         true,
-		},
-		&billing.Project{
-			CallbackCurrency: rub,
-			CallbackProtocol: "xsolla",
-			LimitsCurrency:   rub,
-			MaxPaymentAmount: 15000,
-			MinPaymentAmount: 0,
-			Name:             "test project 2",
-			OnlyFixedAmounts: true,
-			SecretKey:        "test project 2 secret key",
-			IsActive:         true,
-		},
-		&billing.Project{
-			CallbackCurrency: rub,
-			CallbackProtocol: "cardpay",
-			LimitsCurrency:   rub,
-			MaxPaymentAmount: 15000,
-			MinPaymentAmount: 0,
-			Name:             "test project 3",
-			OnlyFixedAmounts: true,
-			SecretKey:        "test project 3 secret key",
-			IsActive:         true,
-		},
+	projectDefault := &billing.Project{
+		Id:               bson.NewObjectId().Hex(),
+		CallbackCurrency: rub,
+		CallbackProtocol: "default",
+		LimitsCurrency:   rub,
+		MaxPaymentAmount: 15000,
+		MinPaymentAmount: 0,
+		Name:             "test project 1",
+		OnlyFixedAmounts: true,
+		SecretKey:        "test project 1 secret key",
+		IsActive:         true,
 	}
+	projectXsolla := &billing.Project{
+		Id:               bson.NewObjectId().Hex(),
+		CallbackCurrency: rub,
+		CallbackProtocol: "xsolla",
+		LimitsCurrency:   rub,
+		MaxPaymentAmount: 15000,
+		MinPaymentAmount: 0,
+		Name:             "test project 2",
+		OnlyFixedAmounts: true,
+		SecretKey:        "test project 2 secret key",
+		IsActive:         true,
+	}
+	projectCardpay := &billing.Project{
+		Id:               bson.NewObjectId().Hex(),
+		CallbackCurrency: rub,
+		CallbackProtocol: "cardpay",
+		LimitsCurrency:   rub,
+		MaxPaymentAmount: 15000,
+		MinPaymentAmount: 0,
+		Name:             "test project 3",
+		OnlyFixedAmounts: true,
+		SecretKey:        "test project 3 secret key",
+		IsActive:         true,
+	}
+
+	project := []interface{}{projectDefault, projectXsolla, projectCardpay}
 
 	err = suite.db.Collection(collectionProject).Insert(project...)
 
@@ -235,6 +239,147 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Insert rates test data failed", "%v", err)
 	}
 
+	pmBankCard := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bank card",
+		Group:            "BANKCARD",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15985",
+			ExternalId: "BANKCARD",
+		},
+		Type:     "bank_card",
+		IsActive: true,
+	}
+	pmQiwi := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Qiwi",
+		Group:            "QIWI",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15993",
+			ExternalId: "QIWI",
+		},
+		Type:     "ewallet",
+		IsActive: true,
+	}
+	pmBitcoin := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bitcoin",
+		Group:            "BITCOIN",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "16007",
+			ExternalId: "BITCOIN",
+		},
+		Type:     "crypto",
+		IsActive: true,
+	}
+
+	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin}
+
+	err = suite.db.Collection(collectionPaymentMethod).Insert(pms...)
+
+	if err != nil {
+		suite.FailNow("Insert payment methods test data failed", "%v", err)
+	}
+
+	commissionStartDate, err := ptypes.TimestampProto(time.Now().Add(time.Minute * -10))
+
+	if err != nil {
+		suite.FailNow("Commission start date conversion failed", "%v", err)
+	}
+
+	commissions := []interface{}{
+		&billing.Commission{
+			PaymentMethodId:         pmBankCard.Id,
+			ProjectId:               projectDefault.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   1,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmQiwi.Id,
+			ProjectId:               projectDefault.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   2,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBitcoin.Id,
+			ProjectId:               projectDefault.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBankCard.Id,
+			ProjectId:               projectXsolla.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   1,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmQiwi.Id,
+			ProjectId:               projectXsolla.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   2,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBitcoin.Id,
+			ProjectId:               projectXsolla.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBankCard.Id,
+			ProjectId:               projectCardpay.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   1,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmQiwi.Id,
+			ProjectId:               projectCardpay.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   2,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBitcoin.Id,
+			ProjectId:               projectCardpay.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+	}
+
+	err = suite.db.Collection(collectionCommission).Insert(commissions...)
+
+	if err != nil {
+		suite.FailNow("Insert commission test data failed", "%v", err)
+	}
+
 	logger, err := zap.NewProduction()
 
 	if err != nil {
@@ -258,7 +403,7 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "RUB")
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -271,10 +416,12 @@ func (suite *BillingServiceTestSuite) TestNewBillingService() {
 	assert.True(suite.T(), len(service.projectCache) > 0)
 	assert.True(suite.T(), len(service.currencyRateCache) > 0)
 	assert.True(suite.T(), len(service.vatCache) > 0)
+	assert.True(suite.T(), len(service.paymentMethodCache) > 0)
+	assert.True(suite.T(), len(service.commissionCache) > 0)
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "RUB")
 
 	key := "unit"
 	err := svc.cache(key, newGetAllEmptyResultTest(svc))
@@ -284,7 +431,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "RUB")
 
 	key := "unit"
 	err := svc.cache(key, newGetAllErrorTest(svc))
@@ -294,7 +441,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "RUB")
 
 	key := "unit"
 	handlers[key] = newGetAllEmptyResultTest
@@ -306,7 +453,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh)
+	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "RUB")
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -337,7 +484,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	cacheCfg := suite.cfg.CacheConfig
 	cacheCfg.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh)
+	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh, nil, "dev", "RUB")
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -347,10 +494,10 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	assert.Nil(suite.T(), err)
 
 	c := &billing.Currency{
-		CodeInt:   826,
-		CodeA3:    "GBP",
-		Name:      &billing.Name{Ru: "Фунт стерлингов Соединенного королевства", En: "British Pound Sterling"},
-		IsActive:  true,
+		CodeInt:  826,
+		CodeA3:   "GBP",
+		Name:     &billing.Name{Ru: "Фунт стерлингов Соединенного королевства", En: "British Pound Sterling"},
+		IsActive: true,
 	}
 
 	err = suite.db.Collection(collectionCurrency).Insert(c)
@@ -359,7 +506,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	_, ok := service.currencyCache[c.CodeA3]
 	assert.False(suite.T(), ok)
 
-	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout + 1))
+	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout+1))
 
 	_, ok = service.currencyCache[c.CodeA3]
 	assert.True(suite.T(), ok)
@@ -371,7 +518,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerErro
 	cacheCfg := suite.cfg.CacheConfig
 	cacheCfg.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh)
+	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh, nil, "dev", "RUB")
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -387,8 +534,33 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerErro
 
 	assert.Nil(suite.T(), suite.db.Collection(collectionCurrency).DropCollection())
 
-	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout + 1))
+	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout+1))
 
 	assert.False(suite.T(), service.rebuild)
 	assert.Error(suite.T(), service.rebuildError)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitError() {
+	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "AUD")
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err := service.Init()
+	assert.Error(suite.T(), err)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment() {
+	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, "dev", "RUB")
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err := service.Init()
+	assert.Nil(suite.T(), err)
+
+	isProd := service.isProductionEnvironment()
+	assert.False(suite.T(), isProd)
 }

@@ -94,16 +94,18 @@ func NewBillingService(
 }
 
 func (s *Service) Init() (err error) {
+	err = s.initCache()
+
+	if err != nil {
+		return
+	}
+
+	go s.reBuildCache()
+
 	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.accountingCurrencyA3)
 
 	if err != nil {
 		return errors.New(errorAccountingCurrencyNotFound)
-	}
-
-	err = s.initCache()
-
-	if err == nil {
-		go s.reBuildCache()
 	}
 
 	return

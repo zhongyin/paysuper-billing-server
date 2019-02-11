@@ -5,16 +5,20 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"testing"
+	"time"
 )
 
 type FinanceTestSuite struct {
 	suite.Suite
-	service *Service
+	service       *Service
+	project       *billing.Project
+	paymentMethod *billing.PaymentMethod
 }
 
 func Test_Finance(t *testing.T) {
@@ -84,6 +88,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 	}
 
 	project := &billing.Project{
+		Id:               bson.NewObjectId().Hex(),
 		CallbackCurrency: rub,
 		CallbackProtocol: "default",
 		LimitsCurrency:   rub,
@@ -101,18 +106,114 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Insert project test data failed", "%v", err)
 	}
 
+	pmBankCard := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bank card",
+		Group:            "BANKCARD",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15985",
+			ExternalId: "BANKCARD",
+		},
+		Type:     "bank_card",
+		IsActive: true,
+	}
+	pmQiwi := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Qiwi",
+		Group:            "QIWI",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15993",
+			ExternalId: "QIWI",
+		},
+		Type:     "ewallet",
+		IsActive: true,
+	}
+	pmBitcoin := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bitcoin",
+		Group:            "BITCOIN",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "16007",
+			ExternalId: "BITCOIN",
+		},
+		Type:     "crypto",
+		IsActive: true,
+	}
+
+	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin}
+
+	err = db.Collection(collectionPaymentMethod).Insert(pms...)
+
+	if err != nil {
+		suite.FailNow("Insert payment methods test data failed", "%v", err)
+	}
+
+	commissionStartDate, err := ptypes.TimestampProto(time.Now().Add(time.Minute * -10))
+
+	if err != nil {
+		suite.FailNow("Commission start date conversion failed", "%v", err)
+	}
+
+	commissions := []interface{}{
+		&billing.Commission{
+			PaymentMethodId:         pmBankCard.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   1,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmQiwi.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   2,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBitcoin.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+	}
+
+	err = db.Collection(collectionCommission).Insert(commissions...)
+
+	if err != nil {
+		suite.FailNow("Insert commission test data failed", "%v", err)
+	}
+
 	logger, err := zap.NewProduction()
 
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1))
+	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), nil, "dev", "RUB")
 	err = suite.service.Init()
 
 	if err != nil {
 		suite.FailNow("Billing service initialization failed", "%v", err)
 	}
+
+	suite.project = project
+	suite.paymentMethod = pmBankCard
 }
 
 func (suite *FinanceTestSuite) TearDownTest() {
@@ -214,4 +315,35 @@ func (suite *FinanceTestSuite) TestFinance_CalculateVatSubdivisionError() {
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
 	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionVat), err.Error())
+}
+
+func (suite *FinanceTestSuite) TestFinance_CalculateCommissionOk() {
+	amount := float64(100)
+
+	commission, err := suite.service.CalculateCommission(suite.project.Id, suite.paymentMethod.Id, amount)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), commission)
+	assert.True(suite.T(), commission.PMCommission > 0)
+	assert.True(suite.T(), commission.PspCommission > 0)
+	assert.True(suite.T(), commission.ToUserCommission > 0)
+	assert.Equal(suite.T(), float64(1), commission.PMCommission)
+	assert.Equal(suite.T(), float64(2), commission.PspCommission)
+	assert.Equal(suite.T(), float64(1), commission.ToUserCommission)
+}
+
+func (suite *FinanceTestSuite) TestFinance_CalculateCommissionProjectError() {
+	commission, err := suite.service.CalculateCommission("5bf67ebd46452d00062c7cc1", suite.paymentMethod.Id, float64(100))
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), commission)
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCommission), err.Error())
+}
+
+func (suite *FinanceTestSuite) TestFinance_CalculateCommissionPaymentMethodError() {
+	commission, err := suite.service.CalculateCommission(suite.project.Id, "5bf67ebd46452d00062c7cc1", float64(100))
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), commission)
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCommission), err.Error())
 }

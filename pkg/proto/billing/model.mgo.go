@@ -71,6 +71,111 @@ type MgoCommission struct {
 	StartDate               time.Time `bson:"start_date"`
 }
 
+type MgoCommissionBilling struct {
+	Id                      bson.ObjectId `bson:"_id"`
+	PaymentMethodId         bson.ObjectId `bson:"pm_id"`
+	ProjectId               bson.ObjectId `bson:"project_id"`
+	PaymentMethodCommission float64       `bson:"pm_commission"`
+	PspCommission           float64       `bson:"psp_commission"`
+	TotalCommissionToUser   float64       `bson:"total_commission_to_user"`
+	StartDate               time.Time     `bson:"start_date"`
+	CreatedAt               time.Time     `bson:"created_at"`
+	UpdatedAt               time.Time     `bson:"updated_at"`
+}
+
+type MgoOrderProject struct {
+	Id                bson.ObjectId `bson:"_id" `
+	Name              string        `bson:"name"`
+	UrlSuccess        string        `bson:"url_success"`
+	UrlFail           string        `bson:"url_fail"`
+	NotifyEmails      []string      `bson:"notify_emails"`
+	SecretKey         string        `bson:"secret_key"`
+	SendNotifyEmail   bool          `bson:"send_notify_email"`
+	UrlCheckAccount   string        `bson:"url_check_account"`
+	UrlProcessPayment string        `bson:"url_process_payment"`
+	CallbackProtocol  string        `bson:"callback_protocol"`
+	Merchant          *Merchant     `bson:"merchant"`
+}
+
+type MgoOrderPaymentMethod struct {
+	Id            bson.ObjectId        `bson:"_id"`
+	Name          string               `bson:"name"`
+	Params        *PaymentMethodParams `bson:"params"`
+	PaymentSystem *PaymentSystem       `bson:"payment_system"`
+	Group         string               `bson:"group_alias"`
+}
+
+type MgoOrder struct {
+	Id                                      bson.ObjectId          `bson:"_id"`
+	Project                                 *MgoOrderProject       `bson:"project"`
+	ProjectOrderId                          string                 `bson:"project_order_id"`
+	ProjectAccount                          string                 `bson:"project_account"`
+	Description                             string                 `bson:"description"`
+	ProjectIncomeAmount                     float64                `bson:"project_income_amount"`
+	ProjectIncomeCurrency                   *Currency              `bson:"project_income_currency"`
+	ProjectOutcomeAmount                    float64                `bson:"project_outcome_amount"`
+	ProjectOutcomeCurrency                  *Currency              `bson:"project_outcome_currency"`
+	ProjectLastRequestedAt                  time.Time              `bson:"project_last_requested_at"`
+	ProjectParams                           map[string]string      `bson:"project_params"`
+	PayerData                               *PayerData             `bson:"payer_data"`
+	PaymentMethod                           *MgoOrderPaymentMethod `bson:"payment_method"`
+	PaymentMethodTerminalId                 string                 `bson:"pm_terminal_id"`
+	PaymentMethodOrderId                    string                 `bson:"pm_order_id"`
+	PaymentMethodOutcomeAmount              float64                `bson:"pm_outcome_amount"`
+	PaymentMethodOutcomeCurrency            *Currency              `bson:"pm_outcome_currency"`
+	PaymentMethodIncomeAmount               float64                `bson:"pm_income_amount"`
+	PaymentMethodIncomeCurrency             *Currency              `bson:"pm_income_currency"`
+	PaymentMethodOrderClosedAt              time.Time              `bson:"pm_order_close_date"`
+	Status                                  int32                  `bson:"status"`
+	IsJsonRequest                           bool                   `bson:"created_by_json"`
+	AmountInPspAccountingCurrency           float64                `bson:"amount_psp_ac"`
+	AmountInMerchantAccountingCurrency      float64                `bson:"amount_in_merchant_ac"`
+	AmountOutMerchantAccountingCurrency     float64                `bson:"amount_out_merchant_ac"`
+	AmountInPaymentSystemAccountingCurrency float64                `bson:"amount_ps_ac"`
+	PaymentMethodPayerAccount               string                 `bson:"pm_account"`
+	PaymentMethodTxnParams                  map[string]string      `bson:"pm_txn_params"`
+	FixedPackage                            *FixedPackage          `bson:"fixed_package"`
+	PaymentRequisites                       map[string]string      `bson:"payment_requisites"`
+	PspFeeAmount                            *OrderFeePsp           `bson:"psp_fee_amount"`
+	ProjectFeeAmount                        *OrderFee              `bson:"project_fee_amount"`
+	ToPayerFeeAmount                        *OrderFee              `bson:"to_payer_fee_amount"`
+	VatAmount                               float64                `bson:"vat_amount"`
+	PaymentSystemFeeAmount                  *OrderFeePaymentSystem `bson:"ps_fee_amount"`
+	UrlSuccess                              string                 `bson:"url_success"`
+	UrlFail                                 string                 `bson:"url_fail"`
+	CreatedAt                               time.Time              `bson:"created_at"`
+	UpdatedAt                               time.Time              `bson:"updated_at"`
+}
+
+type MgoPaymentSystem struct {
+	Id                 bson.ObjectId `bson:"_id"`
+	Name               string        `bson:"name"`
+	Country            *Country      `bson:"country"`
+	AccountingCurrency *Currency     `bson:"accounting_currency"`
+	AccountingPeriod   string        `bson:"accounting_period"`
+	IsActive           bool          `bson:"is_active"`
+	CreatedAt          time.Time     `bson:"created_at"`
+	UpdatedAt          time.Time     `bson:"updated_at"`
+}
+
+type MgoPaymentMethod struct {
+	Id               bson.ObjectId        `bson:"_id"`
+	Name             string               `bson:"name"`
+	Group            string               `bson:"group_alias"`
+	Currency         *Currency            `bson:"currency"`
+	MinPaymentAmount float64              `bson:"min_payment_amount"`
+	MaxPaymentAmount float64              `bson:"max_payment_amount"`
+	Params           *PaymentMethodParams `bson:"params"`
+	Icon             string               `bson:"icon"`
+	IsActive         bool                 `bson:"is_active"`
+	CreatedAt        time.Time            `bson:"created_at"`
+	UpdatedAt        time.Time            `bson:"updated_at"`
+	PaymentSystem    *MgoPaymentSystem    `bson:"payment_system"`
+	Currencies       []int32              `bson:"currencies"`
+	Type             string               `bson:"type"`
+	AccountRegexp    string               `bson:"account_regexp"`
+}
+
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
@@ -342,4 +447,518 @@ func (m *CurrencyRate) SetBSON(raw bson.Raw) error {
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 
 	return err
+}
+
+func (m *Commission) GetBSON() (interface{}, error) {
+	st := &MgoCommissionBilling{
+		PaymentMethodId:         bson.ObjectIdHex(m.PaymentMethodId),
+		ProjectId:               bson.ObjectIdHex(m.ProjectId),
+		PaymentMethodCommission: m.PaymentMethodCommission,
+		PspCommission:           m.PspCommission,
+		TotalCommissionToUser:   m.TotalCommissionToUser,
+	}
+
+	t, err := ptypes.Timestamp(m.StartDate)
+
+	if err != nil {
+		return nil, err
+	}
+
+	st.StartDate = t
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *Commission) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoCommissionBilling)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.PaymentMethodId = decoded.PaymentMethodId.Hex()
+	m.ProjectId = decoded.ProjectId.Hex()
+	m.PaymentMethodCommission = decoded.PaymentMethodCommission
+	m.PspCommission = decoded.PspCommission
+	m.TotalCommissionToUser = decoded.TotalCommissionToUser
+
+	m.StartDate, err = ptypes.TimestampProto(decoded.StartDate)
+
+	if err != nil {
+		return err
+	}
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	return err
+}
+
+func (m *Order) GetBSON() (interface{}, error) {
+	st := &MgoOrder{
+		Project: &MgoOrderProject{
+			Id:                bson.ObjectIdHex(m.Project.Id),
+			Name:              m.Project.Name,
+			UrlSuccess:        m.Project.UrlSuccess,
+			UrlFail:           m.Project.UrlFail,
+			NotifyEmails:      m.Project.NotifyEmails,
+			SendNotifyEmail:   m.Project.SendNotifyEmail,
+			SecretKey:         m.Project.SecretKey,
+			UrlCheckAccount:   m.Project.UrlCheckAccount,
+			UrlProcessPayment: m.Project.UrlProcessPayment,
+			CallbackProtocol:  m.Project.CallbackProtocol,
+			Merchant:          m.Project.Merchant,
+		},
+		ProjectOrderId:                          m.ProjectOrderId,
+		ProjectAccount:                          m.ProjectAccount,
+		Description:                             m.Description,
+		ProjectIncomeAmount:                     m.ProjectIncomeAmount,
+		ProjectIncomeCurrency:                   m.ProjectIncomeCurrency,
+		ProjectOutcomeAmount:                    m.ProjectOutcomeAmount,
+		ProjectOutcomeCurrency:                  m.ProjectOutcomeCurrency,
+		ProjectParams:                           m.ProjectParams,
+		PayerData:                               m.PayerData,
+		PaymentMethodTerminalId:                 m.PaymentMethodTerminalId,
+		PaymentMethodOrderId:                    m.PaymentMethodOrderId,
+		PaymentMethodOutcomeAmount:              m.PaymentMethodOutcomeAmount,
+		PaymentMethodOutcomeCurrency:            m.PaymentMethodOutcomeCurrency,
+		PaymentMethodIncomeAmount:               m.PaymentMethodIncomeAmount,
+		PaymentMethodIncomeCurrency:             m.PaymentMethodIncomeCurrency,
+		Status:                                  m.Status,
+		IsJsonRequest:                           m.IsJsonRequest,
+		AmountInPspAccountingCurrency:           m.AmountInPspAccountingCurrency,
+		AmountInMerchantAccountingCurrency:      m.AmountInMerchantAccountingCurrency,
+		AmountOutMerchantAccountingCurrency:     m.AmountOutMerchantAccountingCurrency,
+		AmountInPaymentSystemAccountingCurrency: m.AmountInPaymentSystemAccountingCurrency,
+		PaymentMethodPayerAccount:               m.PaymentMethodPayerAccount,
+		PaymentMethodTxnParams:                  m.PaymentMethodTxnParams,
+		FixedPackage:                            m.FixedPackage,
+		PaymentRequisites:                       m.PaymentRequisites,
+		PspFeeAmount:                            m.PspFeeAmount,
+		ProjectFeeAmount:                        m.ProjectFeeAmount,
+		ToPayerFeeAmount:                        m.ToPayerFeeAmount,
+		VatAmount:                               m.VatAmount,
+		PaymentSystemFeeAmount:                  m.PaymentSystemFeeAmount,
+	}
+
+	if m.PaymentMethod != nil {
+		st.PaymentMethod = &MgoOrderPaymentMethod{
+			Id:            bson.ObjectIdHex(m.PaymentMethod.Id),
+			Name:          m.PaymentMethod.Name,
+			Params:        m.PaymentMethod.Params,
+			PaymentSystem: m.PaymentMethod.PaymentSystem,
+			Group:         m.PaymentMethod.GroupAlias,
+		}
+	}
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	if m.ProjectLastRequestedAt != nil {
+		t, err := ptypes.Timestamp(m.ProjectLastRequestedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.ProjectLastRequestedAt = t
+	}
+
+	if m.PaymentMethodOrderClosedAt != nil {
+		t, err := ptypes.Timestamp(m.PaymentMethodOrderClosedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.PaymentMethodOrderClosedAt = t
+	}
+
+	return st, nil
+}
+
+func (m *Order) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoOrder)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.Project = &ProjectOrder{
+		Id:                decoded.Project.Id.Hex(),
+		Name:              decoded.Project.Name,
+		UrlSuccess:        decoded.Project.UrlSuccess,
+		UrlFail:           decoded.Project.UrlFail,
+		NotifyEmails:      decoded.Project.NotifyEmails,
+		SendNotifyEmail:   decoded.Project.SendNotifyEmail,
+		SecretKey:         decoded.Project.SecretKey,
+		UrlCheckAccount:   decoded.Project.UrlCheckAccount,
+		UrlProcessPayment: decoded.Project.UrlProcessPayment,
+		CallbackProtocol:  decoded.Project.CallbackProtocol,
+		Merchant:          decoded.Project.Merchant,
+	}
+
+	m.ProjectOrderId = decoded.ProjectOrderId
+	m.ProjectAccount = decoded.ProjectAccount
+	m.Description = decoded.Description
+	m.ProjectIncomeAmount = decoded.ProjectIncomeAmount
+	m.ProjectIncomeCurrency = decoded.ProjectIncomeCurrency
+	m.ProjectOutcomeAmount = decoded.ProjectOutcomeAmount
+	m.ProjectOutcomeCurrency = decoded.ProjectOutcomeCurrency
+	m.ProjectParams = decoded.ProjectParams
+	m.PayerData = decoded.PayerData
+
+	if decoded.PaymentMethod != nil {
+		m.PaymentMethod = &PaymentMethodOrder{
+			Id:            decoded.PaymentMethod.Id.Hex(),
+			Name:          decoded.PaymentMethod.Name,
+			Params:        decoded.PaymentMethod.Params,
+			PaymentSystem: decoded.PaymentMethod.PaymentSystem,
+			GroupAlias:    decoded.PaymentMethod.Group,
+		}
+	}
+
+	m.PaymentMethodTerminalId = decoded.PaymentMethodTerminalId
+	m.PaymentMethodOrderId = decoded.PaymentMethodOrderId
+	m.PaymentMethodOutcomeAmount = decoded.PaymentMethodOutcomeAmount
+	m.PaymentMethodOutcomeCurrency = decoded.PaymentMethodOutcomeCurrency
+	m.PaymentMethodIncomeAmount = decoded.PaymentMethodIncomeAmount
+	m.PaymentMethodIncomeCurrency = decoded.PaymentMethodIncomeCurrency
+	m.Status = decoded.Status
+	m.IsJsonRequest = decoded.IsJsonRequest
+	m.AmountInPspAccountingCurrency = decoded.AmountInPspAccountingCurrency
+	m.AmountInMerchantAccountingCurrency = decoded.AmountInMerchantAccountingCurrency
+	m.AmountOutMerchantAccountingCurrency = decoded.AmountOutMerchantAccountingCurrency
+	m.AmountInPaymentSystemAccountingCurrency = decoded.AmountInPaymentSystemAccountingCurrency
+	m.PaymentMethodPayerAccount = decoded.PaymentMethodPayerAccount
+	m.PaymentMethodTxnParams = decoded.PaymentMethodTxnParams
+	m.FixedPackage = decoded.FixedPackage
+	m.PaymentRequisites = decoded.PaymentRequisites
+	m.PspFeeAmount = decoded.PspFeeAmount
+	m.ProjectFeeAmount = decoded.ProjectFeeAmount
+	m.ToPayerFeeAmount = decoded.ToPayerFeeAmount
+	m.VatAmount = decoded.VatAmount
+	m.PaymentSystemFeeAmount = decoded.PaymentSystemFeeAmount
+
+	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.ProjectLastRequestedAt, err = ptypes.TimestampProto(decoded.ProjectLastRequestedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *PaymentMethod) GetBSON() (interface{}, error) {
+	st := &MgoPaymentMethod{
+		Name:             m.Name,
+		Group:            m.Group,
+		Currency:         m.Currency,
+		MinPaymentAmount: m.MinPaymentAmount,
+		MaxPaymentAmount: m.MaxPaymentAmount,
+		Params:           m.Params,
+		Icon:             m.Icon,
+		Currencies:       m.Currencies,
+		Type:             m.Type,
+		AccountRegexp:    m.AccountRegexp,
+		IsActive:         m.IsActive,
+	}
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.PaymentSystem != nil {
+		st.PaymentSystem = &MgoPaymentSystem{
+			Id:                 bson.ObjectIdHex(m.PaymentSystem.Id),
+			Name:               m.PaymentSystem.Name,
+			Country:            m.PaymentSystem.Country,
+			AccountingCurrency: m.PaymentSystem.AccountingCurrency,
+			AccountingPeriod:   m.PaymentSystem.AccountingPeriod,
+			IsActive:           m.PaymentSystem.IsActive,
+		}
+
+		if m.PaymentSystem.CreatedAt != nil {
+			t, err := ptypes.Timestamp(m.PaymentSystem.CreatedAt)
+
+			if err != nil {
+				return nil, err
+			}
+
+			st.PaymentSystem.CreatedAt = t
+		} else {
+			st.PaymentSystem.CreatedAt = time.Now()
+		}
+
+		if m.PaymentSystem.UpdatedAt != nil {
+			t, err := ptypes.Timestamp(m.PaymentSystem.UpdatedAt)
+
+			if err != nil {
+				return nil, err
+			}
+
+			st.PaymentSystem.UpdatedAt = t
+		} else {
+			st.PaymentSystem.UpdatedAt = time.Now()
+		}
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *PaymentMethod) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoPaymentMethod)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.Name = decoded.Name
+	m.Group = decoded.Group
+	m.Currency = decoded.Currency
+	m.Currencies = decoded.Currencies
+	m.MinPaymentAmount = decoded.MinPaymentAmount
+	m.MaxPaymentAmount = decoded.MaxPaymentAmount
+	m.Params = decoded.Params
+	m.Icon = decoded.Icon
+	m.Type = decoded.Type
+	m.AccountRegexp = decoded.AccountRegexp
+	m.IsActive = decoded.IsActive
+
+	if decoded.PaymentSystem != nil {
+		m.PaymentSystem = &PaymentSystem{
+			Id:                 decoded.PaymentSystem.Id.Hex(),
+			Name:               decoded.PaymentSystem.Name,
+			Country:            decoded.PaymentSystem.Country,
+			AccountingCurrency: decoded.PaymentSystem.AccountingCurrency,
+			AccountingPeriod:   decoded.PaymentSystem.AccountingPeriod,
+			IsActive:           decoded.PaymentSystem.IsActive,
+		}
+
+		m.PaymentSystem.CreatedAt, err = ptypes.TimestampProto(decoded.PaymentSystem.CreatedAt)
+
+		if err != nil {
+			return err
+		}
+
+		m.PaymentSystem.UpdatedAt, err = ptypes.TimestampProto(decoded.PaymentSystem.UpdatedAt)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *PaymentSystem) GetBSON() (interface{}, error) {
+	st := &MgoPaymentSystem{
+		Name:               m.Name,
+		Country:            m.Country,
+		AccountingCurrency: m.AccountingCurrency,
+		AccountingPeriod:   m.AccountingPeriod,
+		IsActive:           m.IsActive,
+	}
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoPaymentSystem)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.Name = decoded.Name
+	m.Country = decoded.Country
+	m.AccountingCurrency = decoded.AccountingCurrency
+	m.AccountingPeriod = decoded.AccountingPeriod
+	m.IsActive = decoded.IsActive
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

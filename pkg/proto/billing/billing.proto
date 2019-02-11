@@ -35,13 +35,13 @@ message OrderCreateRequest {
     string url_notify = 10;
     // @inject_tag: query:"PO_URL_SUCCESS" form:"PO_URL_SUCCESS" json:"url_success" validate:"omitempty,url"
     string url_success = 11;
-    // @inject_tag: query:"PP_URL_FAIL" form:"PP_URL_FAIL" json:"url_fail" validate:"omitempty,url"
+    // @inject_tag: query:"PO_URL_FAIL" form:"PO_URL_FAIL" json:"url_fail" validate:"omitempty,url"
     string url_fail = 12;
-    // @inject_tag: query:"PP_PAYER_EMAIL" form:"PP_PAYER_EMAIL" json:"payer_email" validate:"omitempty,email"
+    // @inject_tag: query:"PO_PAYER_EMAIL" form:"PO_PAYER_EMAIL" json:"payer_email" validate:"omitempty,email"
     string payer_email = 13;
-    // @inject_tag: query:"PP_PAYER_PHONE" form:"PP_PAYER_PHONE" json:"payer_phone" validate:"omitempty,len=255"
+    // @inject_tag: query:"PO_PAYER_PHONE" form:"PO_PAYER_PHONE" json:"payer_phone" validate:"omitempty,len=255"
     string payer_phone = 14;
-    // @inject_tag: query:"PP_REGION" form:"PP_REGION" json:"region" validate:"omitempty,alpha,len=2"
+    // @inject_tag: query:"PO_REGION" form:"PO_REGION" json:"region" validate:"omitempty,alpha,len=2"
     string region = 15;
     string payer_ip = 16;
     map<string, string> other = 17;
@@ -287,11 +287,20 @@ message PaymentMethodParams {
 
 message PaymentSystem {
     // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    bytes id = 1;
+    string id = 1;
+    string name = 2;
+    // @inject_tag: bson:"country" structure:"country"
+    Country Country = 3;
     // @inject_tag: bson:"accounting_currency" structure:"accounting_currency"
     Currency accounting_currency = 4;
+    // @inject_tag: bson:"accounting_period" structure:"accounting_period"
+    string accounting_period = 5;
     // @inject_tag: bson:"is_active" structure:"is_active"
     bool is_active = 6;
+    // @inject_tag: bson:"created_at" structure:"created_at,timestamp"
+    google.protobuf.Timestamp created_at = 7;
+    // @inject_tag: bson:"updated_at" structure:"updated_at,timestamp"
+    google.protobuf.Timestamp updated_at = 8;
 }
 
 message FixedPackage {
@@ -372,6 +381,8 @@ message PaymentMethod {
     string name = 2;
     // @inject_tag: bson:"group_alias"
     string group = 3;
+    // @inject_tag: bson:"currency"
+    Currency currency = 4;
     // @inject_tag: bson:"currencies"
     repeated int32 currencies = 5;
     // @inject_tag: bson:"min_payment_amount"

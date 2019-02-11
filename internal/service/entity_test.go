@@ -11,13 +11,15 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"testing"
+	"time"
 )
 
 type ProjectTestSuite struct {
 	suite.Suite
 	service *Service
 
-	projectId string
+	projectId     string
+	paymentMethod *billing.PaymentMethod
 }
 
 func Test_Project(t *testing.T) {
@@ -104,15 +106,109 @@ func (suite *ProjectTestSuite) SetupTest() {
 		suite.FailNow("Insert project test data failed", "%v", err)
 	}
 
+	pmBankCard := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bank card",
+		Group:            "BANKCARD",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15985",
+			ExternalId: "BANKCARD",
+		},
+		Type:     "bank_card",
+		IsActive: true,
+	}
+	pmQiwi := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Qiwi",
+		Group:            "QIWI",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15993",
+			ExternalId: "QIWI",
+		},
+		Type:     "ewallet",
+		IsActive: true,
+	}
+	pmBitcoin := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bitcoin",
+		Group:            "BITCOIN",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "16007",
+			ExternalId: "BITCOIN",
+		},
+		Type:     "crypto",
+		IsActive: true,
+	}
+
+	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin}
+
+	err = db.Collection(collectionPaymentMethod).Insert(pms...)
+
+	if err != nil {
+		suite.FailNow("Insert payment methods test data failed", "%v", err)
+	}
+
+	commissionStartDate, err := ptypes.TimestampProto(time.Now().Add(time.Minute * -10))
+
+	if err != nil {
+		suite.FailNow("Commission start date conversion failed", "%v", err)
+	}
+
+	commissions := []interface{}{
+		&billing.Commission{
+			PaymentMethodId:         pmBankCard.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   1,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmQiwi.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   2,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBitcoin.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+	}
+
+	err = db.Collection(collectionCommission).Insert(commissions...)
+
+	if err != nil {
+		suite.FailNow("Insert commission test data failed", "%v", err)
+	}
+
 	suite.projectId = project.Id
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1))
-
+	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), nil, "dev", "RUB")
 	err = suite.service.Init()
 
 	if err != nil {
 		suite.FailNow("Billing service initialization failed", "%v", err)
 	}
+
+	suite.paymentMethod = pmBankCard
 }
 
 func (suite *ProjectTestSuite) TearDownTest() {
@@ -141,4 +237,29 @@ func (suite *ProjectTestSuite) TestProject_GetProjectByIdError() {
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), project)
 	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionProject), err.Error())
+}
+
+func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrencyOk() {
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(suite.paymentMethod.Group, 643)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+	assert.Equal(suite.T(), suite.paymentMethod.Id, pm.Id)
+	assert.Equal(suite.T(), suite.paymentMethod.Group, pm.Group)
+}
+
+func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrency_GroupError() {
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency("group_from_my_head", 643)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), pm)
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionPaymentMethod), err.Error())
+}
+
+func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrency_CurrencyError() {
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(suite.paymentMethod.Group, 960)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), pm)
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionPaymentMethod), err.Error())
 }

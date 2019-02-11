@@ -10,6 +10,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"sort"
@@ -72,7 +73,7 @@ type OrderCreateRequestProcessor struct {
 }
 
 func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCreateRequest, rsp *billing.Order) error {
-	processor := &OrderCreateRequestProcessor{Service: s, request: req}
+	processor := &OrderCreateRequestProcessor{Service: s, request: req, checked: &orderCreateRequestProcessorChecked{}}
 
 	if err := processor.processProject(); err != nil {
 		return err
@@ -213,10 +214,7 @@ func (v *OrderCreateRequestProcessor) processProject() error {
 	project, err := v.GetProjectById(v.request.ProjectId)
 
 	if err != nil {
-		return err
-	}
-
-	if project == nil {
+		v.log.Errorw("[PAYONE_BILLING] Order create get project error", "err", err, "request", v.request)
 		return errors.New(orderErrorProjectNotFound)
 	}
 
@@ -233,10 +231,7 @@ func (v *OrderCreateRequestProcessor) processCurrency() error {
 	currency, err := v.GetCurrencyByCodeA3(v.request.Currency)
 
 	if err != nil {
-		return err
-	}
-
-	if currency == nil {
+		v.log.Errorw("[PAYONE_BILLING] Order create get currency error", "err", err, "request", v.request)
 		return errors.New(orderErrorCurrencyNotFound)
 	}
 
@@ -249,7 +244,8 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.request.PayerIp})
 
 	if err != nil {
-		return err
+		v.log.Errorw("[PAYONE_BILLING] Order create get payer data error", "err", err, "ip", v.request.PayerIp)
+		return errors.New(orderErrorPayerRegionUnknown)
 	}
 
 	data := &billing.PayerData{
@@ -297,7 +293,7 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 	var fp *billing.FixedPackage
 
 	for _, val := range regionFps.FixedPackage {
-		if val.Price != v.request.Amount ||
+		if val.Price != v.request.Amount || val.IsActive == false ||
 			(v.checked.currency != nil && val.CurrencyA3 != v.checked.currency.CodeA3) {
 			continue
 		}
@@ -309,8 +305,6 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 		return errors.New(orderErrorFixedPackageNotFound)
 	}
 
-	v.checked.fixedPackage = fp
-
 	if v.checked.currency == nil {
 		currency, err := v.GetCurrencyByCodeA3(fp.CurrencyA3)
 
@@ -320,6 +314,8 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 
 		v.checked.currency = currency
 	}
+
+	v.checked.fixedPackage = fp
 
 	return nil
 }
@@ -334,8 +330,8 @@ func (v *OrderCreateRequestProcessor) processProjectOrderId() error {
 
 	err := v.db.Collection(collectionOrder).Find(filter).One(&order)
 
-	if err != nil {
-		v.log.Errorw(fmt.Sprintf(errorQueryMask, collectionOrder), "err", err, "filter", filter)
+	if err != nil && err != mgo.ErrNotFound {
+		v.log.Errorw("[PAYONE_BILLING] Order create check project order id unique", "err", err, "filter", filter)
 		return errors.New(orderErrorCanNotCreate)
 	}
 
@@ -357,19 +353,15 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod() error {
 		return errors.New(orderErrorPaymentMethodInactive)
 	}
 
-	if pm.PaymentSystem.IsActive == false {
-		return errors.New(orderErrorPaymentSystemInactive)
-	}
-
-	if pm.IsActive == false {
-		return errors.New(orderErrorPaymentMethodInactive)
-	}
-
-	if pm.PaymentSystem.IsActive == false {
+	if pm.PaymentSystem == nil || pm.PaymentSystem.IsActive == false {
 		return errors.New(orderErrorPaymentSystemInactive)
 	}
 
 	if v.isProductionEnvironment() == true {
+		if len(v.checked.project.PaymentMethods) <= 0 {
+			return errors.New(orderErrorPaymentMethodNotAllowed)
+		}
+
 		ppm, ok := v.checked.project.PaymentMethods[pm.Group]
 
 		if !ok {

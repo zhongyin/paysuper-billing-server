@@ -92,7 +92,13 @@ func (h *PaymentMethod) getAll() (recs []interface{}, err error) {
 }
 
 func (s *Service) GetPaymentMethodByGroupAndCurrency(group string, currency int32) (*billing.PaymentMethod, error) {
-	rec, ok := s.paymentMethodCache[group][currency]
+	pmGroup, ok := s.paymentMethodCache[group]
+
+	if !ok {
+		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)
+	}
+
+	rec, ok := pmGroup[currency]
 
 	if !ok {
 		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)
