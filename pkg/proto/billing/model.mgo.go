@@ -588,7 +588,7 @@ func (m *Order) GetBSON() (interface{}, error) {
 			Name:          m.PaymentMethod.Name,
 			Params:        m.PaymentMethod.Params,
 			PaymentSystem: m.PaymentMethod.PaymentSystem,
-			Group:         m.PaymentMethod.GroupAlias,
+			Group:         m.PaymentMethod.Group,
 		}
 	}
 
@@ -688,7 +688,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 			Name:          decoded.PaymentMethod.Name,
 			Params:        decoded.PaymentMethod.Params,
 			PaymentSystem: decoded.PaymentMethod.PaymentSystem,
-			GroupAlias:    decoded.PaymentMethod.Group,
+			Group:         decoded.PaymentMethod.Group,
 		}
 	}
 

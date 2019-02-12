@@ -133,7 +133,7 @@ message ProjectOrder {
 
 message Merchant {
     // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    bytes id = 1; // unique merchant identifier
+    string id = 1; // unique merchant identifier
     // @inject_tag: bson:"external_id" structure:"external_id"
     string external_id = 2; //// unique merchant identifier in auth system
     // @inject_tag: bson:"currency" structure:"currency"
@@ -271,7 +271,7 @@ message PaymentMethodOrder {
     // @inject_tag: bson:"payment_system" structure:"payment_system"
     PaymentSystem payment_system = 4;
     // @inject_tag: bson:"group_alias" structure:"group_alias"
-    string group_alias = 5;
+    string group = 5;
 }
 
 message PaymentMethodParams {

@@ -134,7 +134,31 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 		return errors.New(orderErrorCanNotCreate)
 	}
 
-	rsp = order
+	rsp.Id = order.Id
+	rsp.Project = order.Project
+	rsp.Description = order.Description
+	rsp.ProjectOrderId = order.ProjectOrderId
+	rsp.ProjectAccount = order.ProjectAccount
+	rsp.ProjectIncomeAmount = order.ProjectIncomeAmount
+	rsp.ProjectIncomeCurrency = order.ProjectIncomeCurrency
+	rsp.ProjectOutcomeAmount = order.ProjectOutcomeAmount
+	rsp.ProjectOutcomeCurrency = order.ProjectOutcomeCurrency
+	rsp.ProjectParams = order.ProjectParams
+	rsp.PayerData = order.PayerData
+	rsp.Status = order.Status
+	rsp.CreatedAt = order.CreatedAt
+	rsp.IsJsonRequest = order.IsJsonRequest
+	rsp.FixedPackage = order.FixedPackage
+	rsp.AmountInMerchantAccountingCurrency = order.AmountInMerchantAccountingCurrency
+	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
+	rsp.PaymentMethodOutcomeCurrency = order.PaymentMethodOutcomeCurrency
+	rsp.PaymentMethodIncomeAmount = order.PaymentMethodIncomeAmount
+	rsp.PaymentMethodIncomeCurrency = order.PaymentMethodIncomeCurrency
+	rsp.PaymentMethod = order.PaymentMethod
+	rsp.ProjectFeeAmount = order.ProjectFeeAmount
+	rsp.PspFeeAmount = order.PspFeeAmount
+	rsp.PaymentSystemFeeAmount = order.PaymentSystemFeeAmount
+	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
 
 	return nil
 }
@@ -199,7 +223,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			Name:          v.checked.paymentMethod.Name,
 			Params:        v.checked.paymentMethod.Params,
 			PaymentSystem: v.checked.paymentMethod.PaymentSystem,
-			GroupAlias:    v.checked.paymentMethod.Group,
+			Group:         v.checked.paymentMethod.Group,
 		}
 
 		if err := v.processOrderCommissions(order); err != nil {
@@ -510,11 +534,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	o.PspFeeAmount = &billing.OrderFeePsp{AmountPaymentMethodCurrency: commission.PspCommission}
 
 	// convert PSP amount of fee to accounting currency of merchant
-	amount, err = v.Service.Convert(pmOutCur, mAccCur, commission.PspCommission)
-
-	if err != nil {
-		return err
-	}
+	amount, _ = v.Service.Convert(pmOutCur, mAccCur, commission.PspCommission)
 
 	o.PspFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
 
@@ -542,11 +562,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	o.PaymentSystemFeeAmount.AmountPaymentSystemCurrency = tools.FormatAmount(amount)
 
 	// convert payment system amount of fee to accounting currency of merchant
-	amount, err = v.Service.Convert(pmOutCur, mAccCur, commission.PMCommission)
-
-	if err != nil {
-		return err
-	}
+	amount, _ = v.Service.Convert(pmOutCur, mAccCur, commission.PMCommission)
 
 	o.PaymentSystemFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
 	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
