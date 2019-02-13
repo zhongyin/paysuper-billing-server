@@ -5,7 +5,8 @@ import (
 )
 
 type CacheConfig struct {
-	CurrencyTimeout int64 `envconfig:"CACHE_CURRENCY_TIMEOUT" default:"86400"`
+	CurrencyTimeout             int64 `envconfig:"CACHE_CURRENCY_TIMEOUT" default:"86400"`
+	ProjectPaymentMethodTimeout int64 `envconfig:"CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT" default:"86400"`
 }
 
 type Config struct {

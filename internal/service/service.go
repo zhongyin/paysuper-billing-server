@@ -9,6 +9,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
+	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -52,6 +53,7 @@ type Service struct {
 	exitCh chan bool
 	ctx    context.Context
 	geo    proto.GeoIpService
+	rep    repository.RepositoryService
 	env    string
 
 	accountingCurrencyA3 string
@@ -63,6 +65,8 @@ type Service struct {
 	vatCache           map[string]map[string]*billing.Vat
 	paymentMethodCache map[string]map[int32]*billing.PaymentMethod
 	commissionCache    map[string]map[string]*billing.MgoCommission
+
+	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
 
 	rebuild      bool
 	rebuildError error
@@ -79,6 +83,7 @@ func NewBillingService(
 	cCfg *config.CacheConfig,
 	exitCh chan bool,
 	geo proto.GeoIpService,
+	rep repository.RepositoryService,
 	env string,
 	accountingCurrency string,
 ) *Service {
@@ -88,6 +93,7 @@ func NewBillingService(
 		cCfg:                 cCfg,
 		exitCh:               exitCh,
 		geo:                  geo,
+		rep:                  rep,
 		env:                  env,
 		accountingCurrencyA3: accountingCurrency,
 	}
@@ -100,13 +106,14 @@ func (s *Service) Init() (err error) {
 		return
 	}
 
-	go s.reBuildCache()
-
+	s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
 	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.accountingCurrencyA3)
 
 	if err != nil {
 		return errors.New(errorAccountingCurrencyNotFound)
 	}
+
+	go s.reBuildCache()
 
 	return
 }
@@ -116,6 +123,7 @@ func (s *Service) reBuildCache() {
 	var key string
 
 	curTicker := time.NewTicker(time.Second * time.Duration(s.cCfg.CurrencyTimeout))
+	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cCfg.ProjectPaymentMethodTimeout))
 	s.rebuild = true
 
 	for {
@@ -123,6 +131,10 @@ func (s *Service) reBuildCache() {
 		case <-curTicker.C:
 			err = s.cache(collectionCurrency, handlers[collectionCurrency](s))
 			key = collectionCurrency
+		case <-projectPaymentMethodTimer.C:
+			s.mx.Lock()
+			s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
+			s.mx.Unlock()
 		case <-s.exitCh:
 			s.rebuild = false
 			return

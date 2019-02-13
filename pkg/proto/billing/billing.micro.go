@@ -30,6 +30,10 @@ It has these top-level messages:
 	Country
 	Vat
 	Commission
+	CardExpire
+	SavedCard
+	PaymentFormPaymentMethod
+	PaymentFormPaymentMethods
 */
 package billing
 

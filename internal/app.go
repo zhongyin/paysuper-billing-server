@@ -12,6 +12,8 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/internal/service"
 	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
+	"github.com/ProtocolONE/payone-repository/pkg/constant"
+	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
 	"github.com/micro/go-micro"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -63,12 +65,15 @@ func (app *Application) Init() {
 	app.service.Init()
 
 	geoService := proto.NewGeoIpService(geoip.ServiceName, app.service.Client())
+	repService := repository.NewRepositoryService(constant.PayOneRepositoryServiceName, app.service.Client())
+
 	svc := service.NewBillingService(
 		app.database,
 		app.sugLogger,
 		app.cfg.CacheConfig,
 		app.cacheExit,
 		geoService,
+		repService,
 		app.cfg.Environment,
 		app.cfg.AccountingCurrency,
 	)

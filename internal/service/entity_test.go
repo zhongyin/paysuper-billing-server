@@ -201,7 +201,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	suite.projectId = project.Id
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), nil, "dev", "RUB")
+	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), nil, nil, "dev", "RUB")
 	err = suite.service.Init()
 
 	if err != nil {

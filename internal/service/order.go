@@ -9,6 +9,7 @@ import (
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
+	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
 	"github.com/ProtocolONE/payone-repository/tools"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -70,6 +71,11 @@ type OrderCreateRequestProcessor struct {
 	*Service
 	checked *orderCreateRequestProcessorChecked
 	request *billing.OrderCreateRequest
+}
+
+type OrderRenderProcessor struct {
+	service *Service
+	order   *billing.Order
 }
 
 func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCreateRequest, rsp *billing.Order) error {
@@ -159,6 +165,24 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 	rsp.PspFeeAmount = order.PspFeeAmount
 	rsp.PaymentSystemFeeAmount = order.PaymentSystemFeeAmount
 	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
+
+	return nil
+}
+
+func (s *Service) PaymentFormJsonDataProcess(
+	ctx context.Context,
+	req *billing.Order,
+	rsp *billing.PaymentFormPaymentMethods,
+) error {
+	processor := &OrderRenderProcessor{service: s, order: req}
+
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	if err != nil {
+		return err
+	}
+
+	rsp.PaymentMethods = pms
 
 	return nil
 }
@@ -566,6 +590,139 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 
 	o.PaymentSystemFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
 	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
+
+	return nil
+}
+
+// Get payment methods of project for rendering in payment form
+func (v *OrderRenderProcessor) processRenderFormPaymentMethods() ([]*billing.PaymentFormPaymentMethod, error) {
+	var projectPms []*billing.PaymentFormPaymentMethod
+
+	project, ok := v.service.projectCache[v.order.Project.Id]
+
+	if !ok {
+		return projectPms, errors.New(orderErrorProjectNotFound)
+	}
+
+	if projectPms, ok := v.service.projectPaymentMethodCache[project.Id]; ok {
+		return projectPms, nil
+	}
+
+	for k, val := range v.service.paymentMethodCache {
+		pm, ok := val[v.order.PaymentMethodOutcomeCurrency.CodeInt]
+
+		if !ok {
+			continue
+		}
+
+		if v.service.isProductionEnvironment() == true {
+			if len(project.PaymentMethods) <= 0 {
+				return projectPms, errors.New(orderErrorPaymentMethodNotAllowed)
+			}
+
+			ppm, ok := project.PaymentMethods[k]
+
+			if !ok || ppm.Id != pm.Id ||
+				ppm.Terminal == "" || ppm.Password == "" {
+				continue
+			}
+		}
+
+		formPm := &billing.PaymentFormPaymentMethod{
+			Id:                       pm.Id,
+			Name:                     pm.Name,
+			Icon:                     pm.Icon,
+			Type:                     pm.Type,
+			Group:                    pm.Group,
+			AccountRegexp:            pm.AccountRegexp,
+			Currency:                 v.order.ProjectIncomeCurrency.CodeA3,
+			AmountWithoutCommissions: tools.FormatAmount(v.order.ProjectIncomeAmount),
+		}
+
+		err := v.processPaymentMethodsData(formPm)
+
+		if err != nil {
+			v.service.log.Errorw(
+				"[PAYONE_BILLING] Process payment method data failed",
+				"error", err,
+				"order_id", v.order.Id,
+			)
+			continue
+		}
+
+		projectPms = append(projectPms, formPm)
+	}
+
+	if len(projectPms) <= 0 {
+		return projectPms, errors.New(orderErrorPaymentMethodNotAllowed)
+	}
+
+	v.service.mx.Lock()
+	v.service.projectPaymentMethodCache[v.order.Project.Id] = projectPms
+	v.service.mx.Unlock()
+
+	return projectPms, nil
+}
+
+func (v *OrderRenderProcessor) processPaymentMethodsData(pm *billing.PaymentFormPaymentMethod) error {
+	amount := pm.AmountWithoutCommissions
+
+	if v.order.Project.Merchant.IsCommissionToUserEnabled == true {
+		commission, err := v.service.CalculateCommission(v.order.Project.Id, pm.Id, v.order.ProjectIncomeAmount)
+
+		if err != nil {
+			return err
+		}
+
+		amount += commission.ToUserCommission
+		pm.UserCommissionAmount = tools.FormatAmount(commission.ToUserCommission)
+	}
+
+	if v.order.Project.Merchant.IsVatEnabled == true {
+		vat, err := v.service.CalculateVat(
+			v.order.ProjectIncomeAmount,
+			v.order.PayerData.CountryCodeA2,
+			v.order.PayerData.Subdivision,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		amount += vat
+		pm.VatAmount = tools.FormatAmount(vat)
+	}
+
+	pm.HasSavedCards = false
+
+	if pm.IsBankCard() == true {
+		req := &repository.SavedCardRequest{Account: v.order.ProjectAccount, ProjectId: v.order.Project.Id}
+		rsp, err := v.service.rep.FindSavedCards(context.TODO(), req)
+
+		if err != nil {
+			v.service.log.Errorw(
+				"[PAYONE_BILLING] Get saved cards from repository failed",
+				"error", err,
+				"account", v.order.ProjectAccount,
+				"project_id", v.order.Project.Id,
+				"order_id", v.order.Id,
+			)
+		} else {
+			pm.HasSavedCards = len(rsp.SavedCards) > 0
+			pm.SavedCards = []*billing.SavedCard{}
+
+			for _, v := range rsp.SavedCards {
+				d := &billing.SavedCard{
+					Id:     v.Id,
+					Pan:    v.MaskedPan,
+					Expire: &billing.CardExpire{Month: v.Expire.Month, Year: v.Expire.Year},
+				}
+
+				pm.SavedCards = append(pm.SavedCards, d)
+			}
+
+		}
+	}
 
 	return nil
 }

@@ -462,3 +462,38 @@ message Commission {
     google.protobuf.Timestamp updated_at = 9;
 }
 
+message CardExpire {
+    // @inject_tag: bson:"month"
+    string month = 1;
+    // @inject_tag: bson:"year"
+    string year = 2;
+}
+
+message SavedCard {
+    string id = 1;
+    string pan = 2;
+    CardExpire expire = 3;
+}
+
+message PaymentFormPaymentMethod {
+    string id = 1;
+    string name = 2;
+    string icon = 3;
+    string type = 4;
+    // @inject_tag: json:"group_alias"
+    string group = 5;
+    string account_regexp = 6;
+    double amount_with_commissions = 7;
+    double amount_without_commissions = 8;
+    string currency = 9;
+    double user_commission_amount = 10;
+    double vat_amount = 11;
+    // @inject_tag: json:"has_saved_cards,omitempty"
+    bool has_saved_cards = 12;
+    // @inject_tag: json:"saved_cards,omitempty"
+    repeated SavedCard saved_cards = 13;
+}
+
+message PaymentFormPaymentMethods {
+    repeated PaymentFormPaymentMethod payment_methods = 1;
+}

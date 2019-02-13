@@ -4,17 +4,15 @@ import (
 	"context"
 	"crypto/sha512"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
+	"github.com/ProtocolONE/payone-billing-service/internal/mock"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/tools"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/micro/go-micro/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -36,78 +34,6 @@ type OrderTestSuite struct {
 	paymentMethod                          *billing.PaymentMethod
 	inactivePaymentMethod                  *billing.PaymentMethod
 	paymentMethodWithInactivePaymentSystem *billing.PaymentMethod
-}
-
-type GeoIpServiceTestOk struct{}
-type GeoIpServiceTestOkWithoutSubdivision struct{}
-type GeoIpServiceTestError struct{}
-
-func newGeoIpServiceTestOkWithoutSubdivision() proto.GeoIpService {
-	return &GeoIpServiceTestOkWithoutSubdivision{}
-}
-func newGeoIpServiceTestOk() proto.GeoIpService {
-	return &GeoIpServiceTestOk{}
-}
-
-func newGeoIpServiceTestError() proto.GeoIpService {
-	return &GeoIpServiceTestError{}
-}
-
-func (s *GeoIpServiceTestOk) GetIpData(
-	ctx context.Context,
-	in *proto.GeoIpDataRequest,
-	opts ...client.CallOption,
-) (*proto.GeoIpDataResponse, error) {
-	data := &proto.GeoIpDataResponse{
-		Country: &proto.GeoIpCountry{
-			IsoCode: "RU",
-			Names:   map[string]string{"en": "Russia", "ru": "Россия"},
-		},
-		City: &proto.GeoIpCity{
-			Names: map[string]string{"en": "St.Petersburg", "ru": "Санкт-Петербург"},
-		},
-		Location: &proto.GeoIpLocation{
-			TimeZone: "Europe/Moscow",
-		},
-		Subdivisions: []*proto.GeoIpSubdivision{
-			{
-				GeoNameID: uint32(1),
-				IsoCode:   "SPE",
-				Names:     map[string]string{"en": "St.Petersburg", "ru": "Санкт-Петербург"},
-			},
-		},
-	}
-
-	return data, nil
-}
-
-func (s *GeoIpServiceTestOkWithoutSubdivision) GetIpData(
-	ctx context.Context,
-	in *proto.GeoIpDataRequest,
-	opts ...client.CallOption,
-) (*proto.GeoIpDataResponse, error) {
-	data := &proto.GeoIpDataResponse{
-		Country: &proto.GeoIpCountry{
-			IsoCode: "RU",
-			Names:   map[string]string{"en": "Russia", "ru": "Россия"},
-		},
-		City: &proto.GeoIpCity{
-			Names: map[string]string{"en": "St.Petersburg", "ru": "Санкт-Петербург"},
-		},
-		Location: &proto.GeoIpLocation{
-			TimeZone: "Europe/Moscow",
-		},
-	}
-
-	return data, nil
-}
-
-func (s *GeoIpServiceTestError) GetIpData(
-	ctx context.Context,
-	in *proto.GeoIpDataRequest,
-	opts ...client.CallOption,
-) (*proto.GeoIpDataResponse, error) {
-	return &proto.GeoIpDataResponse{}, errors.New("some error")
 }
 
 func Test_Order(t *testing.T) {
@@ -161,6 +87,12 @@ func (suite *OrderTestSuite) SetupTest() {
 		CodeInt:  980,
 		CodeA3:   "UAH",
 		Name:     &billing.Name{Ru: "Украинская гривна", En: "Ukrainian Hryvnia"},
+		IsActive: true,
+	}
+	eur := &billing.Currency{
+		CodeInt:  978,
+		CodeA3:   "EUR",
+		Name:     &billing.Name{Ru: "Евро", En: "Euro"},
 		IsActive: true,
 	}
 
@@ -497,6 +429,30 @@ func (suite *OrderTestSuite) SetupTest() {
 			IsActive:           true,
 		},
 	}
+	pmWebMoneyWME := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "WebMoney WME",
+		Group:            "WEBMONEY",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currency:         eur,
+		Currencies:       []int32{978},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "cardpay",
+			Terminal:   "15985",
+			ExternalId: "WEBMONEY",
+		},
+		Type:     "ewallet",
+		IsActive: true,
+		PaymentSystem: &billing.PaymentSystem{
+			Id:                 bson.NewObjectId().Hex(),
+			Name:               "CardPay",
+			AccountingCurrency: rub,
+			AccountingPeriod:   "every-day",
+			Country:            &billing.Country{},
+			IsActive:           true,
+		},
+	}
 	pmBitcoin := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
 		Name:             "Bitcoin",
@@ -514,7 +470,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		IsActive: false,
 	}
 
-	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin, pmWebMoney}
+	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin, pmWebMoney, pmWebMoneyWME}
 
 	err = db.Collection(collectionPaymentMethod).Insert(pms...)
 
@@ -547,6 +503,14 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		&billing.Commission{
 			PaymentMethodId:         pmBitcoin.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmWebMoney.Id,
 			ProjectId:               project.Id,
 			PaymentMethodCommission: 1,
 			PspCommission:           2,
@@ -615,7 +579,16 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), newGeoIpServiceTestOk(), "dev", "USD")
+	suite.service = NewBillingService(
+		db,
+		logger.Sugar(),
+		cfg.CacheConfig,
+		make(chan bool, 1),
+		mock.NewGeoIpServiceTestOk(),
+		mock.NewRepositoryServiceOk(),
+		"dev",
+		"USD",
+	)
 	err = suite.service.Init()
 
 	if err != nil {
@@ -756,7 +729,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptyEmailAndPhone_Ok() 
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptySubdivision_Ok() {
-	suite.service.geo = newGeoIpServiceTestOkWithoutSubdivision()
+	suite.service.geo = mock.NewGeoIpServiceTestOkWithoutSubdivision()
 
 	req := &billing.OrderCreateRequest{
 		PayerIp: "127.0.0.1",
@@ -774,7 +747,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptySubdivision_Ok() {
 	assert.NotNil(suite.T(), processor.checked.payerData)
 	assert.Empty(suite.T(), processor.checked.payerData.Subdivision)
 
-	suite.service.geo = newGeoIpServiceTestOk()
+	suite.service.geo = mock.NewGeoIpServiceTestOk()
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPayerData_NotEmptyEmailAndPhone_Ok() {
@@ -799,7 +772,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_NotEmptyEmailAndPhone_Ok
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPayerData_Error() {
-	suite.service.geo = newGeoIpServiceTestError()
+	suite.service.geo = mock.NewGeoIpServiceTestError()
 
 	req := &billing.OrderCreateRequest{
 		PayerIp: "127.0.0.1",
@@ -2544,7 +2517,7 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_PayerDataInvalid_Error
 		PayerIp:       "127.0.0.1",
 	}
 
-	suite.service.geo = newGeoIpServiceTestError()
+	suite.service.geo = mock.NewGeoIpServiceTestError()
 
 	rsp := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
@@ -2801,4 +2774,471 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_PrepareOrderInvalid_Er
 	assert.Nil(suite.T(), rsp.Project)
 	assert.Nil(suite.T(), rsp.PaymentMethod)
 	assert.Nil(suite.T(), rsp.PaymentSystemFeeAmount)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_DevEnvironment_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(pms) > 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Cache_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	_, ok := suite.service.projectPaymentMethodCache[order.Project.Id]
+	assert.False(suite.T(), ok)
+
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(pms) > 0)
+
+	cachePms, ok := suite.service.projectPaymentMethodCache[order.Project.Id]
+	assert.True(suite.T(), ok)
+	assert.True(suite.T(), len(cachePms) > 0)
+
+	pms1, err := processor.processRenderFormPaymentMethods()
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(pms1) > 0)
+	assert.Equal(suite.T(), pms, pms1)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvironment_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	suite.service.env = "prod"
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(pms) > 0)
+
+	suite.service.env = "dev"
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	order.Project.Id = bson.NewObjectId().Hex()
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), pms, 0)
+	assert.Equal(suite.T(), orderErrorProjectNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNotHavePaymentMethods_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	suite.service.env = "prod"
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	order.Project.Id = suite.projectWithoutPaymentMethods.Id
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), pms, 0)
+	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
+
+	suite.service.env = "dev"
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_CommissionNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	order.PaymentMethodOutcomeCurrency.CodeInt = 978
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), pms, 0)
+	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaymentMethods_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	suite.service.env = "prod"
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(order.Id) > 0)
+
+	order.Project.Id = suite.projectEmptyPaymentMethodTerminal.Id
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	pms, err := processor.processRenderFormPaymentMethods()
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), pms, 0)
+	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
+
+	suite.service.env = "dev"
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_SavedCards_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	pm := &billing.PaymentFormPaymentMethod{
+		Id:                       suite.paymentMethod.Id,
+		Name:                     suite.paymentMethod.Id,
+		Icon:                     suite.paymentMethod.Name,
+		Type:                     suite.paymentMethod.Type,
+		Group:                    suite.paymentMethod.Group,
+		AccountRegexp:            suite.paymentMethod.AccountRegexp,
+		Currency:                 order.ProjectIncomeCurrency.CodeA3,
+		AmountWithoutCommissions: tools.FormatAmount(order.ProjectIncomeAmount),
+	}
+
+	assert.True(suite.T(), len(pm.SavedCards) <= 0)
+
+	err = processor.processPaymentMethodsData(pm)
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), pm.HasSavedCards)
+	assert.True(suite.T(), len(pm.SavedCards) > 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_EmptySavedCards_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	suite.service.rep = mock.NewRepositoryServiceEmpty()
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	pm := &billing.PaymentFormPaymentMethod{
+		Id:                       suite.paymentMethod.Id,
+		Name:                     suite.paymentMethod.Id,
+		Icon:                     suite.paymentMethod.Name,
+		Type:                     suite.paymentMethod.Type,
+		Group:                    suite.paymentMethod.Group,
+		AccountRegexp:            suite.paymentMethod.AccountRegexp,
+		Currency:                 order.ProjectIncomeCurrency.CodeA3,
+		AmountWithoutCommissions: tools.FormatAmount(order.ProjectIncomeAmount),
+	}
+
+	assert.True(suite.T(), len(pm.SavedCards) <= 0)
+
+	err = processor.processPaymentMethodsData(pm)
+	assert.Nil(suite.T(), err)
+	assert.False(suite.T(), pm.HasSavedCards)
+	assert.Len(suite.T(), pm.SavedCards, 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_NotBankCard_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	suite.service.rep = mock.NewRepositoryServiceEmpty()
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	pm := &billing.PaymentFormPaymentMethod{
+		Id:                       suite.paymentMethod.Id,
+		Name:                     suite.paymentMethodWithInactivePaymentSystem.Id,
+		Icon:                     suite.paymentMethodWithInactivePaymentSystem.Name,
+		Type:                     suite.paymentMethodWithInactivePaymentSystem.Type,
+		Group:                    suite.paymentMethodWithInactivePaymentSystem.Group,
+		AccountRegexp:            suite.paymentMethodWithInactivePaymentSystem.AccountRegexp,
+		Currency:                 order.ProjectIncomeCurrency.CodeA3,
+		AmountWithoutCommissions: tools.FormatAmount(order.ProjectIncomeAmount),
+	}
+
+	assert.True(suite.T(), len(pm.SavedCards) <= 0)
+
+	err = processor.processPaymentMethodsData(pm)
+	assert.Nil(suite.T(), err)
+	assert.False(suite.T(), pm.HasSavedCards)
+	assert.Len(suite.T(), pm.SavedCards, 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_VatCalculation_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	order.PayerData.CountryCodeA2 = "AU"
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	pm := &billing.PaymentFormPaymentMethod{
+		Id:                       suite.paymentMethod.Id,
+		Name:                     suite.paymentMethod.Id,
+		Icon:                     suite.paymentMethod.Name,
+		Type:                     suite.paymentMethod.Type,
+		Group:                    suite.paymentMethod.Group,
+		AccountRegexp:            suite.paymentMethod.AccountRegexp,
+		Currency:                 order.ProjectIncomeCurrency.CodeA3,
+		AmountWithoutCommissions: tools.FormatAmount(order.ProjectIncomeAmount),
+	}
+
+	err = processor.processPaymentMethodsData(pm)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionVat), err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_GetSavedCards_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	suite.service.rep = mock.NewRepositoryServiceError()
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	processor := &OrderRenderProcessor{service: suite.service, order: order}
+
+	pm := &billing.PaymentFormPaymentMethod{
+		Id:                       suite.paymentMethod.Id,
+		Name:                     suite.paymentMethod.Id,
+		Icon:                     suite.paymentMethod.Name,
+		Type:                     suite.paymentMethod.Type,
+		Group:                    suite.paymentMethod.Group,
+		AccountRegexp:            suite.paymentMethod.AccountRegexp,
+		Currency:                 order.ProjectIncomeCurrency.CodeA3,
+		AmountWithoutCommissions: tools.FormatAmount(order.ProjectIncomeAmount),
+	}
+
+	err = processor.processPaymentMethodsData(pm)
+	assert.Nil(suite.T(), err)
+	assert.False(suite.T(), pm.HasSavedCards)
+	assert.Len(suite.T(), pm.SavedCards, 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	pms := &billing.PaymentFormPaymentMethods{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), order, pms)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(pms.PaymentMethods) > 0)
+	assert.True(suite.T(), len(pms.PaymentMethods[0].Id) > 0)
+	assert.True(suite.T(), pms.PaymentMethods[0].AmountWithoutCommissions > 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	order.PayerData.CountryCodeA2 = "AU"
+
+	pms := &billing.PaymentFormPaymentMethods{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), order, pms)
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), pms.PaymentMethods, 0)
+	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
+
 }

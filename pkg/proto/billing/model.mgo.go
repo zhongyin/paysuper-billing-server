@@ -3,6 +3,7 @@ package billing
 import (
 	"errors"
 	"fmt"
+	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"time"
@@ -961,4 +962,8 @@ func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
 	}
 
 	return nil
+}
+
+func (m *PaymentFormPaymentMethod) IsBankCard() bool {
+	return m.Group == constant.PaymentSystemGroupAliasBankCard
 }

@@ -28,7 +28,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.Order{}
+var _ = billing.PaymentFormPaymentMethods{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -45,6 +45,7 @@ var _ server.Option
 
 type BillingService interface {
 	OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, opts ...client.CallOption) (*billing.Order, error)
+	PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*billing.PaymentFormPaymentMethods, error)
 	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
@@ -76,6 +77,16 @@ func (c *billingService) OrderCreateProcess(ctx context.Context, in *billing.Ord
 	return out, nil
 }
 
+func (c *billingService) PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*billing.PaymentFormPaymentMethods, error) {
+	req := c.c.NewRequest(c.name, "BillingService.PaymentFormJsonDataProcess", in)
+	out := new(billing.PaymentFormPaymentMethods)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.RebuildCache", in)
 	out := new(EmptyResponse)
@@ -90,12 +101,14 @@ func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opt
 
 type BillingServiceHandler interface {
 	OrderCreateProcess(context.Context, *billing.OrderCreateRequest, *billing.Order) error
+	PaymentFormJsonDataProcess(context.Context, *billing.Order, *billing.PaymentFormPaymentMethods) error
 	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
 	type billingService interface {
 		OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error
+		PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, out *billing.PaymentFormPaymentMethods) error
 		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
 	}
 	type BillingService struct {
@@ -111,6 +124,10 @@ type billingServiceHandler struct {
 
 func (h *billingServiceHandler) OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error {
 	return h.BillingServiceHandler.OrderCreateProcess(ctx, in, out)
+}
+
+func (h *billingServiceHandler) PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, out *billing.PaymentFormPaymentMethods) error {
+	return h.BillingServiceHandler.PaymentFormJsonDataProcess(ctx, in, out)
 }
 
 func (h *billingServiceHandler) RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error {
