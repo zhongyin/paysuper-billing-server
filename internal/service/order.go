@@ -99,6 +99,7 @@ type OrderCreateRequestProcessor struct {
 type PaymentFormProcessor struct {
 	service *Service
 	order   *billing.Order
+	request *grpc.PaymentFormJsonDataRequest
 }
 
 type PaymentCreateProcessor struct {
@@ -219,8 +220,11 @@ func (s *Service) PaymentFormJsonDataProcess(
 		return err
 	}
 
-	processor := &PaymentFormProcessor{service: s, order: order}
-
+	processor := &PaymentFormProcessor{
+		service: s,
+		order: order,
+		request: req,
+	}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	if err != nil {
@@ -803,7 +807,7 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		formPm := &billing.PaymentFormPaymentMethod{
 			Id:                       pm.Id,
 			Name:                     pm.Name,
-			Icon:                     pm.Icon,
+			Icon:                     fmt.Sprintf(orderInlineFormImagesUrlMask, v.request.Host, pm.Icon),
 			Type:                     pm.Type,
 			Group:                    pm.Group,
 			AccountRegexp:            pm.AccountRegexp,
@@ -865,6 +869,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 		pm.VatAmount = tools.FormatAmount(vat)
 	}
 
+	pm.AmountWithCommissions = tools.FormatAmount(amount)
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
