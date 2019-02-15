@@ -128,11 +128,11 @@ func (h *Vat) setCache(recs []interface{}) {
 
 		h.svc.mx.Lock()
 
-		if _, ok := h.svc.vatCache[vat.Country]; !ok {
-			h.svc.vatCache[vat.Country] = make(map[string]*billing.Vat)
+		if _, ok := h.svc.vatCache[vat.Country.CodeA2]; !ok {
+			h.svc.vatCache[vat.Country.CodeA2] = make(map[string]*billing.Vat)
 		}
 
-		h.svc.vatCache[vat.Country][vat.Subdivision] = vat
+		h.svc.vatCache[vat.Country.CodeA2][vat.Subdivision] = vat
 
 		h.svc.mx.Unlock()
 	}

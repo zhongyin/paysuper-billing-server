@@ -16,7 +16,7 @@ const (
 
 type MgoVat struct {
 	Id          bson.ObjectId `bson:"_id" json:"id"`
-	Country     string        `bson:"country" json:"country"`
+	Country     *Country      `bson:"country" json:"country"`
 	Subdivision string        `bson:"subdivision_code" json:"subdivision_code,omitempty"`
 	Vat         float64       `bson:"vat" json:"vat"`
 	IsActive    bool          `bson:"is_active" json:"is_active"`

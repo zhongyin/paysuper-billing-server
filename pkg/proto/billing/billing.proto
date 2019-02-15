@@ -446,7 +446,7 @@ message Vat {
     // @inject_tag: bson:"_id"
     string id = 1;
     // @inject_tag: bson:"country"
-    string country = 2;
+    Country country = 2;
     // @inject_tag: bson:"subdivision_code"
     string subdivision = 3;
     // @inject_tag: bson:"vat"
@@ -506,7 +506,7 @@ message PaymentFormPaymentMethod {
     string currency = 9;
     double user_commission_amount = 10;
     double vat_amount = 11;
-    // @inject_tag: json:"has_saved_cards,omitempty"
+    // @inject_tag: json:"has_saved_cards"
     bool has_saved_cards = 12;
     // @inject_tag: json:"saved_cards,omitempty"
     repeated SavedCard saved_cards = 13;
