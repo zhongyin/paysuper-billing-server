@@ -496,7 +496,7 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 
 	for _, val := range regionFps.FixedPackage {
 		if val.Price != v.request.Amount || val.IsActive == false ||
-			(v.checked.currency != nil && val.CurrencyA3 != v.checked.currency.CodeA3) {
+			(v.checked.currency != nil && val.Currency.CodeA3 != v.checked.currency.CodeA3) {
 			continue
 		}
 
@@ -508,7 +508,7 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 	}
 
 	if v.checked.currency == nil {
-		currency, err := v.GetCurrencyByCodeA3(fp.CurrencyA3)
+		currency, err := v.GetCurrencyByCodeA3(fp.Currency.CodeA3)
 
 		if err != nil {
 			return errors.New(orderErrorFixedPackageUnknownCurrency)

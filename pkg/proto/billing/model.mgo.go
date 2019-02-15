@@ -29,7 +29,7 @@ type MgoProject struct {
 	CallbackCurrency         *Currency                        `bson:"callback_currency" json:"callback_currency"`
 	CallbackProtocol         string                           `bson:"callback_protocol" json:"callback_protocol"`
 	CreateInvoiceAllowedUrls []string                         `bson:"create_invoice_allowed_urls" json:"create_invoice_allowed_urls"`
-	Merchant                 *Merchant                        `bson:"merchant" json:"-"`
+	Merchant                 *MgoMerchant                     `bson:"merchant" json:"-"`
 	AllowDynamicNotifyUrls   bool                             `bson:"is_allow_dynamic_notify_urls" json:"allow_dynamic_notify_urls"`
 	AllowDynamicRedirectUrls bool                             `bson:"is_allow_dynamic_redirect_urls" json:"allow_dynamic_redirect_urls"`
 	LimitsCurrency           *Currency                        `bson:"limits_currency" json:"limits_currency"`
@@ -49,6 +49,22 @@ type MgoProject struct {
 	UpdatedAt                time.Time                        `bson:"updated_at" json:"-"`
 	FixedPackage             map[string][]*FixedPackage       `bson:"fixed_package" json:"fixed_package,omitempty"`
 	PaymentMethods           map[string]*ProjectPaymentMethod `bson:"payment_methods" json:"payment_methods,omitempty"`
+}
+
+type MgoMerchant struct {
+	Id                        bson.ObjectId `bson:"_id"`
+	ExternalId                string        `bson:"external_id"`
+	Email                     string        `bson:"email"`
+	Name                      string        `bson:"name"`
+	Country                   *Country      `bson:"country"`
+	AccountingPeriod          string        `bson:"accounting_period"`
+	Currency                  *Currency     `bson:"currency"`
+	IsVatEnabled              bool          `bson:"is_vat_enabled"`
+	IsCommissionToUserEnabled bool          `bson:"is_commission_to_user_enabled"`
+	Status                    int32         `bson:"status"`
+	CreatedAt                 time.Time     `bson:"created_at"`
+	UpdatedAt                 time.Time     `bson:"updated_at"`
+	FirstPaymentAt            time.Time     `bson:"first_payment_at"`
 }
 
 type MgoCurrencyRate struct {
@@ -95,7 +111,7 @@ type MgoOrderProject struct {
 	UrlCheckAccount   string        `bson:"url_check_account"`
 	UrlProcessPayment string        `bson:"url_process_payment"`
 	CallbackProtocol  string        `bson:"callback_protocol"`
-	Merchant          *Merchant     `bson:"merchant"`
+	Merchant          *MgoMerchant  `bson:"merchant"`
 }
 
 type MgoOrderPaymentMethod struct {
@@ -255,7 +271,18 @@ func (m *Project) GetBSON() (interface{}, error) {
 	st := &MgoProject{
 		CallbackCurrency:         m.CallbackCurrency,
 		CreateInvoiceAllowedUrls: m.CreateInvoiceAllowedUrls,
-		Merchant:                 m.Merchant,
+		Merchant: &MgoMerchant{
+			Id:                        bson.ObjectIdHex(m.Merchant.Id),
+			ExternalId:                m.Merchant.ExternalId,
+			Email:                     m.Merchant.Email,
+			Name:                      m.Merchant.Name,
+			Country:                   m.Merchant.Country,
+			AccountingPeriod:          m.Merchant.AccountingPeriod,
+			Currency:                  m.Merchant.Currency,
+			IsVatEnabled:              m.Merchant.IsVatEnabled,
+			IsCommissionToUserEnabled: m.Merchant.IsCommissionToUserEnabled,
+			Status:                    m.Merchant.Status,
+		},
 		AllowDynamicNotifyUrls:   m.AllowDynamicNotifyUrls,
 		AllowDynamicRedirectUrls: m.AllowDynamicRedirectUrls,
 		LimitsCurrency:           m.LimitsCurrency,
@@ -322,6 +349,42 @@ func (m *Project) GetBSON() (interface{}, error) {
 		st.FixedPackage = fps
 	}
 
+	if m.Merchant.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.Merchant.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.Merchant.CreatedAt = t
+	} else {
+		st.Merchant.CreatedAt = time.Now()
+	}
+
+	if m.Merchant.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.Merchant.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.Merchant.UpdatedAt = t
+	} else {
+		st.Merchant.UpdatedAt = time.Now()
+	}
+
+	if m.Merchant.FirstPaymentAt != nil {
+		t, err := ptypes.Timestamp(m.Merchant.FirstPaymentAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.Merchant.FirstPaymentAt = t
+	} else {
+		st.Merchant.FirstPaymentAt = time.Now()
+	}
+
 	return st, nil
 }
 
@@ -337,7 +400,18 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	m.CallbackCurrency = decoded.CallbackCurrency
 	m.CallbackProtocol = decoded.CallbackProtocol
 	m.CreateInvoiceAllowedUrls = decoded.CreateInvoiceAllowedUrls
-	m.Merchant = decoded.Merchant
+	m.Merchant = &Merchant{
+		Id:                        decoded.Merchant.Id.Hex(),
+		ExternalId:                decoded.Merchant.ExternalId,
+		Email:                     decoded.Merchant.Email,
+		Name:                      decoded.Merchant.Name,
+		Country:                   decoded.Merchant.Country,
+		AccountingPeriod:          decoded.Merchant.AccountingPeriod,
+		Currency:                  decoded.Merchant.Currency,
+		IsVatEnabled:              decoded.Merchant.IsVatEnabled,
+		IsCommissionToUserEnabled: decoded.Merchant.IsCommissionToUserEnabled,
+		Status:                    decoded.Merchant.Status,
+	}
 	m.AllowDynamicNotifyUrls = decoded.AllowDynamicNotifyUrls
 	m.AllowDynamicRedirectUrls = decoded.AllowDynamicRedirectUrls
 	m.LimitsCurrency = decoded.LimitsCurrency
@@ -372,6 +446,24 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	}
 
 	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.Merchant.CreatedAt, err = ptypes.TimestampProto(decoded.Merchant.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.Merchant.UpdatedAt, err = ptypes.TimestampProto(decoded.Merchant.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.Merchant.FirstPaymentAt, err = ptypes.TimestampProto(decoded.Merchant.FirstPaymentAt)
 
 	if err != nil {
 		return err
@@ -549,7 +641,18 @@ func (m *Order) GetBSON() (interface{}, error) {
 			UrlCheckAccount:   m.Project.UrlCheckAccount,
 			UrlProcessPayment: m.Project.UrlProcessPayment,
 			CallbackProtocol:  m.Project.CallbackProtocol,
-			Merchant:          m.Project.Merchant,
+			Merchant: &MgoMerchant{
+				Id:                        bson.ObjectIdHex(m.Project.Merchant.Id),
+				ExternalId:                m.Project.Merchant.ExternalId,
+				Email:                     m.Project.Merchant.Email,
+				Name:                      m.Project.Merchant.Name,
+				Country:                   m.Project.Merchant.Country,
+				AccountingPeriod:          m.Project.Merchant.AccountingPeriod,
+				Currency:                  m.Project.Merchant.Currency,
+				IsVatEnabled:              m.Project.Merchant.IsVatEnabled,
+				IsCommissionToUserEnabled: m.Project.Merchant.IsCommissionToUserEnabled,
+				Status:                    m.Project.Merchant.Status,
+			},
 		},
 		ProjectOrderId:                          m.ProjectOrderId,
 		ProjectAccount:                          m.ProjectAccount,
@@ -647,6 +750,40 @@ func (m *Order) GetBSON() (interface{}, error) {
 		st.PaymentMethodOrderClosedAt = t
 	}
 
+	if m.Project.Merchant.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.Project.Merchant.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.Project.Merchant.CreatedAt = t
+	} else {
+		st.Project.Merchant.CreatedAt = time.Now()
+	}
+
+	if m.Project.Merchant.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.Project.Merchant.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.Project.Merchant.UpdatedAt = t
+	} else {
+		st.Project.Merchant.UpdatedAt = time.Now()
+	}
+
+	if m.Project.Merchant.FirstPaymentAt != nil {
+		t, err := ptypes.Timestamp(m.Project.Merchant.FirstPaymentAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.Project.Merchant.FirstPaymentAt = t
+	}
+
 	return st, nil
 }
 
@@ -670,7 +807,18 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 		UrlCheckAccount:   decoded.Project.UrlCheckAccount,
 		UrlProcessPayment: decoded.Project.UrlProcessPayment,
 		CallbackProtocol:  decoded.Project.CallbackProtocol,
-		Merchant:          decoded.Project.Merchant,
+		Merchant: &Merchant{
+			Id:                        decoded.Project.Merchant.Id.Hex(),
+			ExternalId:                decoded.Project.Merchant.ExternalId,
+			Email:                     decoded.Project.Merchant.Email,
+			Name:                      decoded.Project.Merchant.Name,
+			Country:                   decoded.Project.Merchant.Country,
+			AccountingPeriod:          decoded.Project.Merchant.AccountingPeriod,
+			Currency:                  decoded.Project.Merchant.Currency,
+			IsVatEnabled:              decoded.Project.Merchant.IsVatEnabled,
+			IsCommissionToUserEnabled: decoded.Project.Merchant.IsCommissionToUserEnabled,
+			Status:                    decoded.Project.Merchant.Status,
+		},
 	}
 
 	m.ProjectOrderId = decoded.ProjectOrderId
@@ -734,6 +882,24 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	}
 
 	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.Project.Merchant.CreatedAt, err = ptypes.TimestampProto(decoded.Project.Merchant.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.Project.Merchant.UpdatedAt, err = ptypes.TimestampProto(decoded.Project.Merchant.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.Project.Merchant.FirstPaymentAt, err = ptypes.TimestampProto(decoded.Project.Merchant.FirstPaymentAt)
 
 	if err != nil {
 		return err
@@ -948,6 +1114,106 @@ func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
 	m.AccountingCurrency = decoded.AccountingCurrency
 	m.AccountingPeriod = decoded.AccountingPeriod
 	m.IsActive = decoded.IsActive
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Merchant) GetBSON() (interface{}, error) {
+	st := &MgoMerchant{
+		ExternalId:                m.ExternalId,
+		Email:                     m.Email,
+		Name:                      m.Name,
+		Country:                   m.Country,
+		AccountingPeriod:          m.AccountingPeriod,
+		Currency:                  m.Currency,
+		IsVatEnabled:              m.IsVatEnabled,
+		IsCommissionToUserEnabled: m.IsCommissionToUserEnabled,
+		Status:                    m.Status,
+	}
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.FirstPaymentAt != nil {
+		t, err := ptypes.Timestamp(m.FirstPaymentAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.FirstPaymentAt = t
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *Merchant) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoMerchant)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.ExternalId = decoded.ExternalId
+	m.Email = decoded.Email
+	m.Name = decoded.Name
+	m.Country = decoded.Country
+	m.AccountingPeriod = decoded.AccountingPeriod
+	m.Currency = decoded.Currency
+	m.IsVatEnabled = decoded.IsVatEnabled
+	m.IsCommissionToUserEnabled = decoded.IsCommissionToUserEnabled
+	m.Status = decoded.Status
+
+	m.FirstPaymentAt, err = ptypes.TimestampProto(decoded.FirstPaymentAt)
+
+	if err != nil {
+		return err
+	}
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 

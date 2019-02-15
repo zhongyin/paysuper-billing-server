@@ -132,20 +132,32 @@ message ProjectOrder {
 }
 
 message Merchant {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    string id = 1; // unique merchant identifier
-    // @inject_tag: bson:"external_id" structure:"external_id"
-    string external_id = 2; //// unique merchant identifier in auth system
-    // @inject_tag: bson:"currency" structure:"currency"
-    Currency currency = 3; // full object describes merchant's accounting currency
-    // @inject_tag: bson:"is_vat_enabled" structure:"is_vat_enabled"
-    bool is_vat_enabled = 4; // vat calculation enabled
-    // @inject_tag: bson:"is_commission_to_user_enabled" structure:"is_commission_to_user_enabled"
-    bool is_commission_to_user_enabled = 5; // enable to add commission payment method and commission PSP (P1) to payment amount
-    // @inject_tag: bson:"status" structure:"status"
-    int32 status = 6; // merchant status in system. Now available next statuses: 0 - created, 1 - verified, 2 - active, 3 - deleted
-    // @inject_tag: bson:"first_payment_at" structure:"first_payment_at,timestamp"
-    google.protobuf.Timestamp first_payment_at = 7; // date of first payment to merchant
+    // @inject_tag: bson:"_id"
+    string id = 1;
+    // @inject_tag: bson:"external_id"
+    string external_id = 2;
+    // @inject_tag: bson:"email"
+    string email = 3; // merchant email
+    // @inject_tag: bson:"name"
+    string name = 4;
+    // @inject_tag: bson:"country"
+    Country country = 5;
+    // @inject_tag: bson:"accounting_period"
+    string accounting_period = 6;
+    // @inject_tag: bson:"currency"
+    Currency currency = 7;
+    // @inject_tag: bson:"is_vat_enabled"
+    bool is_vat_enabled = 8;
+    // @inject_tag: bson:"is_commission_to_user_enabled"
+    bool is_commission_to_user_enabled = 9;
+    // @inject_tag: bson:"status"
+    int32 status = 10;
+    // @inject_tag: bson:"created_at"
+    google.protobuf.Timestamp created_at = 11;
+    // @inject_tag: bson:"updated_at"
+    google.protobuf.Timestamp updated_at = 12;
+    // @inject_tag: bson:"first_payment_at"
+    google.protobuf.Timestamp first_payment_at = 13;
 }
 
 message Order {
@@ -312,8 +324,8 @@ message FixedPackage {
     string id = 1; // unique identifier of package
     // @inject_tag: bson:"name" structure:"name"
     string name = 2; // package name
-    // @inject_tag: bson:"currency_a3"
-    string currency_a3 = 3;
+    // @inject_tag: bson:"currency"
+    Currency currency = 3;
     // @inject_tag: bson:"price" structure:"price"
     double price = 4; // package price in chosen currency
     // @inject_tag: bson:"is_active" structure:"is_active"
