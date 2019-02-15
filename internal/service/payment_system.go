@@ -11,7 +11,6 @@ const (
 	paymentSystemHandlerCardPay = "cardpay"
 
 	paymentSystemErrorHandlerNotFound                = "handler for specified payment system not found"
-	paymentSystemErrorSettingsNotFound               = "payment system settings not found"
 	paymentSystemErrorAuthenticateFailed             = "authentication failed"
 	paymentSystemErrorUnknownPaymentMethod           = "unknown payment method"
 	paymentSystemErrorCreateRequestFailed            = "order can't be create. try request later"
