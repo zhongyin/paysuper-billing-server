@@ -317,6 +317,16 @@ func (s *Service) PaymentCreateProcess(
 	}
 
 	url, err := h.CreatePayment(order, req.Data)
+	errDb := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	if errDb != nil {
+		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
+
+		rsp.Error = orderErrorUnknown
+		rsp.Status = responseStatusErrorSystem
+
+		return nil
+	}
 
 	if err != nil {
 		s.logError("Order create in payment system failed", []interface{}{"err", err.Error(), "order", order})
