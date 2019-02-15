@@ -13,11 +13,13 @@ import (
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	repo "github.com/ProtocolONE/payone-repository/pkg/proto/repository"
 	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
@@ -75,7 +77,9 @@ const (
 	responseStatusErrorSystem        = int32(2)
 	responseStatusErrorPaymentSystem = int32(3)
 
-	orderDefaultDescription = "Payment by order # %s"
+	orderDefaultDescription      = "Payment by order # %s"
+	orderInlineFormUrlMask       = "%s://%s/order/%s"
+	orderInlineFormImagesUrlMask = "//%s%s"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -206,10 +210,10 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 
 func (s *Service) PaymentFormJsonDataProcess(
 	ctx context.Context,
-	req *grpc.FindByStringValue,
-	rsp *billing.PaymentFormPaymentMethods,
+	req *grpc.PaymentFormJsonDataRequest,
+	rsp *grpc.PaymentFormJsonDataResponse,
 ) error {
-	order, err := s.getOrderById(req.Value)
+	order, err := s.getOrderById(req.OrderId)
 
 	if err != nil {
 		return err
@@ -223,7 +227,21 @@ func (s *Service) PaymentFormJsonDataProcess(
 		return err
 	}
 
+	expire := time.Now().Add(time.Minute * 30).Unix()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": order.Id, "exp": expire})
+
+	rsp.Id = order.Id
+	rsp.Account = order.ProjectAccount
+	rsp.HasVat = order.Project.Merchant.IsVatEnabled
+	rsp.HasUserCommission = order.Project.Merchant.IsCommissionToUserEnabled
+	rsp.Project = &grpc.PaymentFormJsonDataProject{
+		Name:       order.Project.Name,
+		UrlSuccess: order.Project.UrlSuccess,
+		UrlFail:    order.Project.UrlFail,
+	}
 	rsp.PaymentMethods = pms
+	rsp.Token, _ = token.SignedString([]byte(s.cfg.CentrifugoSecret))
+	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, order.Id)
 
 	return nil
 }
@@ -285,7 +303,7 @@ func (s *Service) PaymentCreateProcess(
 		auth.CallbackPassword = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].CallbackPassword
 	}
 
-	h, err := s.NewPaymentSystem(s.psCfg, s.log, auth, order, req.Data)
+	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, s.log, auth, order, req.Data)
 
 	if err != nil {
 		rsp.Error = err.Error()

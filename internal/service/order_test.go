@@ -67,8 +67,30 @@ func (suite *OrderTestSuite) SetupTest() {
 	}
 
 	vat := []interface{}{
-		&billing.Vat{Country: "RU", Subdivision: "", Vat: 20, IsActive: true},
-		&billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Subdivision: "",
+			Vat:         20,
+			IsActive:    true,
+		},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:  840,
+				CodeA2:   "US",
+				CodeA3:   "USA",
+				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+				IsActive: true,
+			},
+			Subdivision: "CA",
+			Vat:         10.25,
+			IsActive:    true,
+		},
 	}
 
 	err = db.Collection(pkg.CollectionVat).Insert(vat...)
@@ -99,6 +121,12 @@ func (suite *OrderTestSuite) SetupTest() {
 		CodeInt:  978,
 		CodeA3:   "EUR",
 		Name:     &billing.Name{Ru: "Евро", En: "Euro"},
+		IsActive: true,
+	}
+	aud := &billing.Currency{
+		CodeInt:  36,
+		CodeA3:   "AUD",
+		Name:     &billing.Name{Ru: "Австралийский доллар", En: "Australian Dollar"},
 		IsActive: true,
 	}
 
@@ -183,39 +211,39 @@ func (suite *OrderTestSuite) SetupTest() {
 			"RU": {
 				FixedPackage: []*billing.FixedPackage{
 					{
-						Id:         "id_0",
-						Name:       "package 0",
-						CurrencyA3: "RUB",
-						Price:      10,
-						IsActive:   true,
+						Id:       "id_0",
+						Name:     "package 0",
+						Currency: rub,
+						Price:    10,
+						IsActive: true,
 					},
 					{
-						Id:         "id_1",
-						Name:       "package 1",
-						CurrencyA3: "RUB",
-						Price:      100,
-						IsActive:   true,
+						Id:       "id_1",
+						Name:     "package 1",
+						Currency: rub,
+						Price:    100,
+						IsActive: true,
 					},
 					{
-						Id:         "id_2",
-						Name:       "package 2",
-						CurrencyA3: "RUB",
-						Price:      300,
-						IsActive:   false,
+						Id:       "id_2",
+						Name:     "package 2",
+						Currency: rub,
+						Price:    300,
+						IsActive: false,
 					},
 					{
-						Id:         "id_3",
-						Name:       "package 3",
-						CurrencyA3: "AUD",
-						Price:      500,
-						IsActive:   true,
+						Id:       "id_3",
+						Name:     "package 3",
+						Currency: aud,
+						Price:    500,
+						IsActive: true,
 					},
 					{
-						Id:         "id_4",
-						Name:       "package 4",
-						CurrencyA3: "RUB",
-						Price:      1000,
-						IsActive:   true,
+						Id:       "id_4",
+						Name:     "package 4",
+						Currency: rub,
+						Price:    1000,
+						IsActive: true,
 					},
 				},
 			},
@@ -254,32 +282,32 @@ func (suite *OrderTestSuite) SetupTest() {
 			"RU": {
 				FixedPackage: []*billing.FixedPackage{
 					{
-						Id:         "id_1",
-						Name:       "package 1",
-						CurrencyA3: "RUB",
-						Price:      100,
-						IsActive:   true,
+						Id:       "id_1",
+						Name:     "package 1",
+						Currency: rub,
+						Price:    100,
+						IsActive: true,
 					},
 					{
-						Id:         "id_2",
-						Name:       "package 2",
-						CurrencyA3: "RUB",
-						Price:      300,
-						IsActive:   false,
+						Id:       "id_2",
+						Name:     "package 2",
+						Currency: rub,
+						Price:    300,
+						IsActive: false,
 					},
 					{
-						Id:         "id_3",
-						Name:       "package 3",
-						CurrencyA3: "AUD",
-						Price:      500,
-						IsActive:   true,
+						Id:       "id_3",
+						Name:     "package 3",
+						Currency: aud,
+						Price:    500,
+						IsActive: true,
 					},
 					{
-						Id:         "id_4",
-						Name:       "package 4",
-						CurrencyA3: "RUB",
-						Price:      1000,
-						IsActive:   true,
+						Id:       "id_4",
+						Name:     "package 4",
+						Currency: rub,
+						Price:    1000,
+						IsActive: true,
 					},
 				},
 			},
@@ -1181,7 +1209,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	}
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 
-	suite.service.env = environmentProd
+	suite.service.cfg.Environment = environmentProd
 
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
@@ -1198,7 +1226,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodNotAllowed_Error() {
@@ -1214,7 +1242,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	}
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 
-	suite.service.env = environmentProd
+	suite.service.cfg.Environment = environmentProd
 
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
@@ -1231,7 +1259,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodIncorrectId_Error() {
@@ -1247,7 +1275,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	}
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 
-	suite.service.env = environmentProd
+	suite.service.cfg.Environment = environmentProd
 
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
@@ -1264,7 +1292,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodIncompatible, err.Error())
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodEmptyTerminal_Error() {
@@ -1280,7 +1308,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	}
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 
-	suite.service.env = environmentProd
+	suite.service.cfg.Environment = environmentProd
 
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
@@ -1297,7 +1325,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodEmptySettings, err.Error())
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_Ok() {
@@ -2867,11 +2895,16 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_DuplicateProjectOrderI
 		CreatedAt:     ptypes.TimestampNow(),
 		IsJsonRequest: false,
 		FixedPackage: &billing.FixedPackage{
-			Id:         "id_1",
-			Name:       "package 1",
-			CurrencyA3: "RUB",
-			Price:      100,
-			IsActive:   true,
+			Id:   "id_1",
+			Name: "package 1",
+			Currency: &billing.Currency{
+				CodeInt:  643,
+				CodeA3:   "RUB",
+				Name:     &billing.Name{Ru: "Российский рубль", En: "Russian ruble"},
+				IsActive: true,
+			},
+			Price:    100,
+			IsActive: true,
 		},
 		AmountInMerchantAccountingCurrency: tools.FormatAmount(req.Amount),
 		PaymentMethodOutcomeAmount:         req.Amount,
@@ -3058,7 +3091,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvir
 		PayerIp:       "127.0.0.1",
 	}
 
-	suite.service.env = "prod"
+	suite.service.cfg.Environment = "prod"
 
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
@@ -3072,7 +3105,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvir
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(pms) > 0)
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNotFound_Error() {
@@ -3117,7 +3150,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 		PayerIp:       "127.0.0.1",
 	}
 
-	suite.service.env = "prod"
+	suite.service.cfg.Environment = environmentProd
 
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
@@ -3134,7 +3167,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 	assert.Len(suite.T(), pms, 0)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_CommissionNotFound_Error() {
@@ -3179,7 +3212,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaym
 		PayerIp:       "127.0.0.1",
 	}
 
-	suite.service.env = "prod"
+	suite.service.cfg.Environment = environmentProd
 
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
@@ -3196,7 +3229,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaym
 	assert.Len(suite.T(), pms, 0)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_SavedCards_Ok() {
@@ -3409,13 +3442,14 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Ok() {
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	pms := &billing.PaymentFormPaymentMethods{}
-	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), &grpc.FindByStringValue{Value: order.Id}, pms)
+	req1 := &grpc.PaymentFormJsonDataRequest{OrderId: order.Id, Scheme: "https", Host: "unit.test"}
+	rsp := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(pms.PaymentMethods) > 0)
-	assert.True(suite.T(), len(pms.PaymentMethods[0].Id) > 0)
-	assert.True(suite.T(), pms.PaymentMethods[0].AmountWithoutCommissions > 0)
+	assert.True(suite.T(), len(rsp.PaymentMethods) > 0)
+	assert.True(suite.T(), len(rsp.PaymentMethods[0].Id) > 0)
+	assert.True(suite.T(), rsp.PaymentMethods[0].AmountWithoutCommissions > 0)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Error() {
@@ -3437,11 +3471,12 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Error() {
 	order.PayerData.CountryCodeA2 = "AU"
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
-	pms := &billing.PaymentFormPaymentMethods{}
-	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), &grpc.FindByStringValue{Value: order.Id}, pms)
+	req1 := &grpc.PaymentFormJsonDataRequest{OrderId: order.Id, Scheme: "https", Host: "unit.test"}
+	rsp := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp)
 
 	assert.Error(suite.T(), err)
-	assert.Len(suite.T(), pms.PaymentMethods, 0)
+	assert.Len(suite.T(), rsp.PaymentMethods, 0)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
 }
 
@@ -3984,7 +4019,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
 
-	suite.service.env = environmentProd
+	suite.service.cfg.Environment = environmentProd
 
 	data := map[string]string{
 		paymentCreateFieldOrderId:         rsp.Id,
@@ -4010,7 +4045,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 		processor.checked.order.PaymentMethodTerminalId,
 	)
 
-	suite.service.env = "dev"
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangeProjectAccount_Ok() {
@@ -4184,7 +4219,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_E
 		PayerIp:     "127.0.0.1",
 	}
 
-	suite.service.env = environmentProd
+	suite.service.cfg.Environment = environmentProd
 
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
@@ -4213,6 +4248,8 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_E
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
 	assert.True(suite.T(), len(rsp.Error) > 0)
 	assert.Equal(suite.T(), paymentSystemErrorAuthenticateFailed, rsp.Error)
+
+	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemHandler_Error() {

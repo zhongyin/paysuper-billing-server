@@ -49,16 +49,13 @@ type Service struct {
 	db     *database.Source
 	log    *zap.SugaredLogger
 	mx     sync.Mutex
-	cCfg   *config.CacheConfig
+	cfg    *config.Config
 	exitCh chan bool
 	ctx    context.Context
 	geo    proto.GeoIpService
 	rep    repository.RepositoryService
-	env    string
-	psCfg  *config.PaymentSystemConfig
 
-	accountingCurrencyA3 string
-	accountingCurrency   *billing.Currency
+	accountingCurrency *billing.Currency
 
 	currencyCache        map[string]*billing.Currency
 	projectCache         map[string]*billing.Project
@@ -88,15 +85,12 @@ func NewBillingService(
 	rep repository.RepositoryService,
 ) *Service {
 	return &Service{
-		db:                   db,
-		log:                  log,
-		cCfg:                 cfg.CacheConfig,
-		exitCh:               exitCh,
-		geo:                  geo,
-		rep:                  rep,
-		env:                  cfg.Environment,
-		accountingCurrencyA3: cfg.AccountingCurrency,
-		psCfg:                cfg.PaymentSystemConfig,
+		db:     db,
+		log:    log,
+		cfg:    cfg,
+		exitCh: exitCh,
+		geo:    geo,
+		rep:    rep,
 	}
 }
 
@@ -108,7 +102,7 @@ func (s *Service) Init() (err error) {
 	}
 
 	s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
-	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.accountingCurrencyA3)
+	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.cfg.AccountingCurrency)
 
 	if err != nil {
 		return errors.New(errorAccountingCurrencyNotFound)
@@ -123,8 +117,8 @@ func (s *Service) reBuildCache() {
 	var err error
 	var key string
 
-	curTicker := time.NewTicker(time.Second * time.Duration(s.cCfg.CurrencyTimeout))
-	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cCfg.ProjectPaymentMethodTimeout))
+	curTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyTimeout))
+	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectPaymentMethodTimeout))
 	s.rebuild = true
 
 	for {
@@ -179,7 +173,7 @@ func (s *Service) initCache() error {
 }
 
 func (s *Service) isProductionEnvironment() bool {
-	return s.env == environmentProd
+	return s.cfg.Environment == environmentProd
 }
 
 func (s *Service) logError(msg string, data interface{}) {

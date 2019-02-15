@@ -511,7 +511,3 @@ message PaymentFormPaymentMethod {
     // @inject_tag: json:"saved_cards,omitempty"
     repeated SavedCard saved_cards = 13;
 }
-
-message PaymentFormPaymentMethods {
-    repeated PaymentFormPaymentMethod payment_methods = 1;
-}

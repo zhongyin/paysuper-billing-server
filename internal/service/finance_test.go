@@ -48,8 +48,30 @@ func (suite *FinanceTestSuite) SetupTest() {
 	}
 
 	vat := []interface{}{
-		&billing.Vat{Country: "RU", Subdivision: "", Vat: 20, IsActive: true},
-		&billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:   643,
+				CodeA2:    "RU",
+				CodeA3:    "RUS",
+				Name:      &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive:  true,
+			},
+			Subdivision: "",
+			Vat: 20,
+			IsActive: true,
+		},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:   840,
+				CodeA2:    "US",
+				CodeA3:    "USA",
+				Name:      &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+				IsActive:  true,
+			},
+			Subdivision: "CA",
+			Vat: 10.25,
+			IsActive: true,
+		},
 	}
 
 	err = db.Collection(pkg.CollectionVat).Insert(vat...)

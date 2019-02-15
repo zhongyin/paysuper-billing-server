@@ -33,7 +33,6 @@ It has these top-level messages:
 	CardExpire
 	SavedCard
 	PaymentFormPaymentMethod
-	PaymentFormPaymentMethods
 */
 package billing
 

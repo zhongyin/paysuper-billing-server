@@ -22,6 +22,8 @@ type Config struct {
 	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8086"`
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 
+	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
+
 	*CacheConfig
 	*PaymentSystemConfig
 }

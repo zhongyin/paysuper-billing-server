@@ -271,18 +271,6 @@ func (m *Project) GetBSON() (interface{}, error) {
 	st := &MgoProject{
 		CallbackCurrency:         m.CallbackCurrency,
 		CreateInvoiceAllowedUrls: m.CreateInvoiceAllowedUrls,
-		Merchant: &MgoMerchant{
-			Id:                        bson.ObjectIdHex(m.Merchant.Id),
-			ExternalId:                m.Merchant.ExternalId,
-			Email:                     m.Merchant.Email,
-			Name:                      m.Merchant.Name,
-			Country:                   m.Merchant.Country,
-			AccountingPeriod:          m.Merchant.AccountingPeriod,
-			Currency:                  m.Merchant.Currency,
-			IsVatEnabled:              m.Merchant.IsVatEnabled,
-			IsCommissionToUserEnabled: m.Merchant.IsCommissionToUserEnabled,
-			Status:                    m.Merchant.Status,
-		},
 		AllowDynamicNotifyUrls:   m.AllowDynamicNotifyUrls,
 		AllowDynamicRedirectUrls: m.AllowDynamicRedirectUrls,
 		LimitsCurrency:           m.LimitsCurrency,
@@ -349,40 +337,55 @@ func (m *Project) GetBSON() (interface{}, error) {
 		st.FixedPackage = fps
 	}
 
-	if m.Merchant.CreatedAt != nil {
-		t, err := ptypes.Timestamp(m.Merchant.CreatedAt)
-
-		if err != nil {
-			return nil, err
+	if m.Merchant != nil {
+		st.Merchant = &MgoMerchant{
+			Id:                        bson.ObjectIdHex(m.Merchant.Id),
+			ExternalId:                m.Merchant.ExternalId,
+			Email:                     m.Merchant.Email,
+			Name:                      m.Merchant.Name,
+			Country:                   m.Merchant.Country,
+			AccountingPeriod:          m.Merchant.AccountingPeriod,
+			Currency:                  m.Merchant.Currency,
+			IsVatEnabled:              m.Merchant.IsVatEnabled,
+			IsCommissionToUserEnabled: m.Merchant.IsCommissionToUserEnabled,
+			Status:                    m.Merchant.Status,
 		}
 
-		st.Merchant.CreatedAt = t
-	} else {
-		st.Merchant.CreatedAt = time.Now()
-	}
+		if m.Merchant.CreatedAt != nil {
+			t, err := ptypes.Timestamp(m.Merchant.CreatedAt)
 
-	if m.Merchant.UpdatedAt != nil {
-		t, err := ptypes.Timestamp(m.Merchant.UpdatedAt)
+			if err != nil {
+				return nil, err
+			}
 
-		if err != nil {
-			return nil, err
+			st.Merchant.CreatedAt = t
+		} else {
+			st.Merchant.CreatedAt = time.Now()
 		}
 
-		st.Merchant.UpdatedAt = t
-	} else {
-		st.Merchant.UpdatedAt = time.Now()
-	}
+		if m.Merchant.UpdatedAt != nil {
+			t, err := ptypes.Timestamp(m.Merchant.UpdatedAt)
 
-	if m.Merchant.FirstPaymentAt != nil {
-		t, err := ptypes.Timestamp(m.Merchant.FirstPaymentAt)
+			if err != nil {
+				return nil, err
+			}
 
-		if err != nil {
-			return nil, err
+			st.Merchant.UpdatedAt = t
+		} else {
+			st.Merchant.UpdatedAt = time.Now()
 		}
 
-		st.Merchant.FirstPaymentAt = t
-	} else {
-		st.Merchant.FirstPaymentAt = time.Now()
+		if m.Merchant.FirstPaymentAt != nil {
+			t, err := ptypes.Timestamp(m.Merchant.FirstPaymentAt)
+
+			if err != nil {
+				return nil, err
+			}
+
+			st.Merchant.FirstPaymentAt = t
+		} else {
+			st.Merchant.FirstPaymentAt = time.Now()
+		}
 	}
 
 	return st, nil
@@ -400,18 +403,40 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	m.CallbackCurrency = decoded.CallbackCurrency
 	m.CallbackProtocol = decoded.CallbackProtocol
 	m.CreateInvoiceAllowedUrls = decoded.CreateInvoiceAllowedUrls
-	m.Merchant = &Merchant{
-		Id:                        decoded.Merchant.Id.Hex(),
-		ExternalId:                decoded.Merchant.ExternalId,
-		Email:                     decoded.Merchant.Email,
-		Name:                      decoded.Merchant.Name,
-		Country:                   decoded.Merchant.Country,
-		AccountingPeriod:          decoded.Merchant.AccountingPeriod,
-		Currency:                  decoded.Merchant.Currency,
-		IsVatEnabled:              decoded.Merchant.IsVatEnabled,
-		IsCommissionToUserEnabled: decoded.Merchant.IsCommissionToUserEnabled,
-		Status:                    decoded.Merchant.Status,
+
+	if decoded.Merchant != nil {
+		m.Merchant = &Merchant{
+			Id:                        decoded.Merchant.Id.Hex(),
+			ExternalId:                decoded.Merchant.ExternalId,
+			Email:                     decoded.Merchant.Email,
+			Name:                      decoded.Merchant.Name,
+			Country:                   decoded.Merchant.Country,
+			AccountingPeriod:          decoded.Merchant.AccountingPeriod,
+			Currency:                  decoded.Merchant.Currency,
+			IsVatEnabled:              decoded.Merchant.IsVatEnabled,
+			IsCommissionToUserEnabled: decoded.Merchant.IsCommissionToUserEnabled,
+			Status:                    decoded.Merchant.Status,
+		}
+
+		m.Merchant.CreatedAt, err = ptypes.TimestampProto(decoded.Merchant.CreatedAt)
+
+		if err != nil {
+			return err
+		}
+
+		m.Merchant.UpdatedAt, err = ptypes.TimestampProto(decoded.Merchant.UpdatedAt)
+
+		if err != nil {
+			return err
+		}
+
+		m.Merchant.FirstPaymentAt, err = ptypes.TimestampProto(decoded.Merchant.FirstPaymentAt)
+
+		if err != nil {
+			return err
+		}
 	}
+
 	m.AllowDynamicNotifyUrls = decoded.AllowDynamicNotifyUrls
 	m.AllowDynamicRedirectUrls = decoded.AllowDynamicRedirectUrls
 	m.LimitsCurrency = decoded.LimitsCurrency
@@ -446,24 +471,6 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	}
 
 	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
-
-	if err != nil {
-		return err
-	}
-
-	m.Merchant.CreatedAt, err = ptypes.TimestampProto(decoded.Merchant.CreatedAt)
-
-	if err != nil {
-		return err
-	}
-
-	m.Merchant.UpdatedAt, err = ptypes.TimestampProto(decoded.Merchant.UpdatedAt)
-
-	if err != nil {
-		return err
-	}
-
-	m.Merchant.FirstPaymentAt, err = ptypes.TimestampProto(decoded.Merchant.FirstPaymentAt)
 
 	if err != nil {
 		return err

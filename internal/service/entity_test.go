@@ -54,7 +54,18 @@ func (suite *ProjectTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	vat := &billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true}
+	vat := &billing.Vat{
+		Country: &billing.Country{
+			CodeInt:   840,
+			CodeA2:    "US",
+			CodeA3:    "USA",
+			Name:      &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+			IsActive:  true,
+		},
+		Subdivision: "CA",
+		Vat: 10.25,
+		IsActive: true,
+	}
 
 	err = db.Collection(pkg.CollectionVat).Insert(vat)
 

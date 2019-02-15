@@ -83,10 +83,54 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 	suite.db = db
 
 	vat := []interface{}{
-		&billing.Vat{Country: "RU", Subdivision: "", Vat: 20, IsActive: true},
-		&billing.Vat{Country: "UA", Subdivision: "", Vat: 22, IsActive: true},
-		&billing.Vat{Country: "US", Subdivision: "AL", Vat: 13.5, IsActive: true},
-		&billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Subdivision: "",
+			Vat:         20,
+			IsActive:    true,
+		},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:  804,
+				CodeA2:   "UA",
+				CodeA3:   "UKR",
+				Name:     &billing.Name{Ru: "Украина", En: "Ukraine"},
+				IsActive: true,
+			},
+			Subdivision: "",
+			Vat:         22,
+			IsActive:    true,
+		},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:  840,
+				CodeA2:   "US",
+				CodeA3:   "USA",
+				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+				IsActive: true,
+			},
+			Subdivision: "AL",
+			Vat:         13.5,
+			IsActive:    true,
+		},
+		&billing.Vat{
+			Country: &billing.Country{
+				CodeInt:  840,
+				CodeA2:   "US",
+				CodeA3:   "USA",
+				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+				IsActive: true,
+			},
+			Subdivision: "CA",
+			Vat:         10.25,
+			IsActive:    true,
+		},
 	}
 
 	err = suite.db.Collection(pkg.CollectionVat).Insert(vat...)

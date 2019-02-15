@@ -12,7 +12,9 @@ It has these top-level messages:
 	EmptyResponse
 	PaymentCreateRequest
 	PaymentCreateResponse
-	FindByStringValue
+	PaymentFormJsonDataRequest
+	PaymentFormJsonDataProject
+	PaymentFormJsonDataResponse
 */
 package grpc
 
@@ -31,7 +33,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.PaymentFormPaymentMethods{}
+var _ = billing.Order{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -48,7 +50,7 @@ var _ server.Option
 
 type BillingService interface {
 	OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, opts ...client.CallOption) (*billing.Order, error)
-	PaymentFormJsonDataProcess(ctx context.Context, in *FindByStringValue, opts ...client.CallOption) (*billing.PaymentFormPaymentMethods, error)
+	PaymentFormJsonDataProcess(ctx context.Context, in *PaymentFormJsonDataRequest, opts ...client.CallOption) (*PaymentFormJsonDataResponse, error)
 	PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, opts ...client.CallOption) (*PaymentCreateResponse, error)
 	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
 }
@@ -81,9 +83,9 @@ func (c *billingService) OrderCreateProcess(ctx context.Context, in *billing.Ord
 	return out, nil
 }
 
-func (c *billingService) PaymentFormJsonDataProcess(ctx context.Context, in *FindByStringValue, opts ...client.CallOption) (*billing.PaymentFormPaymentMethods, error) {
+func (c *billingService) PaymentFormJsonDataProcess(ctx context.Context, in *PaymentFormJsonDataRequest, opts ...client.CallOption) (*PaymentFormJsonDataResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.PaymentFormJsonDataProcess", in)
-	out := new(billing.PaymentFormPaymentMethods)
+	out := new(PaymentFormJsonDataResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -115,7 +117,7 @@ func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opt
 
 type BillingServiceHandler interface {
 	OrderCreateProcess(context.Context, *billing.OrderCreateRequest, *billing.Order) error
-	PaymentFormJsonDataProcess(context.Context, *FindByStringValue, *billing.PaymentFormPaymentMethods) error
+	PaymentFormJsonDataProcess(context.Context, *PaymentFormJsonDataRequest, *PaymentFormJsonDataResponse) error
 	PaymentCreateProcess(context.Context, *PaymentCreateRequest, *PaymentCreateResponse) error
 	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
 }
@@ -123,7 +125,7 @@ type BillingServiceHandler interface {
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
 	type billingService interface {
 		OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error
-		PaymentFormJsonDataProcess(ctx context.Context, in *FindByStringValue, out *billing.PaymentFormPaymentMethods) error
+		PaymentFormJsonDataProcess(ctx context.Context, in *PaymentFormJsonDataRequest, out *PaymentFormJsonDataResponse) error
 		PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, out *PaymentCreateResponse) error
 		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
 	}
@@ -142,7 +144,7 @@ func (h *billingServiceHandler) OrderCreateProcess(ctx context.Context, in *bill
 	return h.BillingServiceHandler.OrderCreateProcess(ctx, in, out)
 }
 
-func (h *billingServiceHandler) PaymentFormJsonDataProcess(ctx context.Context, in *FindByStringValue, out *billing.PaymentFormPaymentMethods) error {
+func (h *billingServiceHandler) PaymentFormJsonDataProcess(ctx context.Context, in *PaymentFormJsonDataRequest, out *PaymentFormJsonDataResponse) error {
 	return h.BillingServiceHandler.PaymentFormJsonDataProcess(ctx, in, out)
 }
 
