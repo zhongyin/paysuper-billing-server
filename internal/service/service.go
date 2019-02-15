@@ -176,8 +176,8 @@ func (s *Service) isProductionEnvironment() bool {
 	return s.cfg.Environment == environmentProd
 }
 
-func (s *Service) logError(msg string, data interface{}) {
-	s.log.Errorw(fmt.Sprintf("[PAYONE_BILLING] %s", msg), data)
+func (s *Service) logError(msg string, data []interface{}) {
+	s.log.Errorw(fmt.Sprintf("[PAYONE_BILLING] %s", msg), data...)
 }
 
 func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {

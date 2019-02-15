@@ -287,7 +287,7 @@ func (s *Service) PaymentCreateProcess(
 	err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	if err != nil {
-		s.logError("Update order data failed", []interface{}{"err", err, "order", order})
+		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
 
 		rsp.Error = orderErrorUnknown
 		rsp.Status = responseStatusErrorSystem
@@ -319,7 +319,7 @@ func (s *Service) PaymentCreateProcess(
 	url, err := h.CreatePayment(order, req.Data)
 
 	if err != nil {
-		s.logError("Order create in payment system failed", []interface{}{"err", err, "order", order})
+		s.logError("Order create in payment system failed", []interface{}{"err", err.Error(), "order", order})
 
 		rsp.Error = err.Error()
 		rsp.Status = responseStatusErrorPaymentSystem
@@ -337,7 +337,7 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 	err = s.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(id)).One(&order)
 
 	if err != nil && err != mgo.ErrNotFound {
-		s.logError("Order not found in payment create process", []interface{}{"err", err, "order_id", id})
+		s.logError("Order not found in payment create process", []interface{}{"err", err.Error(), "order_id", id})
 	}
 
 	if order == nil {
@@ -989,7 +989,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		if err != nil {
 			v.service.logError(
 				"Get BIN data failed in payment create process",
-				[]interface{}{"err", err, "pan", v.data[paymentCreateFieldPan]},
+				[]interface{}{"err", err.Error(), "pan", v.data[paymentCreateFieldPan]},
 			)
 		}
 
