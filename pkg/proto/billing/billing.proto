@@ -21,7 +21,7 @@ message OrderCreateRequest {
     double amount = 3;
     // @inject_tag: query:"PO_CURRENCY" form:"PO_CURRENCY" json:"currency" validate:"omitempty,alpha,len=3"
     string currency = 4;
-    // @inject_tag: "PO_ACCOUNT" form:"PO_ACCOUNT" json:"account"` validate:"omitempty,len=255"
+    // @inject_tag: "PO_ACCOUNT" form:"PO_ACCOUNT" json:"account"`
     string account = 5;
     // @inject_tag: query:"PO_ORDER_ID" form:"PO_ORDER_ID" json:"order_id" validate:"omitempty,len=255"
     string order_id = 6;

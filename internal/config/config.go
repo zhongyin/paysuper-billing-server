@@ -19,7 +19,7 @@ type Config struct {
 	MongoUser          string `envconfig:"MONGO_USER" required:"true"`
 	MongoPassword      string `envconfig:"MONGO_PASSWORD" required:"true"`
 	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" required:"true" default:"EUR"`
-	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8085"`
+	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8086"`
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 
 	*CacheConfig
