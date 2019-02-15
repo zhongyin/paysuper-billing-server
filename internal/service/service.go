@@ -30,6 +30,13 @@ const (
 	errorAccountingCurrencyNotFound = "[PAYONE_BILLING] Accounting currency not found"
 
 	environmentProd = "prod"
+
+	HeaderContentType   = "Content-Type"
+	HeaderAuthorization = "Authorization"
+	HeaderContentLength = "Content-Length"
+
+	MIMEApplicationForm = "application/x-www-form-urlencoded"
+	MIMEApplicationJSON = "application/json"
 )
 
 var (
@@ -55,16 +62,18 @@ type Service struct {
 	geo    proto.GeoIpService
 	rep    repository.RepositoryService
 	env    string
+	psCfg  *config.PaymentSystemConfig
 
 	accountingCurrencyA3 string
 	accountingCurrency   *billing.Currency
 
-	currencyCache      map[string]*billing.Currency
-	projectCache       map[string]*billing.Project
-	currencyRateCache  map[int32]map[int32]*billing.CurrencyRate
-	vatCache           map[string]map[string]*billing.Vat
-	paymentMethodCache map[string]map[int32]*billing.PaymentMethod
-	commissionCache    map[string]map[string]*billing.MgoCommission
+	currencyCache        map[string]*billing.Currency
+	projectCache         map[string]*billing.Project
+	currencyRateCache    map[int32]map[int32]*billing.CurrencyRate
+	vatCache             map[string]map[string]*billing.Vat
+	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
+	paymentMethodIdCache map[string]*billing.PaymentMethod
+	commissionCache      map[string]map[string]*billing.MgoCommission
 
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
 
@@ -80,22 +89,21 @@ type Cacher interface {
 func NewBillingService(
 	db *database.Source,
 	log *zap.SugaredLogger,
-	cCfg *config.CacheConfig,
+	cfg *config.Config,
 	exitCh chan bool,
 	geo proto.GeoIpService,
 	rep repository.RepositoryService,
-	env string,
-	accountingCurrency string,
 ) *Service {
 	return &Service{
 		db:                   db,
 		log:                  log,
-		cCfg:                 cCfg,
+		cCfg:                 cfg.CacheConfig,
 		exitCh:               exitCh,
 		geo:                  geo,
 		rep:                  rep,
-		env:                  env,
-		accountingCurrencyA3: accountingCurrency,
+		env:                  cfg.Environment,
+		accountingCurrencyA3: cfg.AccountingCurrency,
+		psCfg:                cfg.PaymentSystemConfig,
 	}
 }
 
@@ -179,6 +187,10 @@ func (s *Service) initCache() error {
 
 func (s *Service) isProductionEnvironment() bool {
 	return s.env == environmentProd
+}
+
+func (s *Service) logError(msg string, data interface{}) {
+	s.log.Errorw(fmt.Sprintf("[PAYONE_BILLING] %s", msg), data)
 }
 
 func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {

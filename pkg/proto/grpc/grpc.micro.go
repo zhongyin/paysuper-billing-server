@@ -10,6 +10,8 @@ It is generated from these files:
 It has these top-level messages:
 	EmptyRequest
 	EmptyResponse
+	PaymentCreateRequest
+	PaymentCreateResponse
 */
 package grpc
 
@@ -46,6 +48,7 @@ var _ server.Option
 type BillingService interface {
 	OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, opts ...client.CallOption) (*billing.Order, error)
 	PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*billing.PaymentFormPaymentMethods, error)
+	PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, opts ...client.CallOption) (*PaymentCreateResponse, error)
 	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
@@ -87,6 +90,16 @@ func (c *billingService) PaymentFormJsonDataProcess(ctx context.Context, in *bil
 	return out, nil
 }
 
+func (c *billingService) PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, opts ...client.CallOption) (*PaymentCreateResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.PaymentCreateProcess", in)
+	out := new(PaymentCreateResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.RebuildCache", in)
 	out := new(EmptyResponse)
@@ -102,6 +115,7 @@ func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opt
 type BillingServiceHandler interface {
 	OrderCreateProcess(context.Context, *billing.OrderCreateRequest, *billing.Order) error
 	PaymentFormJsonDataProcess(context.Context, *billing.Order, *billing.PaymentFormPaymentMethods) error
+	PaymentCreateProcess(context.Context, *PaymentCreateRequest, *PaymentCreateResponse) error
 	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
 }
 
@@ -109,6 +123,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 	type billingService interface {
 		OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error
 		PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, out *billing.PaymentFormPaymentMethods) error
+		PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, out *PaymentCreateResponse) error
 		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
 	}
 	type BillingService struct {
@@ -128,6 +143,10 @@ func (h *billingServiceHandler) OrderCreateProcess(ctx context.Context, in *bill
 
 func (h *billingServiceHandler) PaymentFormJsonDataProcess(ctx context.Context, in *billing.Order, out *billing.PaymentFormPaymentMethods) error {
 	return h.BillingServiceHandler.PaymentFormJsonDataProcess(ctx, in, out)
+}
+
+func (h *billingServiceHandler) PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, out *PaymentCreateResponse) error {
+	return h.BillingServiceHandler.PaymentCreateProcess(ctx, in, out)
 }
 
 func (h *billingServiceHandler) RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error {

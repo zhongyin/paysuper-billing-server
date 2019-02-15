@@ -59,6 +59,7 @@ func newPaymentMethodHandler(svc *Service) Cacher {
 
 func (h *PaymentMethod) setCache(recs []interface{}) {
 	h.svc.paymentMethodCache = make(map[string]map[int32]*billing.PaymentMethod)
+	h.svc.paymentMethodIdCache = make(map[string]*billing.PaymentMethod)
 
 	for _, r := range recs {
 		pm := r.(*billing.PaymentMethod)
@@ -72,6 +73,8 @@ func (h *PaymentMethod) setCache(recs []interface{}) {
 		for _, v := range pm.Currencies  {
 			h.svc.paymentMethodCache[pm.Group][v] = pm
 		}
+
+		h.svc.paymentMethodIdCache[pm.Id] = pm
 
 		h.svc.mx.Unlock()
 	}
@@ -99,6 +102,16 @@ func (s *Service) GetPaymentMethodByGroupAndCurrency(group string, currency int3
 	}
 
 	rec, ok := pmGroup[currency]
+
+	if !ok {
+		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)
+	}
+
+	return rec, nil
+}
+
+func (s *Service) GetPaymentMethodById(id string) (*billing.PaymentMethod, error) {
+	rec, ok := s.paymentMethodIdCache[id]
 
 	if !ok {
 		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)

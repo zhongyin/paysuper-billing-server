@@ -27,6 +27,7 @@ func Test_Finance(t *testing.T) {
 
 func (suite *FinanceTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
+	cfg.AccountingCurrency = "RUB"
 
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
@@ -205,7 +206,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), nil, nil, "dev", "RUB")
+	suite.service = NewBillingService(db, logger.Sugar(), cfg, make(chan bool, 1), nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {

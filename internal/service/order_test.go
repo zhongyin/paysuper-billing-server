@@ -9,6 +9,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/internal/mock"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/tools"
 	"github.com/globalsign/mgo/bson"
@@ -34,6 +35,8 @@ type OrderTestSuite struct {
 	paymentMethod                          *billing.PaymentMethod
 	inactivePaymentMethod                  *billing.PaymentMethod
 	paymentMethodWithInactivePaymentSystem *billing.PaymentMethod
+	pmWebMoney                             *billing.PaymentMethod
+	pmBitcoin1                             *billing.PaymentMethod
 }
 
 func Test_Order(t *testing.T) {
@@ -42,6 +45,8 @@ func Test_Order(t *testing.T) {
 
 func (suite *OrderTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
+	cfg.AccountingCurrency = "RUB"
+	cfg.CardPayOrderCreateUrl = "https://sandbox.cardpay.com"
 
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
@@ -136,9 +141,11 @@ func (suite *OrderTestSuite) SetupTest() {
 		Currency:         rub,
 		Currencies:       []int32{643, 840, 980},
 		Params: &billing.PaymentMethodParams{
-			Handler:    "cardpay",
-			Terminal:   "15985",
-			ExternalId: "BANKCARD",
+			Handler:          "cardpay",
+			Terminal:         "15985",
+			Password:         "A1tph4I6BD0f",
+			CallbackPassword: "0V1rJ7t4jCRv",
+			ExternalId:       "BANKCARD",
 		},
 		Type:     "bank_card",
 		IsActive: true,
@@ -153,15 +160,16 @@ func (suite *OrderTestSuite) SetupTest() {
 	}
 
 	project := &billing.Project{
-		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "default",
-		LimitsCurrency:   usd,
-		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 1,
-		Name:             "test project 1",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 1 secret key",
+		Id:                       bson.NewObjectId().Hex(),
+		CallbackCurrency:         rub,
+		CallbackProtocol:         "default",
+		LimitsCurrency:           usd,
+		MaxPaymentAmount:         15000,
+		MinPaymentAmount:         1,
+		Name:                     "test project 1",
+		OnlyFixedAmounts:         true,
+		AllowDynamicRedirectUrls: true,
+		SecretKey:                "test project 1 secret key",
 		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
 			"BANKCARD": {
 				Id:        pmBankCard.Id,
@@ -432,7 +440,7 @@ func (suite *OrderTestSuite) SetupTest() {
 	pmWebMoneyWME := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
 		Name:             "WebMoney WME",
-		Group:            "WEBMONEY",
+		Group:            "WEBMONEY_WME",
 		MinPaymentAmount: 0,
 		MaxPaymentAmount: 0,
 		Currency:         eur,
@@ -469,8 +477,32 @@ func (suite *OrderTestSuite) SetupTest() {
 		Type:     "crypto",
 		IsActive: false,
 	}
+	pmBitcoin1 := &billing.PaymentMethod{
+		Id:               bson.NewObjectId().Hex(),
+		Name:             "Bitcoin",
+		Group:            "BITCOIN_1",
+		MinPaymentAmount: 0,
+		MaxPaymentAmount: 0,
+		Currency:         rub,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:    "unit_test",
+			Terminal:   "16007",
+			ExternalId: "BITCOIN",
+		},
+		Type:     "crypto",
+		IsActive: true,
+		PaymentSystem: &billing.PaymentSystem{
+			Id:                 bson.NewObjectId().Hex(),
+			Name:               "CardPay",
+			AccountingCurrency: rub,
+			AccountingPeriod:   "every-day",
+			Country:            &billing.Country{},
+			IsActive:           true,
+		},
+	}
 
-	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin, pmWebMoney, pmWebMoneyWME}
+	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin, pmWebMoney, pmWebMoneyWME, pmBitcoin1}
 
 	err = db.Collection(collectionPaymentMethod).Insert(pms...)
 
@@ -511,6 +543,14 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		&billing.Commission{
 			PaymentMethodId:         pmWebMoney.Id,
+			ProjectId:               project.Id,
+			PaymentMethodCommission: 1,
+			PspCommission:           2,
+			TotalCommissionToUser:   3,
+			StartDate:               commissionStartDate,
+		},
+		&billing.Commission{
+			PaymentMethodId:         pmBitcoin1.Id,
 			ProjectId:               project.Id,
 			PaymentMethodCommission: 1,
 			PspCommission:           2,
@@ -582,12 +622,10 @@ func (suite *OrderTestSuite) SetupTest() {
 	suite.service = NewBillingService(
 		db,
 		logger.Sugar(),
-		cfg.CacheConfig,
+		cfg,
 		make(chan bool, 1),
 		mock.NewGeoIpServiceTestOk(),
 		mock.NewRepositoryServiceOk(),
-		"dev",
-		"USD",
 	)
 	err = suite.service.Init()
 
@@ -604,6 +642,8 @@ func (suite *OrderTestSuite) SetupTest() {
 	suite.paymentMethod = pmBankCard
 	suite.inactivePaymentMethod = pmBitcoin
 	suite.paymentMethodWithInactivePaymentSystem = pmQiwi
+	suite.pmWebMoney = pmWebMoney
+	suite.pmBitcoin1 = pmBitcoin1
 }
 
 func (suite *OrderTestSuite) TearDownTest() {
@@ -1068,30 +1108,13 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_Ok() {
 	err := processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), processor.checked.paymentMethod)
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_PaymentMethodNotFound_Error() {
-	req := &billing.OrderCreateRequest{
-		PaymentMethod: "some_payment_method_from_my_head",
-		Currency:      "RUB",
-	}
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-
-	err := processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processPaymentMethod()
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-	assert.Equal(suite.T(), orderErrorPaymentMethodNotFound, err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_PaymentMethodInactive_Error() {
@@ -1109,7 +1132,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_PaymentMethodInactiv
 	err := processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodInactive, err.Error())
@@ -1130,7 +1157,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_PaymentSystemInactiv
 	err := processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentSystemInactive, err.Error())
@@ -1157,7 +1188,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
@@ -1186,7 +1221,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
@@ -1215,7 +1254,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodIncompatible, err.Error())
@@ -1244,7 +1287,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodEmptySettings, err.Error())
@@ -1272,7 +1319,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1299,7 +1350,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ConvertAmount_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1326,7 +1381,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ConvertAmount_Error()
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1354,7 +1413,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ProjectMinAmount_Erro
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1382,7 +1445,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ProjectMaxAmount_Erro
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1410,7 +1477,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_PaymentMethodMinAmoun
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1438,7 +1509,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_PaymentMethodMaxAmoun
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	err = processor.processLimitAmounts()
@@ -1593,6 +1668,8 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Ok() {
 		OrderId:     bson.NewObjectId().Hex(),
 		PayerEmail:  "test@unit.unit",
 		PayerIp:     "127.0.0.1",
+		UrlSuccess:  "https://unit.test",
+		UrlFail:     "https://unit.test",
 	}
 
 	processor := &OrderCreateRequestProcessor{
@@ -1622,6 +1699,8 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Ok() {
 	order, err := processor.prepareOrder()
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), order)
+	assert.Equal(suite.T(), req.UrlFail, order.Project.UrlFail)
+	assert.Equal(suite.T(), req.UrlSuccess, order.Project.UrlSuccess)
 }
 
 func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
@@ -1661,7 +1740,11 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
 	err = processor.processLimitAmounts()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	order, err := processor.prepareOrder()
@@ -1690,6 +1773,96 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
 	assert.True(suite.T(), order.ProjectFeeAmount.AmountPaymentMethodCurrency > 0)
 
 	assert.True(suite.T(), order.VatAmount > 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlVerify_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+		UrlNotify:   "https://unit.test",
+		UrlVerify:   "https://unit.test",
+	}
+
+	processor := &OrderCreateRequestProcessor{
+		Service: suite.service,
+		request: req,
+		checked: &orderCreateRequestProcessorChecked{},
+	}
+
+	err := processor.processProject()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processPayerData()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processCurrency()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processFixedPackage()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processProjectOrderId()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processLimitAmounts()
+	assert.Nil(suite.T(), err)
+
+	order, err := processor.prepareOrder()
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), order)
+	assert.Equal(suite.T(), orderErrorDynamicNotifyUrlsNotAllowed, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlRedirect_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+		UrlFail:     "https://unit.test",
+		UrlSuccess:  "https://unit.test",
+	}
+
+	processor := &OrderCreateRequestProcessor{
+		Service: suite.service,
+		request: req,
+		checked: &orderCreateRequestProcessorChecked{},
+	}
+
+	err := processor.processProject()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processPayerData()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processCurrency()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processFixedPackage()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processProjectOrderId()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processLimitAmounts()
+	assert.Nil(suite.T(), err)
+
+	processor.checked.project = suite.projectUahLimitCurrency
+
+	order, err := processor.prepareOrder()
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), order)
+	assert.Equal(suite.T(), orderErrorDynamicRedirectUrlsNotAllowed, err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
@@ -1768,7 +1941,11 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Commission_Error() {
 	err = processor.processLimitAmounts()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	processor.checked.payerData.CountryCodeA2 = "AU"
@@ -1806,7 +1983,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 	err = processor.processFixedPackage()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -1905,7 +2086,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 	err = processor.processFixedPackage()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -1993,7 +2178,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_CommissionNotFoun
 	err = processor.processFixedPackage()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -2072,7 +2261,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_CommissionToUserE
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -2153,7 +2346,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_MerchantAccountin
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -2242,7 +2439,11 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_PspAccountingCurr
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPaymentMethod()
+	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), pm)
+
+	err = processor.processPaymentMethod(pm)
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -2795,7 +2996,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_DevEnviro
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(order.Id) > 0)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	pms, err := processor.processRenderFormPaymentMethods()
 
@@ -2822,7 +3023,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Cache_Ok(
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(order.Id) > 0)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	_, ok := suite.service.projectPaymentMethodCache[order.Project.Id]
 	assert.False(suite.T(), ok)
@@ -2864,7 +3065,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvir
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(order.Id) > 0)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Nil(suite.T(), err)
@@ -2894,7 +3095,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 
 	order.Project.Id = bson.NewObjectId().Hex()
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
@@ -2925,7 +3126,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 
 	order.Project.Id = suite.projectWithoutPaymentMethods.Id
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
@@ -2956,7 +3157,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Commissio
 
 	order.PaymentMethodOutcomeCurrency.CodeInt = 978
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
@@ -2987,7 +3188,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaym
 
 	order.Project.Id = suite.projectEmptyPaymentMethodTerminal.Id
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
@@ -3014,7 +3215,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_SavedCards_Ok()
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	pm := &billing.PaymentFormPaymentMethod{
 		Id:                       suite.paymentMethod.Id,
@@ -3054,7 +3255,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_EmptySavedCards
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	pm := &billing.PaymentFormPaymentMethod{
 		Id:                       suite.paymentMethod.Id,
@@ -3094,7 +3295,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_NotBankCard_Ok(
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	pm := &billing.PaymentFormPaymentMethod{
 		Id:                       suite.paymentMethod.Id,
@@ -3134,7 +3335,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_VatCalculation_
 
 	order.PayerData.CountryCodeA2 = "AU"
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	pm := &billing.PaymentFormPaymentMethod{
 		Id:                       suite.paymentMethod.Id,
@@ -3171,7 +3372,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_GetSavedCards_E
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	processor := &OrderRenderProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{service: suite.service, order: order}
 
 	pm := &billing.PaymentFormPaymentMethod{
 		Id:                       suite.paymentMethod.Id,
@@ -3218,14 +3419,14 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Ok() {
 
 func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Error() {
 	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.project.Id,
-		Currency:      "RUB",
-		Amount:        100,
-		Account:       "unit test",
-		Description:   "unit test",
-		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
 	}
 
 	order := &billing.Order{}
@@ -3240,5 +3441,809 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Error() {
 	assert.Error(suite.T(), err)
 	assert.Len(suite.T(), pms.PaymentMethods, 0)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
+}
 
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCard_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldPan:             "4000000000000002",
+		paymentCreateFieldCvv:             "123",
+		paymentCreateFieldMonth:           "02",
+		paymentCreateFieldYear:            "2100",
+		paymentCreateFieldHolder:          "Mr. Card Holder",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), processor.checked.order)
+	assert.NotNil(suite.T(), processor.checked.project)
+	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+
+	bankBrand, ok := processor.checked.order.PaymentRequisites[paymentCreateBankCardFieldBrand]
+
+	assert.True(suite.T(), ok)
+	assert.True(suite.T(), len(bankBrand) > 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Ewallet_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.pmWebMoney.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldEWallet:         "ewallet_account",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), processor.checked.order)
+	assert.NotNil(suite.T(), processor.checked.project)
+	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Bitcoin_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), processor.checked.order)
+	assert.NotNil(suite.T(), processor.checked.project)
+	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderIdEmpty_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldIdNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodEmpty_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId: rsp.Id,
+		paymentCreateFieldEmail:   "test@unit.unit",
+		paymentCreateFieldCrypto:  "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_EmailEmpty_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldEmailNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         bson.NewObjectId().Hex(),
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderHasEndedStatus_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	rsp.Status = constant.OrderStatusProjectComplete
+	err = suite.service.db.Collection(collectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorOrderAlreadyComplete, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ProjectProcess_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	rsp.Project.Id = suite.inactiveProject.Id
+	err = suite.service.db.Collection(collectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorProjectInactive, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: bson.NewObjectId().Hex(),
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorPaymentMethodNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodProcess_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.inactivePaymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorPaymentMethodInactive, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_AmountLimitProcess_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	rsp.ProjectIncomeAmount = 10
+	err = suite.service.db.Collection(collectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "bitcoin_address",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), orderErrorAmountLowerThanMinAllowed, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCardNumberInvalid_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldPan:             "fake_bank_card_number",
+		paymentCreateFieldCvv:             "123",
+		paymentCreateFieldMonth:           "02",
+		paymentCreateFieldYear:            "2100",
+		paymentCreateFieldHolder:          "Mr. Card Holder",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), bankCardPanIsInvalid, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_GetBinData_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldPan:             "4000000000000002",
+		paymentCreateFieldCvv:             "123",
+		paymentCreateFieldMonth:           "02",
+		paymentCreateFieldYear:            "2100",
+		paymentCreateFieldHolder:          "Mr. Card Holder",
+	}
+
+	suite.service.rep = mock.NewRepositoryServiceError()
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), processor.checked.order)
+	assert.NotNil(suite.T(), processor.checked.project)
+	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+
+	bankBrand, ok := processor.checked.order.PaymentRequisites[paymentCreateBankCardFieldBrand]
+
+	assert.False(suite.T(), ok)
+	assert.Len(suite.T(), bankBrand, 0)
+
+	suite.service.rep = mock.NewRepositoryServiceOk()
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_AccountEmpty_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldCrypto:          "",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), processor.checked.order)
+	assert.Nil(suite.T(), processor.checked.project)
+	assert.Nil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), paymentSystemErrorEWalletIdentifierIsInvalid, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSystemTerminal_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	suite.service.env = environmentProd
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldPan:             "4000000000000002",
+		paymentCreateFieldCvv:             "123",
+		paymentCreateFieldMonth:           "02",
+		paymentCreateFieldYear:            "2100",
+		paymentCreateFieldHolder:          "Mr. Card Holder",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), processor.checked.order)
+	assert.NotNil(suite.T(), processor.checked.project)
+	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(
+		suite.T(),
+		suite.project.PaymentMethods[constant.PaymentSystemGroupAliasBankCard].Terminal,
+		processor.checked.order.PaymentMethodTerminalId,
+	)
+
+	suite.service.env = "dev"
+}
+
+func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangeProjectAccount_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), "", rsp.ProjectAccount)
+
+	data := map[string]string{
+		paymentCreateFieldOrderId:         rsp.Id,
+		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		paymentCreateFieldEmail:           "test@unit.unit",
+		paymentCreateFieldPan:             "4000000000000002",
+		paymentCreateFieldCvv:             "123",
+		paymentCreateFieldMonth:           "02",
+		paymentCreateFieldYear:            "2100",
+		paymentCreateFieldHolder:          "Mr. Card Holder",
+	}
+
+	processor := &PaymentCreateProcessor{service: suite.service, data: data}
+	err = processor.processPaymentFormData()
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), processor.checked.order)
+	assert.NotNil(suite.T(), processor.checked.project)
+	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), "test@unit.unit", processor.checked.order.ProjectAccount)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			paymentCreateFieldOrderId:         order.Id,
+			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			paymentCreateFieldEmail:           "test@unit.unit",
+			paymentCreateFieldPan:             "4000000000000002",
+			paymentCreateFieldCvv:             "123",
+			paymentCreateFieldMonth:           "02",
+			paymentCreateFieldYear:            expireYear.Format("2006"),
+			paymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), responseStatusOK, rsp.Status)
+	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
+	assert.Len(suite.T(), rsp.Error, 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessValidation_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			paymentCreateFieldOrderId:         order.Id,
+			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			paymentCreateFieldEmail:           "test@unit.unit",
+			paymentCreateFieldPan:             "4000000000000002",
+			paymentCreateFieldCvv:             "123",
+			paymentCreateFieldMonth:           "02",
+			paymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), responseStatusErrorValidation, rsp.Status)
+	assert.Len(suite.T(), rsp.RedirectUrl, 0)
+	assert.True(suite.T(), len(rsp.Error) > 0)
+	assert.Equal(suite.T(), bankCardExpireYearIsRequired, rsp.Error)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessOrderCommissions_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	order.PayerData.CountryCodeA2 = "AU"
+	err = suite.service.db.Collection(collectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			paymentCreateFieldOrderId:         order.Id,
+			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			paymentCreateFieldEmail:           "test@unit.unit",
+			paymentCreateFieldPan:             "4000000000000002",
+			paymentCreateFieldCvv:             "123",
+			paymentCreateFieldMonth:           "02",
+			paymentCreateFieldYear:            expireYear.Format("2006"),
+			paymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), responseStatusErrorValidation, rsp.Status)
+	assert.Len(suite.T(), rsp.RedirectUrl, 0)
+	assert.True(suite.T(), len(rsp.Error) > 0)
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionVat), rsp.Error)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	suite.service.env = environmentProd
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			paymentCreateFieldOrderId:         order.Id,
+			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			paymentCreateFieldEmail:           "test@unit.unit",
+			paymentCreateFieldPan:             "4000000000000002",
+			paymentCreateFieldCvv:             "123",
+			paymentCreateFieldMonth:           "02",
+			paymentCreateFieldYear:            expireYear.Format("2006"),
+			paymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), responseStatusErrorPaymentSystem, rsp.Status)
+	assert.Len(suite.T(), rsp.RedirectUrl, 0)
+	assert.True(suite.T(), len(rsp.Error) > 0)
+	assert.Equal(suite.T(), paymentSystemErrorAuthenticateFailed, rsp.Error)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemHandler_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			paymentCreateFieldOrderId:         order.Id,
+			paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+			paymentCreateFieldEmail:           "test@unit.unit",
+			paymentCreateFieldCrypto:          "bitcoin_address",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), responseStatusErrorSystem, rsp.Status)
+	assert.Len(suite.T(), rsp.RedirectUrl, 0)
+	assert.True(suite.T(), len(rsp.Error) > 0)
+	assert.Equal(suite.T(), paymentSystemErrorHandlerNotFound, rsp.Error)
 }

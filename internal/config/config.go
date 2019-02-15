@@ -9,6 +9,10 @@ type CacheConfig struct {
 	ProjectPaymentMethodTimeout int64 `envconfig:"CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT" default:"86400"`
 }
 
+type PaymentSystemConfig struct {
+	CardPayOrderCreateUrl string `envconfig:"CARD_PAY_ORDER_CREATE_URL" required:"false"`
+}
+
 type Config struct {
 	MongoHost          string `envconfig:"MONGO_HOST" required:"true"`
 	MongoDatabase      string `envconfig:"MONGO_DB" required:"true"`
@@ -19,6 +23,7 @@ type Config struct {
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 
 	*CacheConfig
+	*PaymentSystemConfig
 }
 
 func NewConfig() (*Config, error) {

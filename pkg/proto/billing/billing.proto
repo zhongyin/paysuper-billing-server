@@ -279,10 +279,14 @@ message PaymentMethodParams {
     string handler = 1;
     // @inject_tag: bson:"terminal" structure:"terminal"
     string terminal = 2;
+    // @inject_tag: bson:"password"
+    string password = 3;
+    // @inject_tag: bson:"callback_password"
+    string callback_password = 5;
     // @inject_tag: bson:"external_id" structure:"external_id"
-    string external_id = 3;
+    string external_id = 6;
     // @inject_tag: bson:"other" structure:"other"
-    map<string, string> other = 4;
+    map<string, string> other = 7;
 }
 
 message PaymentSystem {
@@ -353,8 +357,10 @@ message ProjectPaymentMethod {
     string terminal = 2;
     // @inject_tag: bson:"password"
     string password = 3;
+    // @inject_tag: bson:"callback_password"
+    string callback_password = 4;
     // @inject_tag: bson:"created_at"
-    google.protobuf.Timestamp created_at = 4;
+    google.protobuf.Timestamp created_at = 5;
 }
 
 message CurrencyRate {

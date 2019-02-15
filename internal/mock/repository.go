@@ -30,7 +30,15 @@ func (r *RepositoryServiceOk) FindBinData(
 	in *repository.FindByStringValue,
 	opts ...client.CallOption,
 ) (*billing.BinData, error) {
-	return &billing.BinData{}, nil
+	return &billing.BinData{
+		CardBin: 123,
+		CardBrand: "Mock",
+		CardType: "Mock",
+		CardCategory: "Mock",
+		BankName: "Mock",
+		BankCountryName: "Russia",
+		BankCountryCodeInt: 643,
+	}, nil
 }
 
 func (r *RepositoryServiceOk) InsertSavedCard(
@@ -147,7 +155,7 @@ func (r *RepositoryServiceError) FindBinData(
 	in *repository.FindByStringValue,
 	opts ...client.CallOption,
 ) (*billing.BinData, error) {
-	return &billing.BinData{}, nil
+	return &billing.BinData{}, errors.New("some error")
 }
 
 func (r *RepositoryServiceError) InsertSavedCard(

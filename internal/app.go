@@ -70,12 +70,10 @@ func (app *Application) Init() {
 	svc := service.NewBillingService(
 		app.database,
 		app.sugLogger,
-		app.cfg.CacheConfig,
+		app.cfg,
 		app.cacheExit,
 		geoService,
 		repService,
-		app.cfg.Environment,
-		app.cfg.AccountingCurrency,
 	)
 
 	if err := svc.Init(); err != nil {

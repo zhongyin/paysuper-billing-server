@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
-	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
+	repo "github.com/ProtocolONE/payone-repository/pkg/proto/repository"
 	"github.com/ProtocolONE/payone-repository/tools"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -44,17 +45,34 @@ const (
 	orderErrorSignatureInvalid                         = "order request signature is invalid"
 	orderErrorNotFound                                 = "order with specified identifier not found"
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
-	orderErrorOrderPaymentMethodIncomeCurrencyNotFound = "unknown currency received from payment system"
-	orderErrorOrderPSPAccountingCurrencyNotFound       = "unknown PSP accounting currency"
-	orderErrorOrderDeclined                            = "payment system decline order with specified identifier early"
-	orderErrorOrderCanceled                            = "payment system cancel order with specified identifier early"
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
+	orderErrorUnknown                                  = "unknown error. try request later"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
 	orderErrorCreatePaymentRequiredFieldEmailNotFound         = "required field \"email\" not found"
 
-	orderSignatureElementsGlue = "|"
+	paymentCreateFieldOrderId         = "order_id"
+	paymentCreateFieldPaymentMethodId = "payment_method_id"
+	paymentCreateFieldEmail           = "email"
+	paymentCreateFieldPan             = "pan"
+	paymentCreateFieldCvv             = "cvv"
+	paymentCreateFieldMonth           = "month"
+	paymentCreateFieldYear            = "year"
+	paymentCreateFieldHolder          = "card_holder"
+	paymentCreateFieldEWallet         = "ewallet"
+	paymentCreateFieldCrypto          = "address"
+
+	paymentCreateBankCardFieldBrand         = "card_brand"
+	paymentCreateBankCardFieldType          = "card_type"
+	paymentCreateBankCardFieldCategory      = "card_category"
+	paymentCreateBankCardFieldIssuerName    = "bank_issuer_name"
+	paymentCreateBankCardFieldIssuerCountry = "bank_issuer_country"
+
+	responseStatusOK                 = int32(0)
+	responseStatusErrorValidation    = int32(1)
+	responseStatusErrorSystem        = int32(2)
+	responseStatusErrorPaymentSystem = int32(3)
 
 	orderDefaultDescription = "Payment by order # %s"
 )
@@ -73,9 +91,19 @@ type OrderCreateRequestProcessor struct {
 	request *billing.OrderCreateRequest
 }
 
-type OrderRenderProcessor struct {
+type PaymentFormProcessor struct {
 	service *Service
 	order   *billing.Order
+}
+
+type PaymentCreateProcessor struct {
+	service *Service
+	data    map[string]string
+	checked struct {
+		order         *billing.Order
+		project       *billing.Project
+		paymentMethod *billing.PaymentMethod
+	}
 }
 
 func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCreateRequest, rsp *billing.Order) error {
@@ -118,7 +146,13 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 	}
 
 	if req.PaymentMethod != "" {
-		if err := processor.processPaymentMethod(); err != nil {
+		pm, err := s.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
+
+		if err != nil {
+			return errors.New(orderErrorPaymentMethodNotFound)
+		}
+
+		if err := processor.processPaymentMethod(pm); err != nil {
 			return err
 		}
 	}
@@ -174,7 +208,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	req *billing.Order,
 	rsp *billing.PaymentFormPaymentMethods,
 ) error {
-	processor := &OrderRenderProcessor{service: s, order: req}
+	processor := &PaymentFormProcessor{service: s, order: req}
 
 	pms, err := processor.processRenderFormPaymentMethods()
 
@@ -187,10 +221,101 @@ func (s *Service) PaymentFormJsonDataProcess(
 	return nil
 }
 
+func (s *Service) PaymentCreateProcess(
+	ctx context.Context,
+	req *grpc.PaymentCreateRequest,
+	rsp *grpc.PaymentCreateResponse,
+) error {
+	processor := &PaymentCreateProcessor{service: s, data: req.Data}
+	err := processor.processPaymentFormData()
+
+	if err != nil {
+		rsp.Error = err.Error()
+		rsp.Status = responseStatusErrorValidation
+
+		return nil
+	}
+
+	order := processor.checked.order
+	order.PaymentMethod = &billing.PaymentMethodOrder{
+		Id:            processor.checked.paymentMethod.Id,
+		Name:          processor.checked.paymentMethod.Name,
+		Params:        processor.checked.paymentMethod.Params,
+		PaymentSystem: processor.checked.paymentMethod.PaymentSystem,
+		Group:         processor.checked.paymentMethod.Group,
+	}
+
+	commissionProcessor := &OrderCreateRequestProcessor{Service: s}
+	err = commissionProcessor.processOrderCommissions(order)
+
+	if err != nil {
+		rsp.Error = err.Error()
+		rsp.Status = responseStatusErrorValidation
+
+		return nil
+	}
+
+	err = s.db.Collection(collectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	if err != nil {
+		s.logError("Update order data failed", []interface{}{"err", err, "order", order})
+
+		rsp.Error = orderErrorUnknown
+		rsp.Status = responseStatusErrorSystem
+
+		return nil
+	}
+
+	auth := &Authenticate{
+		Terminal:         processor.checked.paymentMethod.Params.Terminal,
+		Password:         processor.checked.paymentMethod.Params.Password,
+		CallbackPassword: processor.checked.paymentMethod.Params.CallbackPassword,
+	}
+
+	if s.isProductionEnvironment() == true {
+		auth.Terminal = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Terminal
+		auth.Password = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Password
+		auth.CallbackPassword = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].CallbackPassword
+	}
+
+	h, err := s.NewPaymentSystem(s.psCfg, s.log, auth, order, req.Data)
+
+	if err != nil {
+		rsp.Error = err.Error()
+		rsp.Status = responseStatusErrorSystem
+
+		return nil
+	}
+
+	url, err := h.CreatePayment(order, req.Data)
+
+	if err != nil {
+		s.logError("Order create in payment system failed", []interface{}{"err", err, "order", order})
+
+		rsp.Error = err.Error()
+		rsp.Status = responseStatusErrorPaymentSystem
+
+		return nil
+	}
+
+	rsp.Status = responseStatusOK
+	rsp.RedirectUrl = url
+
+	return nil
+}
+
 func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	id := bson.NewObjectId().Hex()
 	amount := tools.FormatAmount(v.request.Amount)
 	merAccAmount := amount
+
+	if (v.request.UrlVerify != "" || v.request.UrlNotify != "") && v.checked.project.AllowDynamicNotifyUrls == false {
+		return nil, errors.New(orderErrorDynamicNotifyUrlsNotAllowed)
+	}
+
+	if (v.request.UrlSuccess != "" || v.request.UrlFail != "") && v.checked.project.AllowDynamicRedirectUrls == false {
+		return nil, errors.New(orderErrorDynamicRedirectUrlsNotAllowed)
+	}
 
 	if v.checked.currency.CodeInt != v.checked.project.Merchant.Currency.CodeInt {
 		amount, err := v.Service.Convert(v.checked.currency.CodeInt, v.checked.project.Merchant.Currency.CodeInt, v.request.Amount)
@@ -239,6 +364,14 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 
 	if v.request.Description != "" {
 		order.Description = v.request.Description
+	}
+
+	if v.request.UrlSuccess != "" {
+		order.Project.UrlSuccess = v.request.UrlSuccess
+	}
+
+	if v.request.UrlFail != "" {
+		order.Project.UrlFail = v.request.UrlFail
 	}
 
 	if v.checked.paymentMethod != nil {
@@ -390,13 +523,7 @@ func (v *OrderCreateRequestProcessor) processProjectOrderId() error {
 	return nil
 }
 
-func (v *OrderCreateRequestProcessor) processPaymentMethod() error {
-	pm, err := v.GetPaymentMethodByGroupAndCurrency(v.request.PaymentMethod, v.checked.currency.CodeInt)
-
-	if err != nil {
-		return errors.New(orderErrorPaymentMethodNotFound)
-	}
-
+func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMethod) error {
 	if pm.IsActive == false {
 		return errors.New(orderErrorPaymentMethodInactive)
 	}
@@ -595,7 +722,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 }
 
 // Get payment methods of project for rendering in payment form
-func (v *OrderRenderProcessor) processRenderFormPaymentMethods() ([]*billing.PaymentFormPaymentMethod, error) {
+func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.PaymentFormPaymentMethod, error) {
 	var projectPms []*billing.PaymentFormPaymentMethod
 
 	project, ok := v.service.projectCache[v.order.Project.Id]
@@ -611,7 +738,13 @@ func (v *OrderRenderProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 	for k, val := range v.service.paymentMethodCache {
 		pm, ok := val[v.order.PaymentMethodOutcomeCurrency.CodeInt]
 
-		if !ok {
+		if !ok || pm.IsActive == false ||
+			pm.PaymentSystem.IsActive == false {
+			continue
+		}
+
+		if v.order.ProjectIncomeAmount < pm.MinPaymentAmount ||
+			(pm.MaxPaymentAmount > 0 && v.order.ProjectIncomeAmount > pm.MaxPaymentAmount) {
 			continue
 		}
 
@@ -664,7 +797,7 @@ func (v *OrderRenderProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 	return projectPms, nil
 }
 
-func (v *OrderRenderProcessor) processPaymentMethodsData(pm *billing.PaymentFormPaymentMethod) error {
+func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentFormPaymentMethod) error {
 	amount := pm.AmountWithoutCommissions
 
 	if v.order.Project.Merchant.IsCommissionToUserEnabled == true {
@@ -696,7 +829,7 @@ func (v *OrderRenderProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
-		req := &repository.SavedCardRequest{Account: v.order.ProjectAccount, ProjectId: v.order.Project.Id}
+		req := &repo.SavedCardRequest{Account: v.order.ProjectAccount, ProjectId: v.order.Project.Id}
 		rsp, err := v.service.rep.FindSavedCards(context.TODO(), req)
 
 		if err != nil {
@@ -722,6 +855,144 @@ func (v *OrderRenderProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 			}
 
 		}
+	}
+
+	return nil
+}
+
+// Validate data received from payment form and write validated data to order
+func (v *PaymentCreateProcessor) processPaymentFormData() error {
+	var order *billing.Order
+
+	if _, ok := v.data[paymentCreateFieldOrderId]; !ok ||
+		v.data[paymentCreateFieldOrderId] == "" {
+		return errors.New(orderErrorCreatePaymentRequiredFieldIdNotFound)
+	}
+
+	if _, ok := v.data[paymentCreateFieldPaymentMethodId]; !ok ||
+		v.data[paymentCreateFieldPaymentMethodId] == "" {
+		return errors.New(orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound)
+	}
+
+	if _, ok := v.data[paymentCreateFieldEmail]; !ok ||
+		v.data[paymentCreateFieldEmail] == "" {
+		return errors.New(orderErrorCreatePaymentRequiredFieldEmailNotFound)
+	}
+
+	err := v.service.db.Collection(collectionOrder).FindId(bson.ObjectIdHex(v.data[paymentCreateFieldOrderId])).One(&order)
+
+	if err != nil && err != mgo.ErrNotFound {
+		v.service.logError("Order not found in payment create process", []interface{}{"err", err, "data", v.data})
+		return errors.New(orderErrorNotFound)
+	}
+
+	if order == nil {
+		return errors.New(orderErrorNotFound)
+	}
+
+	if order.HasEndedStatus() == true {
+		return errors.New(orderErrorOrderAlreadyComplete)
+	}
+
+	processor := &OrderCreateRequestProcessor{
+		Service: v.service,
+		request: &billing.OrderCreateRequest{
+			ProjectId: order.Project.Id,
+			Amount:    order.ProjectIncomeAmount,
+		},
+		checked: &orderCreateRequestProcessorChecked{
+			currency: order.ProjectIncomeCurrency,
+		},
+	}
+
+	if err := processor.processProject(); err != nil {
+		return err
+	}
+
+	pm, err := v.service.GetPaymentMethodById(v.data[paymentCreateFieldPaymentMethodId])
+
+	if err != nil {
+		return errors.New(orderErrorPaymentMethodNotFound)
+	}
+
+	if err = processor.processPaymentMethod(pm); err != nil {
+		return err
+	}
+
+	if err := processor.processLimitAmounts(); err != nil {
+		return err
+	}
+
+	order.PayerData.Email = v.data[paymentCreateFieldEmail]
+	order.PaymentRequisites = make(map[string]string)
+
+	delete(v.data, paymentCreateFieldOrderId)
+	delete(v.data, paymentCreateFieldPaymentMethodId)
+	delete(v.data, paymentCreateFieldEmail)
+
+	if processor.checked.paymentMethod.IsBankCard() == true {
+		validator := &bankCardValidator{
+			Pan:    v.data[paymentCreateFieldPan],
+			Cvv:    v.data[paymentCreateFieldCvv],
+			Month:  v.data[paymentCreateFieldMonth],
+			Year:   v.data[paymentCreateFieldYear],
+			Holder: v.data[paymentCreateFieldHolder],
+		}
+
+		if err := validator.Validate(); err != nil {
+			return err
+		}
+
+		order.PaymentRequisites[paymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[paymentCreateFieldPan])
+		order.PaymentRequisites[paymentCreateFieldMonth] = v.data[paymentCreateFieldMonth]
+		order.PaymentRequisites[paymentCreateFieldYear] = v.data[paymentCreateFieldYear]
+
+		bin, err := v.service.rep.FindBinData(context.TODO(), &repo.FindByStringValue{Value: v.data[paymentCreateFieldPan]})
+
+		if err != nil {
+			v.service.logError(
+				"Get BIN data failed in payment create process",
+				[]interface{}{"err", err, "pan", v.data[paymentCreateFieldPan]},
+			)
+		}
+
+		if err == nil && bin != nil {
+			order.PaymentRequisites[paymentCreateBankCardFieldBrand] = bin.CardBrand
+			order.PaymentRequisites[paymentCreateBankCardFieldType] = bin.CardType
+			order.PaymentRequisites[paymentCreateBankCardFieldCategory] = bin.CardCategory
+			order.PaymentRequisites[paymentCreateBankCardFieldIssuerName] = bin.BankName
+			order.PaymentRequisites[paymentCreateBankCardFieldIssuerCountry] = bin.BankCountryName
+		}
+	} else {
+		account := ""
+
+		if acc, ok := v.data[paymentCreateFieldEWallet]; ok {
+			account = acc
+		}
+
+		if acc, ok := v.data[paymentCreateFieldCrypto]; ok {
+			account = acc
+		}
+
+		if account == "" {
+			return errors.New(paymentSystemErrorEWalletIdentifierIsInvalid)
+		}
+
+		order.PaymentRequisites = v.data
+	}
+
+	v.checked.project = processor.checked.project
+	v.checked.paymentMethod = processor.checked.paymentMethod
+	v.checked.order = order
+
+	if v.service.isProductionEnvironment() == true {
+		v.checked.order.PaymentMethodTerminalId = v.checked.project.PaymentMethods[v.checked.paymentMethod.Group].Terminal
+	} else {
+		v.checked.order.PaymentMethodTerminalId = v.checked.paymentMethod.Params.Terminal
+	}
+
+	if order.ProjectAccount == "" {
+		order.ProjectAccount = order.PayerData.Email
 	}
 
 	return nil

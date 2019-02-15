@@ -58,6 +58,7 @@ func Test_BillingService(t *testing.T) {
 
 func (suite *BillingServiceTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
+	cfg.AccountingCurrency = "RUB"
 
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
@@ -403,7 +404,7 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "RUB")
+	service := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -421,7 +422,7 @@ func (suite *BillingServiceTestSuite) TestNewBillingService() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "RUB")
+	svc := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
 
 	key := "unit"
 	err := svc.cache(key, newGetAllEmptyResultTest(svc))
@@ -431,7 +432,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "RUB")
+	svc := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
 
 	key := "unit"
 	err := svc.cache(key, newGetAllErrorTest(svc))
@@ -441,7 +442,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "RUB")
+	svc := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
 
 	key := "unit"
 	handlers[key] = newGetAllEmptyResultTest
@@ -453,7 +454,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "RUB")
+	service := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -481,10 +482,10 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
-	cacheCfg := suite.cfg.CacheConfig
-	cacheCfg.CurrencyTimeout = 3
+	cfg := suite.cfg
+	cfg.CacheConfig.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh, nil, nil, "dev", "RUB")
+	service := NewBillingService(suite.db, suite.log, cfg, suite.exCh, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -506,7 +507,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	_, ok := service.currencyCache[c.CodeA3]
 	assert.False(suite.T(), ok)
 
-	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout+1))
+	time.Sleep(time.Second * time.Duration(cfg.CurrencyTimeout+1))
 
 	_, ok = service.currencyCache[c.CodeA3]
 	assert.True(suite.T(), ok)
@@ -515,10 +516,10 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerError() {
-	cacheCfg := suite.cfg.CacheConfig
-	cacheCfg.CurrencyTimeout = 3
+	cfg := suite.cfg
+	cfg.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, suite.log, cacheCfg, suite.exCh, nil, nil, "dev", "RUB")
+	service := NewBillingService(suite.db, suite.log, cfg, suite.exCh, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -534,25 +535,28 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerErro
 
 	assert.Nil(suite.T(), suite.db.Collection(collectionCurrency).DropCollection())
 
-	time.Sleep(time.Second * time.Duration(cacheCfg.CurrencyTimeout+1))
+	time.Sleep(time.Second * time.Duration(cfg.CurrencyTimeout+1))
 
 	assert.False(suite.T(), service.rebuild)
 	assert.Error(suite.T(), service.rebuildError)
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitError() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "AUD")
+	cfg, err := config.NewConfig()
+	cfg.AccountingCurrency = "AUD"
+
+	service := NewBillingService(suite.db, suite.log, cfg, suite.exCh, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
 	}
 
-	err := service.Init()
+	err = service.Init()
 	assert.Error(suite.T(), err)
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg.CacheConfig, suite.exCh, nil, nil, "dev", "RUB")
+	service := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")

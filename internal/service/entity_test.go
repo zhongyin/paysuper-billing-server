@@ -28,6 +28,7 @@ func Test_Project(t *testing.T) {
 
 func (suite *ProjectTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
+	cfg.AccountingCurrency = "RUB"
 
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
@@ -201,7 +202,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	suite.projectId = project.Id
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg.CacheConfig, make(chan bool, 1), nil, nil, "dev", "RUB")
+	suite.service = NewBillingService(db, logger.Sugar(), cfg, make(chan bool, 1), nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {
