@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
@@ -167,10 +168,10 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 		return err
 	}
 
-	err = s.db.Collection(collectionOrder).Insert(order)
+	err = s.db.Collection(pkg.CollectionOrder).Insert(order)
 
 	if err != nil {
-		s.log.Errorw(fmt.Sprintf(errorQueryMask, collectionOrder), "err", err, "inserted_data", order)
+		s.log.Errorw(fmt.Sprintf(errorQueryMask, pkg.CollectionOrder), "err", err, "inserted_data", order)
 		return errors.New(orderErrorCanNotCreate)
 	}
 
@@ -205,10 +206,16 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 
 func (s *Service) PaymentFormJsonDataProcess(
 	ctx context.Context,
-	req *billing.Order,
+	req *grpc.FindByStringValue,
 	rsp *billing.PaymentFormPaymentMethods,
 ) error {
-	processor := &PaymentFormProcessor{service: s, order: req}
+	order, err := s.getOrderById(req.Value)
+
+	if err != nil {
+		return err
+	}
+
+	processor := &PaymentFormProcessor{service: s, order: order}
 
 	pms, err := processor.processRenderFormPaymentMethods()
 
@@ -255,7 +262,7 @@ func (s *Service) PaymentCreateProcess(
 		return nil
 	}
 
-	err = s.db.Collection(collectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+	err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"err", err, "order", order})
@@ -302,6 +309,20 @@ func (s *Service) PaymentCreateProcess(
 	rsp.RedirectUrl = url
 
 	return nil
+}
+
+func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
+	err = s.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(id)).One(&order)
+
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Order not found in payment create process", []interface{}{"err", err, "order_id", id})
+	}
+
+	if order == nil {
+		return order, errors.New(orderErrorNotFound)
+	}
+
+	return
 }
 
 func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
@@ -509,7 +530,7 @@ func (v *OrderCreateRequestProcessor) processProjectOrderId() error {
 		"project_order_id": v.request.OrderId,
 	}
 
-	err := v.db.Collection(collectionOrder).Find(filter).One(&order)
+	err := v.db.Collection(pkg.CollectionOrder).Find(filter).One(&order)
 
 	if err != nil && err != mgo.ErrNotFound {
 		v.log.Errorw("[PAYONE_BILLING] Order create check project order id unique", "err", err, "filter", filter)
@@ -862,8 +883,6 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 
 // Validate data received from payment form and write validated data to order
 func (v *PaymentCreateProcessor) processPaymentFormData() error {
-	var order *billing.Order
-
 	if _, ok := v.data[paymentCreateFieldOrderId]; !ok ||
 		v.data[paymentCreateFieldOrderId] == "" {
 		return errors.New(orderErrorCreatePaymentRequiredFieldIdNotFound)
@@ -879,14 +898,9 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return errors.New(orderErrorCreatePaymentRequiredFieldEmailNotFound)
 	}
 
-	err := v.service.db.Collection(collectionOrder).FindId(bson.ObjectIdHex(v.data[paymentCreateFieldOrderId])).One(&order)
+	order, err := v.service.getOrderById(v.data[paymentCreateFieldOrderId])
 
-	if err != nil && err != mgo.ErrNotFound {
-		v.service.logError("Order not found in payment create process", []interface{}{"err", err, "data", v.data})
-		return errors.New(orderErrorNotFound)
-	}
-
-	if order == nil {
+	if err != nil {
 		return errors.New(orderErrorNotFound)
 	}
 

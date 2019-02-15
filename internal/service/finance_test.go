@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
@@ -51,7 +52,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 		&billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true},
 	}
 
-	err = db.Collection(collectionVat).Insert(vat...)
+	err = db.Collection(pkg.CollectionVat).Insert(vat...)
 
 	if err != nil {
 		suite.FailNow("Insert VAT test data failed", "%v", err)
@@ -66,7 +67,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 
 	currency := []interface{}{rub}
 
-	err = db.Collection(collectionCurrency).Insert(currency...)
+	err = db.Collection(pkg.CollectionCurrency).Insert(currency...)
 
 	if err != nil {
 		suite.FailNow("Insert currency test data failed", "%v", err)
@@ -82,7 +83,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 		},
 	}
 
-	err = db.Collection(collectionCurrencyRate).Insert(rate...)
+	err = db.Collection(pkg.CollectionCurrencyRate).Insert(rate...)
 
 	if err != nil {
 		suite.FailNow("Insert rates test data failed", "%v", err)
@@ -101,7 +102,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 		IsActive:         true,
 	}
 
-	err = db.Collection(collectionProject).Insert(project)
+	err = db.Collection(pkg.CollectionProject).Insert(project)
 
 	if err != nil {
 		suite.FailNow("Insert project test data failed", "%v", err)
@@ -155,7 +156,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 
 	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin}
 
-	err = db.Collection(collectionPaymentMethod).Insert(pms...)
+	err = db.Collection(pkg.CollectionPaymentMethod).Insert(pms...)
 
 	if err != nil {
 		suite.FailNow("Insert payment methods test data failed", "%v", err)
@@ -194,7 +195,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 		},
 	}
 
-	err = db.Collection(collectionCommission).Insert(commissions...)
+	err = db.Collection(pkg.CollectionCommission).Insert(commissions...)
 
 	if err != nil {
 		suite.FailNow("Insert commission test data failed", "%v", err)
@@ -242,7 +243,7 @@ func (suite *FinanceTestSuite) TestFinance_GetCurrencyByCodeA3Error() {
 
 	assert.NotNil(suite.T(), err)
 	assert.Nil(suite.T(), c)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCurrency), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCurrency), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_ConvertOk() {
@@ -261,7 +262,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyFromError() {
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCurrencyRate), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCurrencyRate), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyToError() {
@@ -269,7 +270,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyToError() {
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCurrencyRate), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCurrencyRate), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_CalculateVatWithoutSubdivisionOk() {
@@ -307,7 +308,7 @@ func (suite *FinanceTestSuite) TestFinance_CalculateVatCountryError() {
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionVat), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionVat), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_CalculateVatSubdivisionError() {
@@ -315,7 +316,7 @@ func (suite *FinanceTestSuite) TestFinance_CalculateVatSubdivisionError() {
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionVat), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionVat), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_CalculateCommissionOk() {
@@ -338,7 +339,7 @@ func (suite *FinanceTestSuite) TestFinance_CalculateCommissionProjectError() {
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), commission)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCommission), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCommission), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_CalculateCommissionPaymentMethodError() {
@@ -346,5 +347,5 @@ func (suite *FinanceTestSuite) TestFinance_CalculateCommissionPaymentMethodError
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), commission)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionCommission), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCommission), err.Error())
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
@@ -55,7 +56,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	vat := &billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true}
 
-	err = db.Collection(collectionVat).Insert(vat)
+	err = db.Collection(pkg.CollectionVat).Insert(vat)
 
 	if err != nil {
 		suite.FailNow("Insert VAT test data failed", "%v", err)
@@ -68,7 +69,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 		IsActive: true,
 	}
 
-	err = db.Collection(collectionCurrency).Insert(rub)
+	err = db.Collection(pkg.CollectionCurrency).Insert(rub)
 
 	if err != nil {
 		suite.FailNow("Insert currency test data failed", "%v", err)
@@ -82,7 +83,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 		IsActive:     true,
 	}
 
-	err = db.Collection(collectionCurrencyRate).Insert(rate)
+	err = db.Collection(pkg.CollectionCurrencyRate).Insert(rate)
 
 	if err != nil {
 		suite.FailNow("Insert rates test data failed", "%v", err)
@@ -101,7 +102,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 		IsActive:         true,
 	}
 
-	err = db.Collection(collectionProject).Insert(project)
+	err = db.Collection(pkg.CollectionProject).Insert(project)
 
 	if err != nil {
 		suite.FailNow("Insert project test data failed", "%v", err)
@@ -155,7 +156,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin}
 
-	err = db.Collection(collectionPaymentMethod).Insert(pms...)
+	err = db.Collection(pkg.CollectionPaymentMethod).Insert(pms...)
 
 	if err != nil {
 		suite.FailNow("Insert payment methods test data failed", "%v", err)
@@ -194,7 +195,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 		},
 	}
 
-	err = db.Collection(collectionCommission).Insert(commissions...)
+	err = db.Collection(pkg.CollectionCommission).Insert(commissions...)
 
 	if err != nil {
 		suite.FailNow("Insert commission test data failed", "%v", err)
@@ -237,7 +238,7 @@ func (suite *ProjectTestSuite) TestProject_GetProjectByIdError() {
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), project)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionProject), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionProject), err.Error())
 }
 
 func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrencyOk() {
@@ -254,7 +255,7 @@ func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrency
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), pm)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionPaymentMethod), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionPaymentMethod), err.Error())
 }
 
 func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrency_CurrencyError() {
@@ -262,5 +263,5 @@ func (suite *ProjectTestSuite) TestProject_GetGetPaymentMethodByGroupAndCurrency
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), pm)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, collectionPaymentMethod), err.Error())
+	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionPaymentMethod), err.Error())
 }

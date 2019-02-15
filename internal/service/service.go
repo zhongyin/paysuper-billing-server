@@ -7,6 +7,7 @@ import (
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
@@ -16,14 +17,6 @@ import (
 )
 
 const (
-	collectionCurrency      = "currency"
-	collectionProject       = "project"
-	collectionCurrencyRate  = "currency_rate"
-	collectionVat           = "vat"
-	collectionOrder         = "order"
-	collectionPaymentMethod = "payment_method"
-	collectionCommission    = "commission"
-
 	errorNotFound                   = "[PAYONE_BILLING] %s not found"
 	initCacheErrorNotFound          = "[PAYONE_BILLING] %s query result is empty"
 	errorQueryMask                  = "[PAYONE_BILLING] Query from collection \"%s\" failed"
@@ -41,12 +34,12 @@ const (
 
 var (
 	handlers = map[string]func(*Service) Cacher{
-		collectionCurrency:      newCurrencyHandler,
-		collectionProject:       newProjectHandler,
-		collectionCurrencyRate:  newCurrencyRateHandler,
-		collectionVat:           newVatHandler,
-		collectionPaymentMethod: newPaymentMethodHandler,
-		collectionCommission:    newCommissionHandler,
+		pkg.CollectionCurrency:      newCurrencyHandler,
+		pkg.CollectionProject:       newProjectHandler,
+		pkg.CollectionCurrencyRate:  newCurrencyRateHandler,
+		pkg.CollectionVat:           newVatHandler,
+		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
+		pkg.CollectionCommission:    newCommissionHandler,
 	}
 
 	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
@@ -137,8 +130,8 @@ func (s *Service) reBuildCache() {
 	for {
 		select {
 		case <-curTicker.C:
-			err = s.cache(collectionCurrency, handlers[collectionCurrency](s))
-			key = collectionCurrency
+			err = s.cache(pkg.CollectionCurrency, handlers[pkg.CollectionCurrency](s))
+			key = pkg.CollectionCurrency
 		case <-projectPaymentMethodTimer.C:
 			s.mx.Lock()
 			s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)

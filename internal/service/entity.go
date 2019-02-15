@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
 )
@@ -30,7 +31,7 @@ func (h *Project) setCache(recs []interface{}) {
 func (h *Project) getAll() (recs []interface{}, err error) {
 	var data []*billing.Project
 
-	err = h.svc.db.Collection(collectionProject).Find(bson.M{}).All(&data)
+	err = h.svc.db.Collection(pkg.CollectionProject).Find(bson.M{}).All(&data)
 
 	if data != nil {
 		for _, v := range data {
@@ -45,7 +46,7 @@ func (s *Service) GetProjectById(id string) (*billing.Project, error) {
 	rec, ok := s.projectCache[id]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionProject)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionProject)
 	}
 
 	return rec, nil
@@ -83,7 +84,7 @@ func (h *PaymentMethod) setCache(recs []interface{}) {
 func (h *PaymentMethod) getAll() (recs []interface{}, err error) {
 	var data []*billing.PaymentMethod
 
-	err = h.svc.db.Collection(collectionPaymentMethod).Find(bson.M{}).All(&data)
+	err = h.svc.db.Collection(pkg.CollectionPaymentMethod).Find(bson.M{}).All(&data)
 
 	if data != nil {
 		for _, v := range data {
@@ -98,13 +99,13 @@ func (s *Service) GetPaymentMethodByGroupAndCurrency(group string, currency int3
 	pmGroup, ok := s.paymentMethodCache[group]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionPaymentMethod)
 	}
 
 	rec, ok := pmGroup[currency]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionPaymentMethod)
 	}
 
 	return rec, nil
@@ -114,7 +115,7 @@ func (s *Service) GetPaymentMethodById(id string) (*billing.PaymentMethod, error
 	rec, ok := s.paymentMethodIdCache[id]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionPaymentMethod)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionPaymentMethod)
 	}
 
 	return rec, nil

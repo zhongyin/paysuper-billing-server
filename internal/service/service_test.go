@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
@@ -88,7 +89,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		&billing.Vat{Country: "US", Subdivision: "CA", Vat: 10.25, IsActive: true},
 	}
 
-	err = suite.db.Collection(collectionVat).Insert(vat...)
+	err = suite.db.Collection(pkg.CollectionVat).Insert(vat...)
 
 	if err != nil {
 		suite.FailNow("Insert VAT test data failed", "%v", err)
@@ -117,7 +118,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		},
 	}
 
-	err = suite.db.Collection(collectionCurrency).Insert(currency...)
+	err = suite.db.Collection(pkg.CollectionCurrency).Insert(currency...)
 
 	if err != nil {
 		suite.FailNow("Insert currency test data failed", "%v", err)
@@ -162,7 +163,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 
 	project := []interface{}{projectDefault, projectXsolla, projectCardpay}
 
-	err = suite.db.Collection(collectionProject).Insert(project...)
+	err = suite.db.Collection(pkg.CollectionProject).Insert(project...)
 
 	if err != nil {
 		suite.FailNow("Insert project test data failed", "%v", err)
@@ -234,7 +235,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		},
 	}
 
-	err = suite.db.Collection(collectionCurrencyRate).Insert(rate...)
+	err = suite.db.Collection(pkg.CollectionCurrencyRate).Insert(rate...)
 
 	if err != nil {
 		suite.FailNow("Insert rates test data failed", "%v", err)
@@ -288,7 +289,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 
 	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin}
 
-	err = suite.db.Collection(collectionPaymentMethod).Insert(pms...)
+	err = suite.db.Collection(pkg.CollectionPaymentMethod).Insert(pms...)
 
 	if err != nil {
 		suite.FailNow("Insert payment methods test data failed", "%v", err)
@@ -375,7 +376,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		},
 	}
 
-	err = suite.db.Collection(collectionCommission).Insert(commissions...)
+	err = suite.db.Collection(pkg.CollectionCommission).Insert(commissions...)
 
 	if err != nil {
 		suite.FailNow("Insert commission test data failed", "%v", err)
@@ -501,7 +502,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 		IsActive: true,
 	}
 
-	err = suite.db.Collection(collectionCurrency).Insert(c)
+	err = suite.db.Collection(pkg.CollectionCurrency).Insert(c)
 	assert.Nil(suite.T(), err)
 
 	_, ok := service.currencyCache[c.CodeA3]
@@ -533,7 +534,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerErro
 	assert.True(suite.T(), service.rebuild)
 	assert.Nil(suite.T(), service.rebuildError)
 
-	assert.Nil(suite.T(), suite.db.Collection(collectionCurrency).DropCollection())
+	assert.Nil(suite.T(), suite.db.Collection(pkg.CollectionCurrency).DropCollection())
 
 	time.Sleep(time.Second * time.Duration(cfg.CurrencyTimeout+1))
 

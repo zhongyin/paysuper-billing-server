@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
 	"time"
@@ -40,7 +41,7 @@ func (h *Currency) setCache(recs []interface{}) {
 func (h *Currency) getAll() (recs []interface{}, err error) {
 	var data []*billing.Currency
 
-	err = h.svc.db.Collection(collectionCurrency).Find(bson.M{"is_active": true}).All(&data)
+	err = h.svc.db.Collection(pkg.CollectionCurrency).Find(bson.M{"is_active": true}).All(&data)
 
 	if data != nil {
 		for _, v := range data {
@@ -55,7 +56,7 @@ func (s *Service) GetCurrencyByCodeA3(code string) (*billing.Currency, error) {
 	rec, ok := s.currencyCache[code]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionCurrency)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionCurrency)
 	}
 
 	return rec, nil
@@ -86,7 +87,7 @@ func (h *CurrencyRate) setCache(recs []interface{}) {
 func (h *CurrencyRate) getAll() (recs []interface{}, err error) {
 	var data []*billing.CurrencyRate
 
-	err = h.svc.db.Collection(collectionCurrencyRate).Find(bson.M{"is_active": true}).All(&data)
+	err = h.svc.db.Collection(pkg.CollectionCurrencyRate).Find(bson.M{"is_active": true}).All(&data)
 
 	if data != nil {
 		for _, v := range data {
@@ -101,13 +102,13 @@ func (s *Service) Convert(from int32, to int32, value float64) (float64, error) 
 	fRates, ok := s.currencyRateCache[from]
 
 	if !ok {
-		return 0, fmt.Errorf(errorNotFound, collectionCurrencyRate)
+		return 0, fmt.Errorf(errorNotFound, pkg.CollectionCurrencyRate)
 	}
 
 	rec, ok := fRates[to]
 
 	if !ok {
-		return 0, fmt.Errorf(errorNotFound, collectionCurrencyRate)
+		return 0, fmt.Errorf(errorNotFound, pkg.CollectionCurrencyRate)
 	}
 
 	value = value / rec.Rate
@@ -140,7 +141,7 @@ func (h *Vat) setCache(recs []interface{}) {
 func (h *Vat) getAll() (recs []interface{}, err error) {
 	var data []*billing.Vat
 
-	err = h.svc.db.Collection(collectionVat).Find(bson.M{"is_active": true}).All(&data)
+	err = h.svc.db.Collection(pkg.CollectionVat).Find(bson.M{"is_active": true}).All(&data)
 
 	if data != nil {
 		for _, v := range data {
@@ -155,7 +156,7 @@ func (s *Service) CalculateVat(amount float64, country, subdivision string) (flo
 	vatCountry, ok := s.vatCache[country]
 
 	if !ok {
-		return 0, fmt.Errorf(errorNotFound, collectionVat)
+		return 0, fmt.Errorf(errorNotFound, pkg.CollectionVat)
 	}
 
 	if vsFlag, ok := vatBySubdivisionCountries[country]; !ok || vsFlag == false {
@@ -165,7 +166,7 @@ func (s *Service) CalculateVat(amount float64, country, subdivision string) (flo
 	vat, ok := vatCountry[subdivision]
 
 	if !ok {
-		return 0, fmt.Errorf(errorNotFound, collectionVat)
+		return 0, fmt.Errorf(errorNotFound, pkg.CollectionVat)
 	}
 
 	amount = amount * (vat.Vat / 100)
@@ -212,7 +213,7 @@ func (h *Commission) getAll() (recs []interface{}, err error) {
 		},
 	}
 
-	err = h.svc.db.Collection(collectionCommission).Pipe(q).All(&data)
+	err = h.svc.db.Collection(pkg.CollectionCommission).Pipe(q).All(&data)
 
 	if data != nil {
 		for _, v := range data {
@@ -227,13 +228,13 @@ func (s *Service) CalculateCommission(projectId, pmId string, amount float64) (*
 	projectCommissions, ok := s.commissionCache[projectId]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionCommission)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionCommission)
 	}
 
 	commission, ok := projectCommissions[pmId]
 
 	if !ok {
-		return nil, fmt.Errorf(errorNotFound, collectionCommission)
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionCommission)
 	}
 
 	c := &OrderCommission{

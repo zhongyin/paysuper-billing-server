@@ -7,7 +7,7 @@ import "billing/billing.proto";
 
 service BillingService {
     rpc OrderCreateProcess(billing.OrderCreateRequest) returns (billing.Order) {}
-    rpc PaymentFormJsonDataProcess(billing.Order) returns (billing.PaymentFormPaymentMethods) {}
+    rpc PaymentFormJsonDataProcess(FindByStringValue) returns (billing.PaymentFormPaymentMethods) {}
     rpc PaymentCreateProcess(PaymentCreateRequest) returns (PaymentCreateResponse) {}
     rpc RebuildCache(EmptyRequest) returns (EmptyResponse) {}
 }
@@ -23,4 +23,8 @@ message PaymentCreateResponse {
     int32 status = 1;
     string redirect_url = 2;
     string error = 3;
+}
+
+message FindByStringValue {
+    string value = 1;
 }
