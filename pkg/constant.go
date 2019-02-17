@@ -11,4 +11,5 @@ const (
 	CollectionOrder         = "order"
 	CollectionPaymentMethod = "payment_method"
 	CollectionCommission    = "commission"
+	CollectionBinData       = "bank_bin"
 )

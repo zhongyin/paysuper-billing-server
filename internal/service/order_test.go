@@ -642,6 +642,23 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Insert commission test data failed", "%v", err)
 	}
 
+	bin := &BinData{
+		Id:                 bson.NewObjectId(),
+		CardBin:            400000,
+		CardBrand:          "MASTERCARD",
+		CardType:           "DEBIT",
+		CardCategory:       "WORLD",
+		BankName:           "ALFA BANK",
+		BankCountryName:    "UKRAINE",
+		BankCountryCodeInt: 804,
+	}
+
+	err = db.Collection(pkg.CollectionBinData).Insert(bin)
+
+	if err != nil {
+		suite.FailNow("Insert BIN test data failed", "%v", err)
+	}
+
 	logger, err := zap.NewProduction()
 
 	if err != nil {
@@ -3030,7 +3047,15 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_DevEnviro
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(order.Id) > 0)
 
-	processor := &PaymentFormProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{
+		service: suite.service,
+		order:   order,
+		request: &grpc.PaymentFormJsonDataRequest{
+			OrderId: order.Id,
+			Scheme:  "http",
+			Host:    "unit.test",
+		},
+	}
 
 	pms, err := processor.processRenderFormPaymentMethods()
 
@@ -3057,7 +3082,15 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Cache_Ok(
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(order.Id) > 0)
 
-	processor := &PaymentFormProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{
+		service: suite.service,
+		order:   order,
+		request: &grpc.PaymentFormJsonDataRequest{
+			OrderId: order.Id,
+			Scheme:  "http",
+			Host:    "unit.test",
+		},
+	}
 
 	_, ok := suite.service.projectPaymentMethodCache[order.Project.Id]
 	assert.False(suite.T(), ok)
@@ -3099,7 +3132,15 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvir
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(order.Id) > 0)
 
-	processor := &PaymentFormProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{
+		service: suite.service,
+		order:   order,
+		request: &grpc.PaymentFormJsonDataRequest{
+			OrderId: order.Id,
+			Scheme:  "http",
+			Host:    "unit.test",
+		},
+	}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Nil(suite.T(), err)
@@ -3191,7 +3232,15 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Commissio
 
 	order.PaymentMethodOutcomeCurrency.CodeInt = 978
 
-	processor := &PaymentFormProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{
+		service: suite.service,
+		order:   order,
+		request: &grpc.PaymentFormJsonDataRequest{
+			OrderId: order.Id,
+			Scheme:  "http",
+			Host:    "unit.test",
+		},
+	}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
@@ -3945,7 +3994,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_GetBinData_Error()
 		paymentCreateFieldOrderId:         rsp.Id,
 		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldPan:             "4000000000000002",
+		paymentCreateFieldPan:             "5555555555554444",
 		paymentCreateFieldCvv:             "123",
 		paymentCreateFieldMonth:           "02",
 		paymentCreateFieldYear:            "2100",

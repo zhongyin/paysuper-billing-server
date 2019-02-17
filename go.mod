@@ -4,7 +4,7 @@ require (
 	github.com/InVisionApp/go-health v2.1.0+incompatible
 	github.com/ProtocolONE/geoip-service v0.0.0-20190130072841-bf3b3b79a742
 	github.com/ProtocolONE/go-micro-plugins v0.3.0
-	github.com/ProtocolONE/payone-repository v1.0.86
+	github.com/ProtocolONE/payone-repository v1.0.87
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/go-stack/stack v1.8.0 // indirect

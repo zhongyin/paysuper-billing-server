@@ -18,6 +18,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -110,6 +111,19 @@ type PaymentCreateProcessor struct {
 		project       *billing.Project
 		paymentMethod *billing.PaymentMethod
 	}
+}
+
+type BinData struct {
+	Id                 bson.ObjectId `bson:"_id"`
+	CardBin            int32         `bson:"card_bin"`
+	CardBrand          string        `bson:"card_brand"`
+	CardType           string        `bson:"card_type"`
+	CardCategory       string        `bson:"card_category"`
+	BankName           string        `bson:"bank_name"`
+	BankCountryName    string        `bson:"bank_country_name"`
+	BankCountryCodeInt int32         `bson:"bank_country_code_int"`
+	BankSite           string        `bson:"bank_site"`
+	BankPhone          string        `bson:"bank_phone"`
 }
 
 func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCreateRequest, rsp *billing.Order) error {
@@ -222,7 +236,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 
 	processor := &PaymentFormProcessor{
 		service: s,
-		order: order,
+		order:   order,
 		request: req,
 	}
 	pms, err := processor.processRenderFormPaymentMethods()
@@ -352,6 +366,29 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 
 	if order == nil {
 		return order, errors.New(orderErrorNotFound)
+	}
+
+	return
+}
+
+func (s *Service) getBinData(pan string) (data *BinData) {
+	if len(pan) < 6 {
+		s.logError("Incorrect PAN to get BIN data", []interface{}{"pan", pan})
+		return
+	}
+
+	i, err := strconv.ParseInt(pan[:6], 10, 32)
+
+	if err != nil {
+		s.logError("Parse PAN to int failed", []interface{}{"error", err.Error(), "pan", pan})
+		return
+	}
+
+	err = s.db.Collection(pkg.CollectionBinData).Find(bson.M{"card_bin": int32(i)}).One(&data)
+
+	if err != nil {
+		s.logError("Query to get bank card BIN data failed", []interface{}{"error", err.Error(), "pan", pan})
+		return
 	}
 
 	return
@@ -994,16 +1031,9 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		order.PaymentRequisites[paymentCreateFieldMonth] = v.data[paymentCreateFieldMonth]
 		order.PaymentRequisites[paymentCreateFieldYear] = v.data[paymentCreateFieldYear]
 
-		bin, err := v.service.rep.FindBinData(context.TODO(), &repo.FindByStringValue{Value: v.data[paymentCreateFieldPan]})
+		bin := v.service.getBinData(order.PaymentRequisites[paymentCreateFieldPan])
 
-		if err != nil {
-			v.service.logError(
-				"Get BIN data failed in payment create process",
-				[]interface{}{"err", err.Error(), "pan", v.data[paymentCreateFieldPan]},
-			)
-		}
-
-		if err == nil && bin != nil {
+		if bin != nil {
 			order.PaymentRequisites[paymentCreateBankCardFieldBrand] = bin.CardBrand
 			order.PaymentRequisites[paymentCreateBankCardFieldType] = bin.CardType
 			order.PaymentRequisites[paymentCreateBankCardFieldCategory] = bin.CardCategory
