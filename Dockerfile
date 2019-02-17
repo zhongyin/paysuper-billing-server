@@ -7,7 +7,7 @@ WORKDIR /application
 ENV GO111MODULE=on
 
 ENV MONGO_HOST = "localhost:3002"
-ENV MONGO_DB = "p1payapi"
+ENV MONGO_DB = "payone"
 ENV MONGO_USER = ""
 ENV MONGO_PASSWORD = ""
 ENV CENTRIFUGO_SECRET = "secret"

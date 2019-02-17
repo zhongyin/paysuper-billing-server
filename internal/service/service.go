@@ -118,7 +118,13 @@ func (s *Service) reBuildCache() {
 	var key string
 
 	curTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyTimeout))
+	projectTicker := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectTimeout))
+	currencyRateTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyRateTimeout))
+	vatTicker := time.NewTicker(time.Second * time.Duration(s.cfg.VatTimeout))
+	paymentMethodTicker := time.NewTicker(time.Second * time.Duration(s.cfg.PaymentMethodTimeout))
+	commissionTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CommissionTimeout))
 	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectPaymentMethodTimeout))
+
 	s.rebuild = true
 
 	for {
@@ -126,6 +132,21 @@ func (s *Service) reBuildCache() {
 		case <-curTicker.C:
 			err = s.cache(pkg.CollectionCurrency, handlers[pkg.CollectionCurrency](s))
 			key = pkg.CollectionCurrency
+		case <-projectTicker.C:
+			err = s.cache(pkg.CollectionProject, handlers[pkg.CollectionProject](s))
+			key = pkg.CollectionProject
+		case <-currencyRateTicker.C:
+			err = s.cache(pkg.CollectionCurrencyRate, handlers[pkg.CollectionCurrencyRate](s))
+			key = pkg.CollectionCurrencyRate
+		case <-vatTicker.C:
+			err = s.cache(pkg.CollectionVat, handlers[pkg.CollectionVat](s))
+			key = pkg.CollectionVat
+		case <-paymentMethodTicker.C:
+			err = s.cache(pkg.CollectionPaymentMethod, handlers[pkg.CollectionPaymentMethod](s))
+			key = pkg.CollectionPaymentMethod
+		case <-commissionTicker.C:
+			err = s.cache(pkg.CollectionCommission, handlers[pkg.CollectionCommission](s))
+			key = pkg.CollectionCommission
 		case <-projectPaymentMethodTimer.C:
 			s.mx.Lock()
 			s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
