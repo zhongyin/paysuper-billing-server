@@ -18,10 +18,11 @@ import (
 
 type BillingServiceTestSuite struct {
 	suite.Suite
-	db   *database.Source
-	log  *zap.SugaredLogger
-	cfg  *config.Config
-	exCh chan bool
+	db      *database.Source
+	log     *zap.Logger
+	logUndo func()
+	cfg     *config.Config
+	exCh    chan bool
 }
 
 type getAllEmptyResultTest Currency
@@ -426,13 +427,13 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Insert commission test data failed", "%v", err)
 	}
 
-	logger, err := zap.NewProduction()
+	suite.log, err = zap.NewProduction()
 
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
+	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
-	suite.log = logger.Sugar()
 	suite.exCh = make(chan bool, 1)
 }
 
@@ -446,10 +447,11 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
+	suite.logUndo()
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -467,7 +469,7 @@ func (suite *BillingServiceTestSuite) TestNewBillingService() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
 
 	key := "unit"
 	err := svc.cache(key, newGetAllEmptyResultTest(svc))
@@ -477,7 +479,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
 
 	key := "unit"
 	err := svc.cache(key, newGetAllErrorTest(svc))
@@ -487,7 +489,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
-	svc := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
 
 	key := "unit"
 	handlers[key] = newGetAllEmptyResultTest
@@ -499,7 +501,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -530,7 +532,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	cfg := suite.cfg
 	cfg.CacheConfig.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, suite.log, cfg, suite.exCh, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -564,7 +566,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerErro
 	cfg := suite.cfg
 	cfg.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, suite.log, cfg, suite.exCh, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -590,7 +592,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitE
 	cfg, err := config.NewConfig()
 	cfg.AccountingCurrency = "AUD"
 
-	service := NewBillingService(suite.db, suite.log, cfg, suite.exCh, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -601,7 +603,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitE
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment() {
-	service := NewBillingService(suite.db, suite.log, suite.cfg, suite.exCh, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")

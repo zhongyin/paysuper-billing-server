@@ -2,11 +2,16 @@ package service
 
 import (
 	"bytes"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -32,22 +37,23 @@ const (
 	cardPayDateFormat = "2006-01-02T15:04:05Z"
 )
 
-var cardPayTokens = map[string]*cardPayToken{}
-
-var cardPayPaths = map[string]*Path{
-	cardPayActionAuthenticate: {
-		path:   "/api/auth/token",
-		method: http.MethodPost,
-	},
-	cardPayActionRefresh: {
-		path:   "/api/auth/token",
-		method: http.MethodPost,
-	},
-	cardPayActionCreatePayment: {
-		path:   "/api/payments",
-		method: http.MethodPost,
-	},
-}
+var (
+	cardPayTokens = map[string]*cardPayToken{}
+	cardPayPaths = map[string]*Path{
+		cardPayActionAuthenticate: {
+			path:   "/api/auth/token",
+			method: http.MethodPost,
+		},
+		cardPayActionRefresh: {
+			path:   "/api/auth/token",
+			method: http.MethodPost,
+		},
+		cardPayActionCreatePayment: {
+			path:   "/api/payments",
+			method: http.MethodPost,
+		},
+	}
+)
 
 type cardPay struct {
 	processor *paymentProcessor
@@ -153,8 +159,8 @@ func newCardPayHandler(processor *paymentProcessor) PaymentSystem {
 	return &cardPay{processor: processor}
 }
 
-func (h *cardPay) CreatePayment(order *billing.Order, requisites map[string]string) (url string, err error) {
-	if err = h.auth(order.PaymentMethod.Params.ExternalId); err != nil {
+func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err error) {
+	if err = h.auth(h.processor.order.PaymentMethod.Params.ExternalId); err != nil {
 		return
 	}
 
@@ -164,20 +170,20 @@ func (h *cardPay) CreatePayment(order *billing.Order, requisites map[string]stri
 		return
 	}
 
-	cpOrder, err := h.getCardPayOrder(order, requisites)
+	cpOrder, err := h.getCardPayOrder(h.processor.order, requisites)
 
 	if err != nil {
 		return
 	}
 
-	order.Status = constant.OrderStatusPaymentSystemRejectOnCreate
+	h.processor.order.Status = constant.OrderStatusPaymentSystemRejectOnCreate
 
 	b, _ := json.Marshal(cpOrder)
 
 	client := tools.NewLoggedHttpClient(h.processor.log)
 	req, err := http.NewRequest(cardPayPaths[cardPayActionCreatePayment].method, qUrl, bytes.NewBuffer(b))
 
-	token := h.getToken(order.PaymentMethod.Params.ExternalId)
+	token := h.getToken(h.processor.order.PaymentMethod.Params.ExternalId)
 	auth := strings.Title(token.TokenType) + " " + token.AccessToken
 
 	req.Header.Add(HeaderContentType, MIMEApplicationJSON)
@@ -199,13 +205,87 @@ func (h *cardPay) CreatePayment(order *billing.Order, requisites map[string]stri
 		return
 	}
 
-	order.Status = constant.OrderStatusPaymentSystemCreate
+	h.processor.order.Status = constant.OrderStatusPaymentSystemCreate
 	url = cpResponse.RedirectUrl
 
 	return
 }
 
-func (h *cardPay) ProcessPayment() (err error) {
+func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (err error) {
+	req := message.(*billing.CardPayPaymentCallback)
+	order := h.processor.order
+	order.Status = constant.OrderStatusPaymentSystemReject
+
+	err = h.checkCallbackRequestSignature(raw, signature)
+
+	if err != nil {
+		return
+	}
+
+	if !req.IsPaymentAllowedStatus() {
+		return NewError(paymentSystemErrorRequestStatusIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	t, err := time.Parse(cardPayDateFormat, req.CallbackTime)
+
+	if err != nil {
+		return NewError(paymentSystemErrorRequestTimeFieldIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	ts, err := ptypes.TimestampProto(t)
+
+	if err != nil {
+		return NewError(paymentSystemErrorRequestTimeFieldIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	if req.PaymentMethod != h.processor.order.PaymentMethod.Params.ExternalId {
+		return NewError(paymentSystemErrorRequestPaymentMethodIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	if req.PaymentData.Amount != order.PaymentMethodOutcomeAmount ||
+		req.PaymentData.Currency != order.PaymentMethodOutcomeCurrency.CodeA3 {
+		return NewError(paymentSystemErrorRequestAmountOrCurrencyIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	switch req.PaymentMethod {
+	case constant.PaymentSystemGroupAliasBankCard:
+		order.PaymentMethodPayerAccount = req.CardAccount.MaskedPan
+		order.PaymentMethodTxnParams = req.GetBankCardTxnParams()
+		break
+	case constant.PaymentSystemGroupAliasQiwi,
+		constant.PaymentSystemGroupAliasWebMoney,
+		constant.PaymentSystemGroupAliasNeteller,
+		constant.PaymentSystemGroupAliasAlipay:
+		order.PaymentMethodPayerAccount = req.EwalletAccount.Id
+		order.PaymentMethodTxnParams = req.GetEWalletTxnParams()
+		break
+	case constant.PaymentSystemGroupAliasBitcoin:
+		order.PaymentMethodPayerAccount = req.CryptocurrencyAccount.CryptoAddress
+		order.PaymentMethodTxnParams = req.GetCryptoCurrencyTxnParams()
+		break
+	default:
+		return NewError(paymentSystemErrorRequestPaymentMethodIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	switch req.PaymentData.Status {
+	case pkg.CardPayPaymentResponseStatusDeclined:
+		order.Status = constant.OrderStatusPaymentSystemDeclined
+		break
+	case pkg.CardPayPaymentResponseStatusCancelled:
+		order.Status = constant.OrderStatusPaymentSystemCanceled
+		break
+	case pkg.CardPayPaymentResponseStatusCompleted:
+		order.Status = constant.OrderStatusPaymentSystemComplete
+		break
+	default:
+		return NewError(paymentSystemErrorRequestTemporarySkipped, pkg.StatusTemporary)
+	}
+
+	order.PaymentMethodOrderId = req.PaymentData.Id
+	order.PaymentMethodOrderClosedAt = ts
+	order.PaymentMethodIncomeAmount = req.PaymentData.Amount
+	order.PaymentMethodIncomeCurrencyA3 = req.PaymentData.Currency
+
 	return
 }
 
@@ -216,8 +296,8 @@ func (h *cardPay) auth(pmKey string) error {
 
 	data := url.Values{
 		cardPayRequestFieldGrantType:    []string{cardPayGrantTypePassword},
-		cardPayRequestFieldTerminalCode: []string{h.processor.auth.Terminal},
-		cardPayRequestFieldPassword:     []string{h.processor.auth.Password},
+		cardPayRequestFieldTerminalCode: []string{h.processor.order.PaymentMethod.Params.Terminal},
+		cardPayRequestFieldPassword:     []string{h.processor.order.PaymentMethod.Params.Password},
 	}
 
 	qUrl, err := h.getUrl(cardPayActionAuthenticate)
@@ -268,7 +348,7 @@ func (h *cardPay) auth(pmKey string) error {
 func (h *cardPay) refresh(pmKey string) error {
 	data := url.Values{
 		cardPayRequestFieldGrantType:    []string{cardPayGrantTypeRefreshToken},
-		cardPayRequestFieldTerminalCode: []string{h.processor.auth.Terminal},
+		cardPayRequestFieldTerminalCode: []string{h.processor.order.PaymentMethod.Params.Terminal},
 		cardPayRequestFieldRefreshToken: []string{cardPayTokens[pmKey].RefreshToken},
 	}
 
@@ -436,19 +516,19 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 }
 
 func (h *cardPay) geBankCardCardPayOrder(cpo *CardPayOrder, requisites map[string]string) {
-	year := requisites[paymentCreateFieldYear]
+	year := requisites[pkg.PaymentCreateFieldYear]
 
 	if len(year) < 3 {
 		year = strconv.Itoa(time.Now().UTC().Year())[:2] + year
 	}
 
-	expire := requisites[paymentCreateFieldMonth] + "/" + year
+	expire := requisites[pkg.PaymentCreateFieldMonth] + "/" + year
 
 	cpo.CardAccount = &CardPayCardAccount{
 		Card: &CardPayBankCardAccount{
-			Pan:        requisites[paymentCreateFieldPan],
-			HolderName: requisites[paymentCreateFieldHolder],
-			Cvv:        requisites[paymentCreateFieldCvv],
+			Pan:        requisites[pkg.PaymentCreateFieldPan],
+			HolderName: requisites[pkg.PaymentCreateFieldHolder],
+			Cvv:        requisites[pkg.PaymentCreateFieldCvv],
 			Expire:     expire,
 		},
 	}
@@ -456,12 +536,23 @@ func (h *cardPay) geBankCardCardPayOrder(cpo *CardPayOrder, requisites map[strin
 
 func (h *cardPay) getEWalletCardPayOrder(cpo *CardPayOrder, requisites map[string]string) {
 	cpo.EWalletAccount = &CardPayEWalletAccount{
-		Id: requisites[paymentCreateFieldEWallet],
+		Id: requisites[pkg.PaymentCreateFieldEWallet],
 	}
 }
 
 func (h *cardPay) getCryptoCurrencyCardPayOrder(cpo *CardPayOrder, requisites map[string]string) {
 	cpo.CryptoCurrencyAccount = &CardPayCryptoCurrencyAccount{
-		RollbackAddress: requisites[paymentCreateFieldCrypto],
+		RollbackAddress: requisites[pkg.PaymentCreateFieldCrypto],
 	}
+}
+
+func (h *cardPay) checkCallbackRequestSignature(raw, signature string) error {
+	hash := sha512.New()
+	hash.Write([]byte(raw + h.processor.order.PaymentMethod.Params.CallbackPassword))
+
+	if hex.EncodeToString(hash.Sum(nil)) != signature {
+		return NewError(paymentSystemErrorRequestSignatureIsInvalid, pkg.StatusErrorValidation)
+	}
+
+	return nil
 }

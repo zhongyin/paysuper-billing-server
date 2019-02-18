@@ -28,6 +28,7 @@ type Config struct {
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 
 	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
+	BrokerAddress    string `envconfig:"BROKER_ADDRESS" required:"true" default:"amqp://127.0.0.1:5672"`
 
 	*CacheConfig
 	*PaymentSystemConfig

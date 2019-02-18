@@ -18,6 +18,8 @@ import (
 type ProjectTestSuite struct {
 	suite.Suite
 	service *Service
+	log     *zap.Logger
+	logUndo func()
 
 	projectId     string
 	paymentMethod *billing.PaymentMethod
@@ -48,23 +50,24 @@ func (suite *ProjectTestSuite) SetupTest() {
 		suite.FailNow("Database connection failed", "%v", err)
 	}
 
-	logger, err := zap.NewProduction()
+	suite.log, err = zap.NewProduction()
 
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
+	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
 	vat := &billing.Vat{
 		Country: &billing.Country{
-			CodeInt:   840,
-			CodeA2:    "US",
-			CodeA3:    "USA",
-			Name:      &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-			IsActive:  true,
+			CodeInt:  840,
+			CodeA2:   "US",
+			CodeA3:   "USA",
+			Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+			IsActive: true,
 		},
 		Subdivision: "CA",
-		Vat: 10.25,
-		IsActive: true,
+		Vat:         10.25,
+		IsActive:    true,
 	}
 
 	err = db.Collection(pkg.CollectionVat).Insert(vat)
@@ -214,7 +217,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	suite.projectId = project.Id
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg, make(chan bool, 1), nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {
@@ -231,9 +234,11 @@ func (suite *ProjectTestSuite) TearDownTest() {
 
 	suite.service.db.Close()
 
-	if err := suite.service.log.Sync(); err != nil {
+	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
+
+	suite.logUndo()
 }
 
 func (suite *ProjectTestSuite) TestProject_GetProjectByIdOk() {

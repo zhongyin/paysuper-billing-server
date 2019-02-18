@@ -16,7 +16,10 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	protobuf "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/streadway/amqp"
+	"go.uber.org/zap"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,32 +54,18 @@ const (
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
 	orderErrorUnknown                                  = "unknown error. try request later"
+	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
+	paymentRequestIncorrect                            = "payment request has incorrect format"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
 	orderErrorCreatePaymentRequiredFieldEmailNotFound         = "required field \"email\" not found"
-
-	paymentCreateFieldOrderId         = "order_id"
-	paymentCreateFieldPaymentMethodId = "payment_method_id"
-	paymentCreateFieldEmail           = "email"
-	paymentCreateFieldPan             = "pan"
-	paymentCreateFieldCvv             = "cvv"
-	paymentCreateFieldMonth           = "month"
-	paymentCreateFieldYear            = "year"
-	paymentCreateFieldHolder          = "card_holder"
-	paymentCreateFieldEWallet         = "ewallet"
-	paymentCreateFieldCrypto          = "address"
 
 	paymentCreateBankCardFieldBrand         = "card_brand"
 	paymentCreateBankCardFieldType          = "card_type"
 	paymentCreateBankCardFieldCategory      = "card_category"
 	paymentCreateBankCardFieldIssuerName    = "bank_issuer_name"
 	paymentCreateBankCardFieldIssuerCountry = "bank_issuer_country"
-
-	responseStatusOK                 = int32(0)
-	responseStatusErrorValidation    = int32(1)
-	responseStatusErrorSystem        = int32(2)
-	responseStatusErrorPaymentSystem = int32(3)
 
 	orderDefaultDescription      = "Payment by order # %s"
 	orderInlineFormUrlMask       = "%s://%s/order/%s"
@@ -190,7 +179,7 @@ func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCrea
 	err = s.db.Collection(pkg.CollectionOrder).Insert(order)
 
 	if err != nil {
-		s.log.Errorw(fmt.Sprintf(errorQueryMask, pkg.CollectionOrder), "err", err, "inserted_data", order)
+		zap.S().Errorw(fmt.Sprintf(errorQueryMask, pkg.CollectionOrder), "err", err, "inserted_data", order)
 		return errors.New(orderErrorCanNotCreate)
 	}
 
@@ -274,7 +263,7 @@ func (s *Service) PaymentCreateProcess(
 
 	if err != nil {
 		rsp.Error = err.Error()
-		rsp.Status = responseStatusErrorValidation
+		rsp.Status = pkg.StatusErrorValidation
 
 		return nil
 	}
@@ -293,7 +282,16 @@ func (s *Service) PaymentCreateProcess(
 
 	if err != nil {
 		rsp.Error = err.Error()
-		rsp.Status = responseStatusErrorValidation
+		rsp.Status = pkg.StatusErrorValidation
+
+		return nil
+	}
+
+	err = processor.processPaymentAmounts()
+
+	if err != nil {
+		rsp.Error = orderCurrencyConvertationError
+		rsp.Status = pkg.StatusErrorSystem
 
 		return nil
 	}
@@ -304,40 +302,34 @@ func (s *Service) PaymentCreateProcess(
 		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
 
 		rsp.Error = orderErrorUnknown
-		rsp.Status = responseStatusErrorSystem
+		rsp.Status = pkg.StatusErrorSystem
 
 		return nil
-	}
-
-	auth := &Authenticate{
-		Terminal:         processor.checked.paymentMethod.Params.Terminal,
-		Password:         processor.checked.paymentMethod.Params.Password,
-		CallbackPassword: processor.checked.paymentMethod.Params.CallbackPassword,
 	}
 
 	if s.isProductionEnvironment() == true {
-		auth.Terminal = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Terminal
-		auth.Password = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Password
-		auth.CallbackPassword = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].CallbackPassword
+		order.PaymentMethod.Params.Terminal = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Terminal
+		order.PaymentMethod.Params.Password = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Password
+		order.PaymentMethod.Params.CallbackPassword = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].CallbackPassword
 	}
 
-	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, s.log, auth, order, req.Data)
+	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, order)
 
 	if err != nil {
 		rsp.Error = err.Error()
-		rsp.Status = responseStatusErrorSystem
+		rsp.Status = pkg.StatusErrorSystem
 
 		return nil
 	}
 
-	url, err := h.CreatePayment(order, req.Data)
+	url, err := h.CreatePayment(req.Data)
 	errDb := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	if errDb != nil {
 		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
 
 		rsp.Error = orderErrorUnknown
-		rsp.Status = responseStatusErrorSystem
+		rsp.Status = pkg.StatusErrorSystem
 
 		return nil
 	}
@@ -346,13 +338,92 @@ func (s *Service) PaymentCreateProcess(
 		s.logError("Order create in payment system failed", []interface{}{"err", err.Error(), "order", order})
 
 		rsp.Error = err.Error()
-		rsp.Status = responseStatusErrorPaymentSystem
+		rsp.Status = pkg.StatusErrorPaymentSystem
 
 		return nil
 	}
 
-	rsp.Status = responseStatusOK
+	rsp.Status = pkg.StatusOK
 	rsp.RedirectUrl = url
+
+	return nil
+}
+
+func (s *Service) PaymentCallbackProcess(
+	ctx context.Context,
+	req *grpc.PaymentNotifyRequest,
+	rsp *grpc.PaymentNotifyResponse,
+) error {
+	order, err := s.getOrderById(req.OrderId)
+
+	if err != nil {
+		return errors.New(orderErrorNotFound)
+	}
+
+	var data protobuf.Message
+
+	switch order.PaymentMethod.Params.Handler {
+	case paymentSystemHandlerCardPay:
+		data = &billing.CardPayPaymentCallback{}
+		err := ptypes.UnmarshalAny(req.Request, data)
+
+		if err != nil {
+			return errors.New(paymentRequestIncorrect)
+		}
+		break
+	default:
+		return errors.New(orderErrorPaymentMethodNotFound)
+	}
+
+	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, order)
+
+	if err != nil {
+		return err
+	}
+
+	pErr := h.ProcessPayment(data, req.RawRequest, req.Signature)
+
+	if pErr != nil {
+		s.logError(
+			"Callback processing failed",
+			[]interface{}{
+				"err", pErr.Error(),
+				"order_id", req.OrderId,
+				"request", req.RawRequest,
+				"signature", req.Signature,
+			},
+		)
+
+		pErr, _ := pErr.(*Error)
+
+		rsp.Error = pErr.Error()
+		rsp.Status = pErr.Status()
+
+		if pErr.Status() == pkg.StatusTemporary {
+			return nil
+		}
+	}
+
+	err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	if err != nil {
+		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
+
+		rsp.Error = orderErrorUnknown
+		rsp.Status = pkg.StatusErrorSystem
+
+		return nil
+	}
+
+	if pErr == nil {
+		err = s.broker.Publish(constant.PayOneTopicNotifyPaymentName, order, amqp.Table{"x-retry-count": int32(0)})
+
+		if err != nil {
+			s.logError("Publish notify message to queue failed", []interface{}{"err", err.Error(), "order", order})
+		}
+
+		rsp.Status = pkg.StatusOK
+	}
 
 	return nil
 }
@@ -414,7 +485,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			return nil, err
 		}
 
-		merAccAmount = tools.FormatAmount(amount)
+		merAccAmount = amount
 	}
 
 	order := &billing.Order{
@@ -445,7 +516,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      v.request.IsJson,
 		FixedPackage:                       v.checked.fixedPackage,
-		AmountInMerchantAccountingCurrency: tools.FormatAmount(merAccAmount),
+		AmountInMerchantAccountingCurrency: merAccAmount,
 		PaymentMethodOutcomeAmount:         amount,
 		PaymentMethodOutcomeCurrency:       v.checked.currency,
 		PaymentMethodIncomeAmount:          amount,
@@ -485,7 +556,7 @@ func (v *OrderCreateRequestProcessor) processProject() error {
 	project, err := v.GetProjectById(v.request.ProjectId)
 
 	if err != nil {
-		v.log.Errorw("[PAYONE_BILLING] Order create get project error", "err", err, "request", v.request)
+		zap.S().Errorw("[PAYONE_BILLING] Order create get project error", "err", err, "request", v.request)
 		return errors.New(orderErrorProjectNotFound)
 	}
 
@@ -502,7 +573,7 @@ func (v *OrderCreateRequestProcessor) processCurrency() error {
 	currency, err := v.GetCurrencyByCodeA3(v.request.Currency)
 
 	if err != nil {
-		v.log.Errorw("[PAYONE_BILLING] Order create get currency error", "err", err, "request", v.request)
+		zap.S().Errorw("[PAYONE_BILLING] Order create get currency error", "err", err, "request", v.request)
 		return errors.New(orderErrorCurrencyNotFound)
 	}
 
@@ -515,7 +586,7 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.request.PayerIp})
 
 	if err != nil {
-		v.log.Errorw("[PAYONE_BILLING] Order create get payer data error", "err", err, "ip", v.request.PayerIp)
+		zap.S().Errorw("[PAYONE_BILLING] Order create get payer data error", "err", err, "ip", v.request.PayerIp)
 		return errors.New(orderErrorPayerRegionUnknown)
 	}
 
@@ -602,7 +673,7 @@ func (v *OrderCreateRequestProcessor) processProjectOrderId() error {
 	err := v.db.Collection(pkg.CollectionOrder).Find(filter).One(&order)
 
 	if err != nil && err != mgo.ErrNotFound {
-		v.log.Errorw("[PAYONE_BILLING] Order create check project order id unique", "err", err, "filter", filter)
+		zap.S().Errorw("[PAYONE_BILLING] Order create check project order id unique", "err", err, "filter", filter)
 		return errors.New(orderErrorCanNotCreate)
 	}
 
@@ -725,8 +796,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 			return err
 		}
 
-		o.VatAmount = tools.FormatAmount(vat)
-
+		o.VatAmount = vat
 		// add VAT amount to payment amount
 		pmOutAmount += o.VatAmount
 	}
@@ -750,7 +820,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 
 		// add commission to user to payment amount
 		pmOutAmount += commission.ToUserCommission
-		o.ToPayerFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: tools.FormatAmount(commission.ToUserCommission)}
+		o.ToPayerFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: commission.ToUserCommission}
 
 		// convert amount of fee shifted to user to accounting currency of merchant
 		amount, err := v.Service.Convert(pmOutCur, mAccCur, commission.ToUserCommission)
@@ -759,7 +829,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 			return err
 		}
 
-		o.ToPayerFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
+		o.ToPayerFeeAmount.AmountMerchantCurrency = amount
 	}
 
 	o.ProjectFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: tools.FormatAmount(totalCommission)}
@@ -771,14 +841,12 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 		return err
 	}
 
-	o.ProjectFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
+	o.ProjectFeeAmount.AmountMerchantCurrency = amount
 	o.PspFeeAmount = &billing.OrderFeePsp{AmountPaymentMethodCurrency: commission.PspCommission}
 
 	// convert PSP amount of fee to accounting currency of merchant
 	amount, _ = v.Service.Convert(pmOutCur, mAccCur, commission.PspCommission)
-
-	o.PspFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
-
+	o.PspFeeAmount.AmountMerchantCurrency = amount
 	// convert PSP amount of fee to accounting currency of PSP
 	amount, err = v.Service.Convert(pmOutCur, v.Service.accountingCurrency.CodeInt, commission.PspCommission)
 
@@ -786,11 +854,11 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 		return err
 	}
 
-	o.PspFeeAmount.AmountPspCurrency = tools.FormatAmount(amount)
+	o.PspFeeAmount.AmountPspCurrency = amount
 
 	// save information about payment system commission
 	o.PaymentSystemFeeAmount = &billing.OrderFeePaymentSystem{
-		AmountPaymentMethodCurrency: tools.FormatAmount(commission.PMCommission),
+		AmountPaymentMethodCurrency: commission.PMCommission,
 	}
 
 	// convert payment system amount of fee to accounting currency of payment system
@@ -800,13 +868,12 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 		return err
 	}
 
-	o.PaymentSystemFeeAmount.AmountPaymentSystemCurrency = tools.FormatAmount(amount)
-
+	o.PaymentSystemFeeAmount.AmountPaymentSystemCurrency = amount
 	// convert payment system amount of fee to accounting currency of merchant
 	amount, _ = v.Service.Convert(pmOutCur, mAccCur, commission.PMCommission)
 
-	o.PaymentSystemFeeAmount.AmountMerchantCurrency = tools.FormatAmount(amount)
-	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
+	o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
+	o.PaymentMethodOutcomeAmount = pmOutAmount
 
 	return nil
 }
@@ -859,13 +926,13 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 			Group:                    pm.Group,
 			AccountRegexp:            pm.AccountRegexp,
 			Currency:                 v.order.ProjectIncomeCurrency.CodeA3,
-			AmountWithoutCommissions: tools.FormatAmount(v.order.ProjectIncomeAmount),
+			AmountWithoutCommissions: v.order.ProjectIncomeAmount,
 		}
 
 		err := v.processPaymentMethodsData(formPm)
 
 		if err != nil {
-			v.service.log.Errorw(
+			zap.S().Errorw(
 				"[PAYONE_BILLING] Process payment method data failed",
 				"error", err,
 				"order_id", v.order.Id,
@@ -898,7 +965,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 		}
 
 		amount += commission.ToUserCommission
-		pm.UserCommissionAmount = tools.FormatAmount(commission.ToUserCommission)
+		pm.UserCommissionAmount = commission.ToUserCommission
 	}
 
 	if v.order.Project.Merchant.IsVatEnabled == true {
@@ -913,10 +980,10 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 		}
 
 		amount += vat
-		pm.VatAmount = tools.FormatAmount(vat)
+		pm.VatAmount = vat
 	}
 
-	pm.AmountWithCommissions = tools.FormatAmount(amount)
+	pm.AmountWithCommissions = amount
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
@@ -924,7 +991,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 		rsp, err := v.service.rep.FindSavedCards(context.TODO(), req)
 
 		if err != nil {
-			v.service.log.Errorw(
+			zap.S().Errorw(
 				"[PAYONE_BILLING] Get saved cards from repository failed",
 				"error", err,
 				"account", v.order.ProjectAccount,
@@ -953,22 +1020,22 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 
 // Validate data received from payment form and write validated data to order
 func (v *PaymentCreateProcessor) processPaymentFormData() error {
-	if _, ok := v.data[paymentCreateFieldOrderId]; !ok ||
-		v.data[paymentCreateFieldOrderId] == "" {
+	if _, ok := v.data[pkg.PaymentCreateFieldOrderId]; !ok ||
+		v.data[pkg.PaymentCreateFieldOrderId] == "" {
 		return errors.New(orderErrorCreatePaymentRequiredFieldIdNotFound)
 	}
 
-	if _, ok := v.data[paymentCreateFieldPaymentMethodId]; !ok ||
-		v.data[paymentCreateFieldPaymentMethodId] == "" {
+	if _, ok := v.data[pkg.PaymentCreateFieldPaymentMethodId]; !ok ||
+		v.data[pkg.PaymentCreateFieldPaymentMethodId] == "" {
 		return errors.New(orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound)
 	}
 
-	if _, ok := v.data[paymentCreateFieldEmail]; !ok ||
-		v.data[paymentCreateFieldEmail] == "" {
+	if _, ok := v.data[pkg.PaymentCreateFieldEmail]; !ok ||
+		v.data[pkg.PaymentCreateFieldEmail] == "" {
 		return errors.New(orderErrorCreatePaymentRequiredFieldEmailNotFound)
 	}
 
-	order, err := v.service.getOrderById(v.data[paymentCreateFieldOrderId])
+	order, err := v.service.getOrderById(v.data[pkg.PaymentCreateFieldOrderId])
 
 	if err != nil {
 		return errors.New(orderErrorNotFound)
@@ -993,7 +1060,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return err
 	}
 
-	pm, err := v.service.GetPaymentMethodById(v.data[paymentCreateFieldPaymentMethodId])
+	pm, err := v.service.GetPaymentMethodById(v.data[pkg.PaymentCreateFieldPaymentMethodId])
 
 	if err != nil {
 		return errors.New(orderErrorPaymentMethodNotFound)
@@ -1007,31 +1074,31 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return err
 	}
 
-	order.PayerData.Email = v.data[paymentCreateFieldEmail]
+	order.PayerData.Email = v.data[pkg.PaymentCreateFieldEmail]
 	order.PaymentRequisites = make(map[string]string)
 
-	delete(v.data, paymentCreateFieldOrderId)
-	delete(v.data, paymentCreateFieldPaymentMethodId)
-	delete(v.data, paymentCreateFieldEmail)
+	delete(v.data, pkg.PaymentCreateFieldOrderId)
+	delete(v.data, pkg.PaymentCreateFieldPaymentMethodId)
+	delete(v.data, pkg.PaymentCreateFieldEmail)
 
 	if processor.checked.paymentMethod.IsBankCard() == true {
 		validator := &bankCardValidator{
-			Pan:    v.data[paymentCreateFieldPan],
-			Cvv:    v.data[paymentCreateFieldCvv],
-			Month:  v.data[paymentCreateFieldMonth],
-			Year:   v.data[paymentCreateFieldYear],
-			Holder: v.data[paymentCreateFieldHolder],
+			Pan:    v.data[pkg.PaymentCreateFieldPan],
+			Cvv:    v.data[pkg.PaymentCreateFieldCvv],
+			Month:  v.data[pkg.PaymentCreateFieldMonth],
+			Year:   v.data[pkg.PaymentCreateFieldYear],
+			Holder: v.data[pkg.PaymentCreateFieldHolder],
 		}
 
 		if err := validator.Validate(); err != nil {
 			return err
 		}
 
-		order.PaymentRequisites[paymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[paymentCreateFieldPan])
-		order.PaymentRequisites[paymentCreateFieldMonth] = v.data[paymentCreateFieldMonth]
-		order.PaymentRequisites[paymentCreateFieldYear] = v.data[paymentCreateFieldYear]
+		order.PaymentRequisites[pkg.PaymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[pkg.PaymentCreateFieldPan])
+		order.PaymentRequisites[pkg.PaymentCreateFieldMonth] = v.data[pkg.PaymentCreateFieldMonth]
+		order.PaymentRequisites[pkg.PaymentCreateFieldYear] = v.data[pkg.PaymentCreateFieldYear]
 
-		bin := v.service.getBinData(order.PaymentRequisites[paymentCreateFieldPan])
+		bin := v.service.getBinData(order.PaymentRequisites[pkg.PaymentCreateFieldPan])
 
 		if bin != nil {
 			order.PaymentRequisites[paymentCreateBankCardFieldBrand] = bin.CardBrand
@@ -1043,11 +1110,11 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 	} else {
 		account := ""
 
-		if acc, ok := v.data[paymentCreateFieldEWallet]; ok {
+		if acc, ok := v.data[pkg.PaymentCreateFieldEWallet]; ok {
 			account = acc
 		}
 
-		if acc, ok := v.data[paymentCreateFieldCrypto]; ok {
+		if acc, ok := v.data[pkg.PaymentCreateFieldCrypto]; ok {
 			account = acc
 		}
 
@@ -1062,15 +1129,93 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 	v.checked.paymentMethod = processor.checked.paymentMethod
 	v.checked.order = order
 
-	if v.service.isProductionEnvironment() == true {
-		v.checked.order.PaymentMethodTerminalId = v.checked.project.PaymentMethods[v.checked.paymentMethod.Group].Terminal
-	} else {
-		v.checked.order.PaymentMethodTerminalId = v.checked.paymentMethod.Params.Terminal
-	}
-
 	if order.ProjectAccount == "" {
 		order.ProjectAccount = order.PayerData.Email
 	}
 
 	return nil
+}
+
+func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
+	order := v.checked.order
+
+	order.ProjectOutcomeAmount, err = v.service.Convert(
+		order.PaymentMethodIncomeCurrency.CodeInt,
+		order.ProjectOutcomeCurrency.CodeInt,
+		order.PaymentMethodOutcomeAmount,
+	)
+
+	if err != nil {
+		v.service.logError(
+			"Convert to project outcome currency failed",
+			[]interface{}{
+				"error", err.Error(),
+				"from", order.PaymentMethodIncomeCurrency.CodeInt,
+				"to", order.ProjectOutcomeCurrency.CodeInt,
+				"order_id", order.Id,
+			},
+		)
+
+		return
+	}
+
+	order.AmountInPspAccountingCurrency, err = v.service.Convert(
+		order.PaymentMethodIncomeCurrency.CodeInt,
+		v.service.accountingCurrency.CodeInt,
+		order.PaymentMethodOutcomeAmount,
+	)
+
+	if err != nil {
+		v.service.logError(
+			"Convert to PSP accounting currency failed",
+			[]interface{}{
+				"error", err.Error(),
+				"from", order.PaymentMethodIncomeCurrency.CodeInt,
+				"to", v.service.accountingCurrency.CodeInt,
+				"order_id", order.Id,
+			},
+		)
+
+		return
+	}
+
+	order.AmountOutMerchantAccountingCurrency, err = v.service.Convert(
+		order.PaymentMethodIncomeCurrency.CodeInt,
+		order.Project.Merchant.Currency.CodeInt,
+		order.PaymentMethodOutcomeAmount,
+	)
+
+	if err != nil {
+		v.service.logError(
+			"Convert to merchant accounting currency failed",
+			[]interface{}{
+				"error", err.Error(),
+				"from", order.PaymentMethodIncomeCurrency.CodeInt,
+				"to", order.Project.Merchant.Currency.CodeInt,
+				"order_id", order.Id,
+			},
+		)
+
+		return
+	}
+
+	order.AmountInPaymentSystemAccountingCurrency, err = v.service.Convert(
+		order.PaymentMethodIncomeCurrency.CodeInt,
+		order.PaymentMethod.PaymentSystem.AccountingCurrency.CodeInt,
+		order.PaymentMethodOutcomeAmount,
+	)
+
+	if err != nil {
+		v.service.logError(
+			"Convert to payment system accounting currency failed",
+			[]interface{}{
+				"error", err.Error(),
+				"from", order.PaymentMethodIncomeCurrency.CodeInt,
+				"to", order.Project.Merchant.Currency.CodeInt,
+				"order_id", order.Id,
+			},
+		)
+	}
+
+	return
 }

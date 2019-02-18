@@ -11,6 +11,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
+	"github.com/ProtocolONE/rabbitmq/pkg"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -47,13 +48,13 @@ var (
 
 type Service struct {
 	db     *database.Source
-	log    *zap.SugaredLogger
 	mx     sync.Mutex
 	cfg    *config.Config
 	exitCh chan bool
 	ctx    context.Context
 	geo    proto.GeoIpService
 	rep    repository.RepositoryService
+	broker *rabbitmq.Broker
 
 	accountingCurrency *billing.Currency
 
@@ -78,19 +79,19 @@ type Cacher interface {
 
 func NewBillingService(
 	db *database.Source,
-	log *zap.SugaredLogger,
 	cfg *config.Config,
 	exitCh chan bool,
 	geo proto.GeoIpService,
 	rep repository.RepositoryService,
+	broker *rabbitmq.Broker,
 ) *Service {
 	return &Service{
 		db:     db,
-		log:    log,
 		cfg:    cfg,
 		exitCh: exitCh,
 		geo:    geo,
 		rep:    rep,
+		broker: broker,
 	}
 }
 
@@ -160,7 +161,7 @@ func (s *Service) reBuildCache() {
 			s.rebuild = false
 			s.rebuildError = err
 
-			s.log.Errorw("Rebuild cache failed", "error", err, "cached_collection", key)
+			zap.S().Errorw("Rebuild cache failed", "error", err, "cached_collection", key)
 		}
 	}
 }
@@ -175,6 +176,9 @@ func (s *Service) cache(key string, handler Cacher) error {
 	if rec == nil || len(rec) <= 0 {
 		return fmt.Errorf(initCacheErrorNotFound, key)
 	}
+
+	s.mx.Lock()
+	defer s.mx.Unlock()
 
 	handler.setCache(rec)
 
@@ -198,7 +202,7 @@ func (s *Service) isProductionEnvironment() bool {
 }
 
 func (s *Service) logError(msg string, data []interface{}) {
-	s.log.Errorw(fmt.Sprintf("[PAYONE_BILLING] %s", msg), data...)
+	zap.S().Errorw(fmt.Sprintf("[PAYONE_BILLING] %s", msg), data...)
 }
 
 func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {

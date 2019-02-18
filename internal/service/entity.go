@@ -17,14 +17,11 @@ func newProjectHandler(svc *Service) Cacher {
 }
 
 func (h *Project) setCache(recs []interface{}) {
-	h.svc.projectCache = make(map[string]*billing.Project)
+	h.svc.projectCache = make(map[string]*billing.Project, len(recs))
 
 	for _, r := range recs {
 		project := r.(*billing.Project)
-
-		h.svc.mx.Lock()
 		h.svc.projectCache[project.Id] = project
-		h.svc.mx.Unlock()
 	}
 }
 
@@ -59,16 +56,14 @@ func newPaymentMethodHandler(svc *Service) Cacher {
 }
 
 func (h *PaymentMethod) setCache(recs []interface{}) {
-	h.svc.paymentMethodCache = make(map[string]map[int32]*billing.PaymentMethod)
-	h.svc.paymentMethodIdCache = make(map[string]*billing.PaymentMethod)
+	h.svc.paymentMethodCache = make(map[string]map[int32]*billing.PaymentMethod, len(recs))
+	h.svc.paymentMethodIdCache = make(map[string]*billing.PaymentMethod, len(recs))
 
 	for _, r := range recs {
 		pm := r.(*billing.PaymentMethod)
 
-		h.svc.mx.Lock()
-
 		if _, ok := h.svc.paymentMethodCache[pm.Group]; !ok {
-			h.svc.paymentMethodCache[pm.Group] = make(map[int32]*billing.PaymentMethod)
+			h.svc.paymentMethodCache[pm.Group] = make(map[int32]*billing.PaymentMethod, len(pm.Currencies))
 		}
 
 		for _, v := range pm.Currencies  {
@@ -76,8 +71,6 @@ func (h *PaymentMethod) setCache(recs []interface{}) {
 		}
 
 		h.svc.paymentMethodIdCache[pm.Id] = pm
-
-		h.svc.mx.Unlock()
 	}
 }
 

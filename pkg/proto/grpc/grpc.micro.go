@@ -15,6 +15,8 @@ It has these top-level messages:
 	PaymentFormJsonDataRequest
 	PaymentFormJsonDataProject
 	PaymentFormJsonDataResponse
+	PaymentNotifyRequest
+	PaymentNotifyResponse
 */
 package grpc
 
@@ -22,6 +24,7 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import billing "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+import _ "github.com/golang/protobuf/ptypes/any"
 
 import (
 	context "context"
@@ -52,6 +55,7 @@ type BillingService interface {
 	OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, opts ...client.CallOption) (*billing.Order, error)
 	PaymentFormJsonDataProcess(ctx context.Context, in *PaymentFormJsonDataRequest, opts ...client.CallOption) (*PaymentFormJsonDataResponse, error)
 	PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, opts ...client.CallOption) (*PaymentCreateResponse, error)
+	PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
 	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
@@ -103,6 +107,16 @@ func (c *billingService) PaymentCreateProcess(ctx context.Context, in *PaymentCr
 	return out, nil
 }
 
+func (c *billingService) PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.PaymentCallbackProcess", in)
+	out := new(PaymentNotifyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.RebuildCache", in)
 	out := new(EmptyResponse)
@@ -119,6 +133,7 @@ type BillingServiceHandler interface {
 	OrderCreateProcess(context.Context, *billing.OrderCreateRequest, *billing.Order) error
 	PaymentFormJsonDataProcess(context.Context, *PaymentFormJsonDataRequest, *PaymentFormJsonDataResponse) error
 	PaymentCreateProcess(context.Context, *PaymentCreateRequest, *PaymentCreateResponse) error
+	PaymentCallbackProcess(context.Context, *PaymentNotifyRequest, *PaymentNotifyResponse) error
 	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
 }
 
@@ -127,6 +142,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		OrderCreateProcess(ctx context.Context, in *billing.OrderCreateRequest, out *billing.Order) error
 		PaymentFormJsonDataProcess(ctx context.Context, in *PaymentFormJsonDataRequest, out *PaymentFormJsonDataResponse) error
 		PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, out *PaymentCreateResponse) error
+		PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, out *PaymentNotifyResponse) error
 		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
 	}
 	type BillingService struct {
@@ -150,6 +166,10 @@ func (h *billingServiceHandler) PaymentFormJsonDataProcess(ctx context.Context, 
 
 func (h *billingServiceHandler) PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, out *PaymentCreateResponse) error {
 	return h.BillingServiceHandler.PaymentCreateProcess(ctx, in, out)
+}
+
+func (h *billingServiceHandler) PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, out *PaymentNotifyResponse) error {
+	return h.BillingServiceHandler.PaymentCallbackProcess(ctx, in, out)
 }
 
 func (h *billingServiceHandler) RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error {

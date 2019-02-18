@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
@@ -13,6 +14,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +28,10 @@ import (
 
 type OrderTestSuite struct {
 	suite.Suite
-	service                                *Service
+	service *Service
+	log     *zap.Logger
+	logUndo func()
+
 	project                                *billing.Project
 	inactiveProject                        *billing.Project
 	projectWithoutPaymentMethods           *billing.Project
@@ -659,19 +664,26 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Insert BIN test data failed", "%v", err)
 	}
 
-	logger, err := zap.NewProduction()
+	suite.log, err = zap.NewProduction()
 
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
+	suite.logUndo = zap.ReplaceGlobals(suite.log)
+
+	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
+
+	if err != nil {
+		suite.FailNow("Creating RabbitMQ publisher failed", "%v", err)
+	}
 
 	suite.service = NewBillingService(
 		db,
-		logger.Sugar(),
 		cfg,
 		make(chan bool, 1),
 		mock.NewGeoIpServiceTestOk(),
 		mock.NewRepositoryServiceOk(),
+		broker,
 	)
 	err = suite.service.Init()
 
@@ -699,9 +711,10 @@ func (suite *OrderTestSuite) TearDownTest() {
 
 	suite.service.db.Close()
 
-	if err := suite.service.log.Sync(); err != nil {
+	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
+	suite.logUndo()
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessProject_Ok() {
@@ -3546,14 +3559,14 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCard_Ok() {
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldPan:             "4000000000000002",
-		paymentCreateFieldCvv:             "123",
-		paymentCreateFieldMonth:           "02",
-		paymentCreateFieldYear:            "2100",
-		paymentCreateFieldHolder:          "Mr. Card Holder",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldPan:             "4000000000000002",
+		pkg.PaymentCreateFieldCvv:             "123",
+		pkg.PaymentCreateFieldMonth:           "02",
+		pkg.PaymentCreateFieldYear:            "2100",
+		pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3587,10 +3600,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Ewallet_Ok() {
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.pmWebMoney.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldEWallet:         "ewallet_account",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmWebMoney.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldEWallet:         "ewallet_account",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3619,10 +3632,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Bitcoin_Ok() {
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3651,9 +3664,9 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderIdEmpty_Error
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3683,9 +3696,9 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodEmpty
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId: rsp.Id,
-		paymentCreateFieldEmail:   "test@unit.unit",
-		paymentCreateFieldCrypto:  "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId: rsp.Id,
+		pkg.PaymentCreateFieldEmail:   "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:  "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3715,9 +3728,9 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_EmailEmpty_Error()
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3747,10 +3760,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderNotFound_Erro
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         bson.NewObjectId().Hex(),
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         bson.NewObjectId().Hex(),
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3783,10 +3796,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderHasEndedStatu
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3819,10 +3832,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ProjectProcess_Err
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3852,10 +3865,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodNotFo
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: bson.NewObjectId().Hex(),
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: bson.NewObjectId().Hex(),
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3885,10 +3898,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodProce
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.inactivePaymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.inactivePaymentMethod.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3921,10 +3934,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_AmountLimitProcess
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "bitcoin_address",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3954,14 +3967,14 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCardNumberInva
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldPan:             "fake_bank_card_number",
-		paymentCreateFieldCvv:             "123",
-		paymentCreateFieldMonth:           "02",
-		paymentCreateFieldYear:            "2100",
-		paymentCreateFieldHolder:          "Mr. Card Holder",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldPan:             "fake_bank_card_number",
+		pkg.PaymentCreateFieldCvv:             "123",
+		pkg.PaymentCreateFieldMonth:           "02",
+		pkg.PaymentCreateFieldYear:            "2100",
+		pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -3991,14 +4004,14 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_GetBinData_Error()
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldPan:             "5555555555554444",
-		paymentCreateFieldCvv:             "123",
-		paymentCreateFieldMonth:           "02",
-		paymentCreateFieldYear:            "2100",
-		paymentCreateFieldHolder:          "Mr. Card Holder",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldPan:             "5555555555554444",
+		pkg.PaymentCreateFieldCvv:             "123",
+		pkg.PaymentCreateFieldMonth:           "02",
+		pkg.PaymentCreateFieldYear:            "2100",
+		pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 	}
 
 	suite.service.rep = mock.NewRepositoryServiceError()
@@ -4036,10 +4049,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_AccountEmpty_Error
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldCrypto:          "",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldCrypto:          "",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -4064,34 +4077,43 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 		PayerIp:     "127.0.0.1",
 	}
 
-	rsp := &billing.Order{}
-	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
 	suite.service.cfg.Environment = environmentProd
+	expireYear := time.Now().AddDate(1, 0, 0)
 
-	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldPan:             "4000000000000002",
-		paymentCreateFieldCvv:             "123",
-		paymentCreateFieldMonth:           "02",
-		paymentCreateFieldYear:            "2100",
-		paymentCreateFieldHolder:          "Mr. Card Holder",
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
 	}
 
-	processor := &PaymentCreateProcessor{service: suite.service, data: data}
-	err = processor.processPaymentFormData()
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), processor.checked.order)
-	assert.NotNil(suite.T(), processor.checked.project)
-	assert.NotNil(suite.T(), processor.checked.paymentMethod)
+	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.Len(suite.T(), rsp.Error, 0)
+	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
+
+	var check *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&check)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), check)
 	assert.Equal(
 		suite.T(),
 		suite.project.PaymentMethods[constant.PaymentSystemGroupAliasBankCard].Terminal,
-		processor.checked.order.PaymentMethodTerminalId,
+		check.PaymentMethod.Params.Terminal,
 	)
 
 	suite.service.cfg.Environment = "dev"
@@ -4114,14 +4136,14 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangeProjectAccou
 	assert.Equal(suite.T(), "", rsp.ProjectAccount)
 
 	data := map[string]string{
-		paymentCreateFieldOrderId:         rsp.Id,
-		paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-		paymentCreateFieldEmail:           "test@unit.unit",
-		paymentCreateFieldPan:             "4000000000000002",
-		paymentCreateFieldCvv:             "123",
-		paymentCreateFieldMonth:           "02",
-		paymentCreateFieldYear:            "2100",
-		paymentCreateFieldHolder:          "Mr. Card Holder",
+		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+		pkg.PaymentCreateFieldPan:             "4000000000000002",
+		pkg.PaymentCreateFieldCvv:             "123",
+		pkg.PaymentCreateFieldMonth:           "02",
+		pkg.PaymentCreateFieldYear:            "2100",
+		pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 	}
 
 	processor := &PaymentCreateProcessor{service: suite.service, data: data}
@@ -4154,14 +4176,14 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			paymentCreateFieldOrderId:         order.Id,
-			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-			paymentCreateFieldEmail:           "test@unit.unit",
-			paymentCreateFieldPan:             "4000000000000002",
-			paymentCreateFieldCvv:             "123",
-			paymentCreateFieldMonth:           "02",
-			paymentCreateFieldYear:            expireYear.Format("2006"),
-			paymentCreateFieldHolder:          "Mr. Card Holder",
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 		},
 	}
 
@@ -4169,7 +4191,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), responseStatusOK, rsp.Status)
+	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
 	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
 	assert.Len(suite.T(), rsp.Error, 0)
 }
@@ -4192,13 +4214,13 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessValidation_Er
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			paymentCreateFieldOrderId:         order.Id,
-			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-			paymentCreateFieldEmail:           "test@unit.unit",
-			paymentCreateFieldPan:             "4000000000000002",
-			paymentCreateFieldCvv:             "123",
-			paymentCreateFieldMonth:           "02",
-			paymentCreateFieldHolder:          "Mr. Card Holder",
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 		},
 	}
 
@@ -4206,7 +4228,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessValidation_Er
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), responseStatusErrorValidation, rsp.Status)
+	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp.Status)
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
 	assert.True(suite.T(), len(rsp.Error) > 0)
 	assert.Equal(suite.T(), bankCardExpireYearIsRequired, rsp.Error)
@@ -4235,14 +4257,14 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessOrderCommissi
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			paymentCreateFieldOrderId:         order.Id,
-			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-			paymentCreateFieldEmail:           "test@unit.unit",
-			paymentCreateFieldPan:             "4000000000000002",
-			paymentCreateFieldCvv:             "123",
-			paymentCreateFieldMonth:           "02",
-			paymentCreateFieldYear:            expireYear.Format("2006"),
-			paymentCreateFieldHolder:          "Mr. Card Holder",
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 		},
 	}
 
@@ -4250,13 +4272,13 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessOrderCommissi
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), responseStatusErrorValidation, rsp.Status)
+	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp.Status)
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
 	assert.True(suite.T(), len(rsp.Error) > 0)
 	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionVat), rsp.Error)
 }
 
-func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_Error() {
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_Ok() {
 	req := &billing.OrderCreateRequest{
 		ProjectId:   suite.project.Id,
 		Currency:    "RUB",
@@ -4278,14 +4300,14 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_E
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			paymentCreateFieldOrderId:         order.Id,
-			paymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
-			paymentCreateFieldEmail:           "test@unit.unit",
-			paymentCreateFieldPan:             "4000000000000002",
-			paymentCreateFieldCvv:             "123",
-			paymentCreateFieldMonth:           "02",
-			paymentCreateFieldYear:            expireYear.Format("2006"),
-			paymentCreateFieldHolder:          "Mr. Card Holder",
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
 		},
 	}
 
@@ -4293,10 +4315,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_E
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), responseStatusErrorPaymentSystem, rsp.Status)
-	assert.Len(suite.T(), rsp.RedirectUrl, 0)
-	assert.True(suite.T(), len(rsp.Error) > 0)
-	assert.Equal(suite.T(), paymentSystemErrorAuthenticateFailed, rsp.Error)
+	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
+	assert.Len(suite.T(), rsp.Error, 0)
 
 	suite.service.cfg.Environment = "dev"
 }
@@ -4319,10 +4340,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemH
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			paymentCreateFieldOrderId:         order.Id,
-			paymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
-			paymentCreateFieldEmail:           "test@unit.unit",
-			paymentCreateFieldCrypto:          "bitcoin_address",
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 		},
 	}
 
@@ -4330,8 +4351,109 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemH
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), responseStatusErrorSystem, rsp.Status)
+	assert.Equal(suite.T(), pkg.StatusErrorSystem, rsp.Status)
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
 	assert.True(suite.T(), len(rsp.Error) > 0)
 	assert.Equal(suite.T(), paymentSystemErrorHandlerNotFound, rsp.Error)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+
+	var order1 *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order1)
+	suite.NotNil(suite.T(), order1)
+
+	callbackRequest := &billing.CardPayPaymentCallback{
+		PaymentMethod: suite.paymentMethod.Params.ExternalId,
+		CallbackTime:  time.Now().Format("2006-01-02T15:04:05Z"),
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id:          order.Id,
+			Description: order.Description,
+			Items: []*billing.CardPayItem{
+				{
+					Name:        order.FixedPackage.Name,
+					Description: order.FixedPackage.Name,
+					Count:       1,
+					Price:       order.FixedPackage.Price,
+				},
+			},
+		},
+		CardAccount: &billing.CallbackCardPayBankCardAccount{
+			Holder:             order.PaymentRequisites[pkg.PaymentCreateFieldHolder],
+			IssuingCountryCode: "RU",
+			MaskedPan:          order.PaymentRequisites[pkg.PaymentCreateFieldPan],
+			Token:              bson.NewObjectId().Hex(),
+		},
+		Customer: &billing.CardPayCustomer{
+			Email:  order.PayerData.Email,
+			Ip:     order.PayerData.Ip,
+			Id:     order.ProjectAccount,
+			Locale: "Europe/Moscow",
+		},
+		PaymentData: &billing.CallbackCardPayPaymentData{
+			Id:          order.Id,
+			Amount:      order1.PaymentMethodOutcomeAmount,
+			Currency:    order1.PaymentMethodOutcomeCurrency.CodeA3,
+			Description: order.Description,
+			Is_3D:       true,
+			Rrn:         bson.NewObjectId().Hex(),
+			Status:      pkg.CardPayPaymentResponseStatusCompleted,
+		},
+	}
+
+	buf, err := json.Marshal(callbackRequest)
+	assert.Nil(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(buf) + order1.PaymentMethod.Params.CallbackPassword))
+
+	any, err := ptypes.MarshalAny(callbackRequest)
+	assert.Nil(suite.T(), err)
+
+	callbackData := &grpc.PaymentNotifyRequest{
+		OrderId:    order.Id,
+		Request:    any,
+		Signature:  hex.EncodeToString(hash.Sum(nil)),
+		RawRequest: string(buf),
+	}
+
+	callbackResponse := &grpc.PaymentNotifyResponse{}
+	err = suite.service.PaymentCallbackProcess(context.TODO(), callbackData, callbackResponse)
+
+	assert.Nil(suite.T(), err)
 }

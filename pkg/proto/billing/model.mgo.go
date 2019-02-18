@@ -670,7 +670,6 @@ func (m *Order) GetBSON() (interface{}, error) {
 		ProjectOutcomeCurrency:                  m.ProjectOutcomeCurrency,
 		ProjectParams:                           m.ProjectParams,
 		PayerData:                               m.PayerData,
-		PaymentMethodTerminalId:                 m.PaymentMethodTerminalId,
 		PaymentMethodOrderId:                    m.PaymentMethodOrderId,
 		PaymentMethodOutcomeAmount:              m.PaymentMethodOutcomeAmount,
 		PaymentMethodOutcomeCurrency:            m.PaymentMethodOutcomeCurrency,
@@ -848,7 +847,6 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 		}
 	}
 
-	m.PaymentMethodTerminalId = decoded.PaymentMethodTerminalId
 	m.PaymentMethodOrderId = decoded.PaymentMethodOrderId
 	m.PaymentMethodOutcomeAmount = decoded.PaymentMethodOutcomeAmount
 	m.PaymentMethodOutcomeCurrency = decoded.PaymentMethodOutcomeCurrency

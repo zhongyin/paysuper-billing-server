@@ -14,6 +14,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
+	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/micro/go-micro"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -31,8 +32,8 @@ type Application struct {
 
 	cacheExit chan bool
 
-	logger    *zap.Logger
-	sugLogger *zap.SugaredLogger
+	logger     *zap.Logger
+	loggerUndo func()
 }
 
 type appHealthCheck struct{}
@@ -53,6 +54,12 @@ func (app *Application) Init() {
 	app.cfg = cfg
 	app.initDatabase()
 
+	broker, err := rabbitmq.NewBroker(app.cfg.BrokerAddress)
+
+	if err != nil {
+		app.logger.Fatal("Creating RabbitMQ publisher failed", zap.Error(err), zap.String("broker_address", app.cfg.BrokerAddress))
+	}
+
 	app.service = micro.NewService(
 		micro.Name(pkg.ServiceName),
 		micro.Version(pkg.ServiceVersion),
@@ -69,11 +76,11 @@ func (app *Application) Init() {
 
 	svc := service.NewBillingService(
 		app.database,
-		app.sugLogger,
 		app.cfg,
 		app.cacheExit,
 		geoService,
 		repService,
+		broker,
 	)
 
 	if err := svc.Init(); err != nil {
@@ -100,7 +107,7 @@ func (app *Application) initLogger() {
 		log.Fatalf("[PAYONE_BILLING] Application logger initialization failed with error: %s\n", err)
 	}
 
-	app.sugLogger = app.logger.Sugar()
+	app.loggerUndo = zap.ReplaceGlobals(app.logger)
 }
 
 func (app *Application) initDatabase() {
@@ -189,13 +196,7 @@ func (app *Application) Stop() {
 
 	}()
 
-	func() {
-		if err := app.sugLogger.Sync(); err != nil {
-			app.logger.Fatal("Sugared logger sync failed", zap.Error(err))
-		} else {
-			app.logger.Info("Sugared logger synced")
-		}
-	}()
+	app.loggerUndo()
 }
 
 func (c *appHealthCheck) Status() (interface{}, error) {

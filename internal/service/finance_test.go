@@ -17,7 +17,10 @@ import (
 
 type FinanceTestSuite struct {
 	suite.Suite
-	service       *Service
+	service *Service
+	log     *zap.Logger
+	logUndo func()
+
 	project       *billing.Project
 	paymentMethod *billing.PaymentMethod
 }
@@ -50,27 +53,27 @@ func (suite *FinanceTestSuite) SetupTest() {
 	vat := []interface{}{
 		&billing.Vat{
 			Country: &billing.Country{
-				CodeInt:   643,
-				CodeA2:    "RU",
-				CodeA3:    "RUS",
-				Name:      &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-				IsActive:  true,
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
 			},
 			Subdivision: "",
-			Vat: 20,
-			IsActive: true,
+			Vat:         20,
+			IsActive:    true,
 		},
 		&billing.Vat{
 			Country: &billing.Country{
-				CodeInt:   840,
-				CodeA2:    "US",
-				CodeA3:    "USA",
-				Name:      &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-				IsActive:  true,
+				CodeInt:  840,
+				CodeA2:   "US",
+				CodeA3:   "USA",
+				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
+				IsActive: true,
 			},
 			Subdivision: "CA",
-			Vat: 10.25,
-			IsActive: true,
+			Vat:         10.25,
+			IsActive:    true,
 		},
 	}
 
@@ -223,13 +226,14 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Insert commission test data failed", "%v", err)
 	}
 
-	logger, err := zap.NewProduction()
+	suite.log, err = zap.NewProduction()
 
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
+	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
-	suite.service = NewBillingService(db, logger.Sugar(), cfg, make(chan bool, 1), nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {
@@ -247,9 +251,10 @@ func (suite *FinanceTestSuite) TearDownTest() {
 
 	suite.service.db.Close()
 
-	if err := suite.service.log.Sync(); err != nil {
+	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
+	suite.logUndo()
 }
 
 func (suite *FinanceTestSuite) TestFinance_GetCurrencyByCodeA3Ok() {
@@ -270,7 +275,7 @@ func (suite *FinanceTestSuite) TestFinance_GetCurrencyByCodeA3Error() {
 
 func (suite *FinanceTestSuite) TestFinance_ConvertOk() {
 	origin := float64(1000)
-	expect := 15.625
+	expect := 15.63
 
 	amount, err := suite.service.Convert(643, 840, origin)
 

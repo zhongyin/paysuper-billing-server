@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/ProtocolONE/payone-repository/tools"
 	"github.com/globalsign/mgo/bson"
 	"time"
 )
@@ -27,14 +28,11 @@ func newCurrencyHandler(svc *Service) Cacher {
 }
 
 func (h *Currency) setCache(recs []interface{}) {
-	h.svc.currencyCache = make(map[string]*billing.Currency)
+	h.svc.currencyCache = make(map[string]*billing.Currency, len(recs))
 
 	for _, c := range recs {
 		cur := c.(*billing.Currency)
-
-		h.svc.mx.Lock()
 		h.svc.currencyCache[cur.CodeA3] = cur
-		h.svc.mx.Unlock()
 	}
 }
 
@@ -67,20 +65,16 @@ func newCurrencyRateHandler(svc *Service) Cacher {
 }
 
 func (h *CurrencyRate) setCache(recs []interface{}) {
-	h.svc.currencyRateCache = make(map[int32]map[int32]*billing.CurrencyRate)
+	h.svc.currencyRateCache = make(map[int32]map[int32]*billing.CurrencyRate, len(recs))
 
 	for _, c := range recs {
 		rate := c.(*billing.CurrencyRate)
 
-		h.svc.mx.Lock()
-
 		if _, ok := h.svc.currencyRateCache[rate.CurrencyFrom]; !ok {
-			h.svc.currencyRateCache[rate.CurrencyFrom] = make(map[int32]*billing.CurrencyRate)
+			h.svc.currencyRateCache[rate.CurrencyFrom] = make(map[int32]*billing.CurrencyRate, len(recs))
 		}
 
 		h.svc.currencyRateCache[rate.CurrencyFrom][rate.CurrencyTo] = rate
-
-		h.svc.mx.Unlock()
 	}
 }
 
@@ -113,7 +107,7 @@ func (s *Service) Convert(from int32, to int32, value float64) (float64, error) 
 
 	value = value / rec.Rate
 
-	return value, nil
+	return tools.FormatAmount(value), nil
 }
 
 func newVatHandler(svc *Service) Cacher {
@@ -121,20 +115,18 @@ func newVatHandler(svc *Service) Cacher {
 }
 
 func (h *Vat) setCache(recs []interface{}) {
-	h.svc.vatCache = make(map[string]map[string]*billing.Vat)
+	h.svc.vatCache = make(map[string]map[string]*billing.Vat, len(recs))
 
 	for _, c := range recs {
 		vat := c.(*billing.Vat)
 
-		h.svc.mx.Lock()
+		country := vat.Country.CodeA2
 
-		if _, ok := h.svc.vatCache[vat.Country.CodeA2]; !ok {
-			h.svc.vatCache[vat.Country.CodeA2] = make(map[string]*billing.Vat)
+		if _, ok := h.svc.vatCache[country]; !ok {
+			h.svc.vatCache[country] = make(map[string]*billing.Vat)
 		}
 
-		h.svc.vatCache[vat.Country.CodeA2][vat.Subdivision] = vat
-
-		h.svc.mx.Unlock()
+		h.svc.vatCache[country][vat.Subdivision] = vat
 	}
 }
 
@@ -171,7 +163,7 @@ func (s *Service) CalculateVat(amount float64, country, subdivision string) (flo
 
 	amount = amount * (vat.Vat / 100)
 
-	return amount, nil
+	return tools.FormatAmount(amount), nil
 }
 
 func newCommissionHandler(svc *Service) Cacher {
@@ -179,20 +171,19 @@ func newCommissionHandler(svc *Service) Cacher {
 }
 
 func (h *Commission) setCache(recs []interface{}) {
-	h.svc.commissionCache = make(map[string]map[string]*billing.MgoCommission)
+	h.svc.commissionCache = make(map[string]map[string]*billing.MgoCommission, len(recs))
 
 	for _, c := range recs {
 		commission := c.(*billing.MgoCommission)
 
-		h.svc.mx.Lock()
+		projectId := commission.Id.ProjectId.Hex()
+		pmId := commission.Id.PaymentMethodId.Hex()
 
-		if _, ok := h.svc.commissionCache[commission.Id.ProjectId.Hex()]; !ok {
-			h.svc.commissionCache[commission.Id.ProjectId.Hex()] = make(map[string]*billing.MgoCommission)
+		if _, ok := h.svc.commissionCache[projectId]; !ok {
+			h.svc.commissionCache[projectId] = make(map[string]*billing.MgoCommission)
 		}
 
-		h.svc.commissionCache[commission.Id.ProjectId.Hex()][commission.Id.PaymentMethodId.Hex()] = commission
-
-		h.svc.mx.Unlock()
+		h.svc.commissionCache[projectId][pmId] = commission
 	}
 }
 
@@ -238,9 +229,9 @@ func (s *Service) CalculateCommission(projectId, pmId string, amount float64) (*
 	}
 
 	c := &OrderCommission{
-		PMCommission:     amount * (commission.PaymentMethodCommission / 100),
-		PspCommission:    amount * (commission.PspCommission / 100),
-		ToUserCommission: amount * (commission.ToUserCommission / 100),
+		PMCommission:     tools.FormatAmount(amount * (commission.PaymentMethodCommission / 100)),
+		PspCommission:    tools.FormatAmount(amount * (commission.PspCommission / 100)),
+		ToUserCommission: tools.FormatAmount(amount * (commission.ToUserCommission / 100)),
 	}
 
 	return c, nil
