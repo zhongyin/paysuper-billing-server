@@ -35,7 +35,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.Order{}
+var _ = billing.Merchant{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -56,6 +56,8 @@ type BillingService interface {
 	PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, opts ...client.CallOption) (*PaymentCreateResponse, error)
 	PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
 	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
+	UpdateOrder(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*EmptyResponse, error)
+	UpdateMerchant(ctx context.Context, in *billing.Merchant, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
 type billingService struct {
@@ -126,6 +128,26 @@ func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opt
 	return out, nil
 }
 
+func (c *billingService) UpdateOrder(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.UpdateOrder", in)
+	out := new(EmptyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) UpdateMerchant(ctx context.Context, in *billing.Merchant, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.UpdateMerchant", in)
+	out := new(EmptyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -134,6 +156,8 @@ type BillingServiceHandler interface {
 	PaymentCreateProcess(context.Context, *PaymentCreateRequest, *PaymentCreateResponse) error
 	PaymentCallbackProcess(context.Context, *PaymentNotifyRequest, *PaymentNotifyResponse) error
 	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
+	UpdateOrder(context.Context, *billing.Order, *EmptyResponse) error
+	UpdateMerchant(context.Context, *billing.Merchant, *EmptyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -143,6 +167,8 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		PaymentCreateProcess(ctx context.Context, in *PaymentCreateRequest, out *PaymentCreateResponse) error
 		PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, out *PaymentNotifyResponse) error
 		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
+		UpdateOrder(ctx context.Context, in *billing.Order, out *EmptyResponse) error
+		UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -173,4 +199,12 @@ func (h *billingServiceHandler) PaymentCallbackProcess(ctx context.Context, in *
 
 func (h *billingServiceHandler) RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error {
 	return h.BillingServiceHandler.RebuildCache(ctx, in, out)
+}
+
+func (h *billingServiceHandler) UpdateOrder(ctx context.Context, in *billing.Order, out *EmptyResponse) error {
+	return h.BillingServiceHandler.UpdateOrder(ctx, in, out)
+}
+
+func (h *billingServiceHandler) UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error {
+	return h.BillingServiceHandler.UpdateMerchant(ctx, in, out)
 }

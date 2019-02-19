@@ -12,6 +12,7 @@ const (
 	CollectionPaymentMethod = "payment_method"
 	CollectionCommission    = "commission"
 	CollectionBinData       = "bank_bin"
+	CollectionMerchant      = "merchant"
 
 	CardPayPaymentResponseStatusDeclined   = "DECLINED"
 	CardPayPaymentResponseStatusAuthorized = "AUTHORIZED"

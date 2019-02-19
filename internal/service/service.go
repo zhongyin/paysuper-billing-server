@@ -12,6 +12,7 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
 	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
 	"github.com/ProtocolONE/rabbitmq/pkg"
+	"github.com/globalsign/mgo/bson"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -206,5 +207,25 @@ func (s *Service) logError(msg string, data []interface{}) {
 }
 
 func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {
+	return nil
+}
+
+func (s *Service) UpdateOrder(ctx context.Context, req *billing.Order, rsp *grpc.EmptyResponse) error {
+	err := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(req.Id), req)
+
+	if err != nil {
+		s.logError("Update order failed", []interface{}{"error", err.Error(), "order", req})
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateMerchant(ctx context.Context, req *billing.Merchant, rsp *grpc.EmptyResponse) error {
+	err := s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(req.Id), req)
+
+	if err != nil {
+		s.logError("Update merchant failed", []interface{}{"error", err.Error(), "order", req})
+	}
+
 	return nil
 }

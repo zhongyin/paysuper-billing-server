@@ -10,13 +10,14 @@ service BillingService {
     rpc PaymentFormJsonDataProcess (PaymentFormJsonDataRequest) returns (PaymentFormJsonDataResponse) {}
     rpc PaymentCreateProcess (PaymentCreateRequest) returns (PaymentCreateResponse) {}
     rpc PaymentCallbackProcess (PaymentNotifyRequest) returns (PaymentNotifyResponse) {}
+
     rpc RebuildCache (EmptyRequest) returns (EmptyResponse) {}
+    rpc UpdateOrder (billing.Order) returns (EmptyResponse) {}
+    rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {}
 }
 
-message EmptyRequest {
-}
-message EmptyResponse {
-}
+message EmptyRequest {}
+message EmptyResponse {}
 
 message PaymentCreateRequest {
     map<string, string> data = 1;
