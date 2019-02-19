@@ -24,7 +24,6 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import billing "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
-import _ "github.com/golang/protobuf/ptypes/any"
 
 import (
 	context "context"

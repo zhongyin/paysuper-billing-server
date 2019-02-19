@@ -4,7 +4,6 @@ option go_package = "github.com/ProtocolONE/payone-billing-service/pkg/proto/grp
 package grpc;
 
 import "billing/billing.proto";
-import "google/protobuf/any.proto";
 
 service BillingService {
     rpc OrderCreateProcess (billing.OrderCreateRequest) returns (billing.Order) {}
@@ -14,8 +13,10 @@ service BillingService {
     rpc RebuildCache (EmptyRequest) returns (EmptyResponse) {}
 }
 
-message EmptyRequest {}
-message EmptyResponse {}
+message EmptyRequest {
+}
+message EmptyResponse {
+}
 
 message PaymentCreateRequest {
     map<string, string> data = 1;
@@ -55,9 +56,8 @@ message PaymentFormJsonDataResponse {
 
 message PaymentNotifyRequest {
     string order_id = 1;
-    google.protobuf.Any request = 2;
-    string raw_request = 3;
-    string signature = 4;
+    bytes request = 2;
+    string signature = 3;
 }
 
 message PaymentNotifyResponse {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
@@ -365,7 +366,7 @@ func (s *Service) PaymentCallbackProcess(
 	switch order.PaymentMethod.Params.Handler {
 	case paymentSystemHandlerCardPay:
 		data = &billing.CardPayPaymentCallback{}
-		err := ptypes.UnmarshalAny(req.Request, data)
+		err := json.Unmarshal(req.Request, data)
 
 		if err != nil {
 			return errors.New(paymentRequestIncorrect)
@@ -381,7 +382,7 @@ func (s *Service) PaymentCallbackProcess(
 		return err
 	}
 
-	pErr := h.ProcessPayment(data, req.RawRequest, req.Signature)
+	pErr := h.ProcessPayment(data, string(req.Request), req.Signature)
 
 	if pErr != nil {
 		s.logError(
@@ -389,7 +390,7 @@ func (s *Service) PaymentCallbackProcess(
 			[]interface{}{
 				"err", pErr.Error(),
 				"order_id", req.OrderId,
-				"request", req.RawRequest,
+				"request", string(req.Request),
 				"signature", req.Signature,
 			},
 		)

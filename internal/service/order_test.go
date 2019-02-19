@@ -4488,14 +4488,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 	hash := sha512.New()
 	hash.Write([]byte(string(buf) + order1.PaymentMethod.Params.CallbackPassword))
 
-	any, err := ptypes.MarshalAny(callbackRequest)
-	assert.Nil(suite.T(), err)
-
 	callbackData := &grpc.PaymentNotifyRequest{
 		OrderId:    order.Id,
-		Request:    any,
+		Request:    buf,
 		Signature:  hex.EncodeToString(hash.Sum(nil)),
-		RawRequest: string(buf),
 	}
 
 	callbackResponse := &grpc.PaymentNotifyResponse{}
