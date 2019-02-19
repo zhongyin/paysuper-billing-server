@@ -133,8 +133,14 @@ func (suite *OrderTestSuite) SetupTest() {
 		Name:     &billing.Name{Ru: "Австралийский доллар", En: "Australian Dollar"},
 		IsActive: true,
 	}
+	amd := &billing.Currency{
+		CodeInt:  51,
+		CodeA3:   "AMD",
+		Name:     &billing.Name{Ru: "Армянский драм", En: "Armenian dram"},
+		IsActive: true,
+	}
 
-	currency := []interface{}{rub, usd, uah}
+	currency := []interface{}{rub, usd, uah, amd}
 
 	err = db.Collection(pkg.CollectionCurrency).Insert(currency...)
 
@@ -153,6 +159,13 @@ func (suite *OrderTestSuite) SetupTest() {
 		&billing.CurrencyRate{
 			CurrencyFrom: 643,
 			CurrencyTo:   643,
+			Rate:         1,
+			Date:         ptypes.TimestampNow(),
+			IsActive:     true,
+		},
+		&billing.CurrencyRate{
+			CurrencyFrom: 643,
+			CurrencyTo:   51,
 			Rate:         1,
 			Date:         ptypes.TimestampNow(),
 			IsActive:     true,
@@ -320,7 +333,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		Merchant: &billing.Merchant{
 			Id:                        bson.NewObjectId().Hex(),
 			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  uah,
+			Currency:                  amd,
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -1828,7 +1841,8 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
 	assert.True(suite.T(), order.ProjectFeeAmount.AmountMerchantCurrency > 0)
 	assert.True(suite.T(), order.ProjectFeeAmount.AmountPaymentMethodCurrency > 0)
 
-	assert.True(suite.T(), order.VatAmount > 0)
+	assert.True(suite.T(), order.VatAmount.AmountPaymentMethodCurrency > 0)
+	assert.True(suite.T(), order.VatAmount.AmountMerchantCurrency > 0)
 }
 
 func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlVerify_Error() {
@@ -1953,6 +1967,13 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
 
 	err = processor.processProjectOrderId()
 	assert.Nil(suite.T(), err)
+
+	processor.checked.project.Merchant.Currency = &billing.Currency{
+		CodeInt:  980,
+		CodeA3:   "UAH",
+		Name:     &billing.Name{Ru: "Украинская гривна", En: "Ukrainian Hryvnia"},
+		IsActive: true,
+	}
 
 	order, err := processor.prepareOrder()
 	assert.Error(suite.T(), err)
@@ -2093,7 +2114,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 	assert.Nil(suite.T(), order.ProjectFeeAmount)
 	assert.Nil(suite.T(), order.PspFeeAmount)
 	assert.Nil(suite.T(), order.PaymentSystemFeeAmount)
-	assert.Equal(suite.T(), float64(0), order.VatAmount)
+	assert.Nil(suite.T(), order.VatAmount)
 
 	err = processor.processOrderCommissions(order)
 	assert.Nil(suite.T(), err)
@@ -2112,7 +2133,8 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 	assert.True(suite.T(), order.PaymentSystemFeeAmount.AmountMerchantCurrency > 0)
 	assert.True(suite.T(), order.PaymentSystemFeeAmount.AmountPaymentSystemCurrency > 0)
 
-	assert.True(suite.T(), order.VatAmount > 0)
+	assert.True(suite.T(), order.VatAmount.AmountPaymentMethodCurrency > 0)
+	assert.True(suite.T(), order.VatAmount.AmountMerchantCurrency > 0)
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error() {
@@ -4204,15 +4226,18 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), vat)
 
-	orderVat := tools.FormatAmount(order1.ProjectIncomeAmount * (vat.Vat / 100))
-	assert.Equal(suite.T(), orderVat, order1.VatAmount)
-
-	toUserCommission := tools.FormatAmount(order1.ProjectIncomeAmount * (commission.ToUserCommission / 100))
-	assert.Equal(suite.T(), toUserCommission, order1.ToPayerFeeAmount.AmountPaymentMethodCurrency)
-
 	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.Currency.CodeInt]
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), rate)
+
+	orderVat := tools.FormatAmount(order1.ProjectIncomeAmount * (vat.Vat / 100))
+	assert.Equal(suite.T(), orderVat, order1.VatAmount.AmountPaymentMethodCurrency)
+
+	orderVat1 := tools.FormatAmount(orderVat / rate.Rate)
+	assert.Equal(suite.T(), orderVat1, order1.VatAmount.AmountMerchantCurrency)
+
+	toUserCommission := tools.FormatAmount(order1.ProjectIncomeAmount * (commission.ToUserCommission / 100))
+	assert.Equal(suite.T(), toUserCommission, order1.ToPayerFeeAmount.AmountPaymentMethodCurrency)
 
 	toUserCommission1 := tools.FormatAmount(toUserCommission / rate.Rate)
 	assert.Equal(suite.T(), toUserCommission1, order1.ToPayerFeeAmount.AmountMerchantCurrency)

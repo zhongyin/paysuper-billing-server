@@ -156,7 +156,7 @@ type MgoOrder struct {
 	PspFeeAmount                            *OrderFeePsp           `bson:"psp_fee_amount"`
 	ProjectFeeAmount                        *OrderFee              `bson:"project_fee_amount"`
 	ToPayerFeeAmount                        *OrderFee              `bson:"to_payer_fee_amount"`
-	VatAmount                               float64                `bson:"vat_amount"`
+	VatAmount                               *OrderFee              `bson:"vat_amount"`
 	PaymentSystemFeeAmount                  *OrderFeePaymentSystem `bson:"ps_fee_amount"`
 	UrlSuccess                              string                 `bson:"url_success"`
 	UrlFail                                 string                 `bson:"url_fail"`

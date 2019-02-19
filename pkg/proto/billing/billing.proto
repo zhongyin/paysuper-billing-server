@@ -230,7 +230,7 @@ message Order {
     // @inject_tag: bson:"to_payer_fee_amount" structure:"to_payer_fee_amount"
     OrderFee to_payer_fee_amount = 34; // value of fee which added to payer amount
     // @inject_tag: bson:"vat_amount" structure:"vat_amount"
-    double vat_amount = 35; // vat amount
+    OrderFee vat_amount = 35; // vat amount
     // @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
     OrderFeePaymentSystem payment_system_fee_amount = 36; // payment system fee for payment operation
 }

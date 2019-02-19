@@ -788,6 +788,8 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
 	pmOutAmount := o.PaymentMethodOutcomeAmount
+	mAccCur := o.Project.Merchant.Currency.CodeInt
+	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 
 	// if merchant enable VAT calculation then we're need to calculate VAT for payer
 	if o.Project.Merchant.IsVatEnabled == true {
@@ -797,9 +799,18 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 			return err
 		}
 
-		o.VatAmount = vat
+		o.VatAmount = &billing.OrderFee{AmountPaymentMethodCurrency: vat}
+
+		// convert amount of VAT to accounting currency of merchant
+		amount, err := v.Service.Convert(pmOutCur, mAccCur, vat)
+
+		if err != nil {
+			return err
+		}
+		o.VatAmount.AmountMerchantCurrency = amount
+
 		// add VAT amount to payment amount
-		pmOutAmount += o.VatAmount
+		pmOutAmount += vat
 	}
 
 	// calculate commissions to selected payment method
@@ -808,9 +819,6 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	if err != nil {
 		return err
 	}
-
-	mAccCur := o.Project.Merchant.Currency.CodeInt
-	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 
 	totalCommission := commission.PMCommission + commission.PspCommission
 
