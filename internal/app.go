@@ -119,7 +119,11 @@ func (app *Application) initDatabase() {
 	db, err := database.NewDatabase(settings)
 
 	if err != nil {
-		app.logger.Fatal("[PAYONE_BILLING] Database connection failed", zap.Error(err))
+		app.logger.Fatal(
+			"[PAYONE_BILLING] Database connection failed",
+			zap.Error(err),
+			zap.String("connection_string", settings.String()),
+		)
 	}
 
 	app.database = db

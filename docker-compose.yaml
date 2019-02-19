@@ -1,0 +1,21 @@
+version: "3.6"
+
+services:
+  payone-billing-service-go:
+    build: .
+    container_name: payone-billing-service-go
+    networks:
+      - p1devnet
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      MONGO_HOST: p1devnet:3002
+      MONGO_DB: p1payapi
+      MONGO_USER: ""
+      ENV MONGO_PASSWORD: ""
+    tty: true
+
+networks:
+  p1devnet:
+    external: true

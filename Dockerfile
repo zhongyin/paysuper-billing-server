@@ -11,7 +11,7 @@ ENV MONGO_DB = "payone"
 ENV MONGO_USER = ""
 ENV MONGO_PASSWORD = ""
 ENV CENTRIFUGO_SECRET = "secret"
-ENV CARD_PAY_ORDER_CREATE_URL = "https://cardpay.com"
+ENV CARD_PAY_ORDER_CREATE_URL = "https://sandbox.cardpay.com"
 
 COPY go.mod go.sum ./
 RUN go mod download
