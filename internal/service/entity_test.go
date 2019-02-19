@@ -19,7 +19,6 @@ type ProjectTestSuite struct {
 	suite.Suite
 	service *Service
 	log     *zap.Logger
-	logUndo func()
 
 	projectId     string
 	paymentMethod *billing.PaymentMethod
@@ -55,7 +54,6 @@ func (suite *ProjectTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
-	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
 	vat := &billing.Vat{
 		Country: &billing.Country{
@@ -237,8 +235,6 @@ func (suite *ProjectTestSuite) TearDownTest() {
 	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
-
-	suite.logUndo()
 }
 
 func (suite *ProjectTestSuite) TestProject_GetProjectByIdOk() {

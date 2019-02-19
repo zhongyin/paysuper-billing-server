@@ -20,7 +20,6 @@ type BillingServiceTestSuite struct {
 	suite.Suite
 	db      *database.Source
 	log     *zap.Logger
-	logUndo func()
 	cfg     *config.Config
 	exCh    chan bool
 }
@@ -432,7 +431,6 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
-	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
 	suite.exCh = make(chan bool, 1)
 }
@@ -447,7 +445,6 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
-	suite.logUndo()
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {

@@ -30,7 +30,6 @@ type OrderTestSuite struct {
 	suite.Suite
 	service *Service
 	log     *zap.Logger
-	logUndo func()
 
 	project                                *billing.Project
 	inactiveProject                        *billing.Project
@@ -669,7 +668,6 @@ func (suite *OrderTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
-	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
 	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
 
@@ -714,7 +712,6 @@ func (suite *OrderTestSuite) TearDownTest() {
 	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
-	suite.logUndo()
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessProject_Ok() {
@@ -4194,6 +4191,55 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
 	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
 	assert.Len(suite.T(), rsp.Error, 0)
+
+	var order1 *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order1)
+	assert.NotNil(suite.T(), order1)
+
+	commission, ok := suite.service.commissionCache[order1.Project.Id][order1.PaymentMethod.Id]
+	assert.True(suite.T(), ok)
+	assert.NotNil(suite.T(), commission)
+
+	vat, ok := suite.service.vatCache[order1.PayerData.CountryCodeA2][""]
+	assert.True(suite.T(), ok)
+	assert.NotNil(suite.T(), vat)
+
+	orderVat := tools.FormatAmount(order1.ProjectIncomeAmount * (vat.Vat / 100))
+	assert.Equal(suite.T(), orderVat, order1.VatAmount)
+
+	toUserCommission := tools.FormatAmount(order1.ProjectIncomeAmount * (commission.ToUserCommission / 100))
+	assert.Equal(suite.T(), toUserCommission, order1.ToPayerFeeAmount.AmountPaymentMethodCurrency)
+
+	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.Currency.CodeInt]
+	assert.True(suite.T(), ok)
+	assert.NotNil(suite.T(), rate)
+
+	toUserCommission1 := tools.FormatAmount(toUserCommission / rate.Rate)
+	assert.Equal(suite.T(), toUserCommission1, order1.ToPayerFeeAmount.AmountMerchantCurrency)
+
+	pmCommission := tools.FormatAmount(order1.ProjectIncomeAmount * (commission.PaymentMethodCommission / 100))
+	pspCommission := tools.FormatAmount(order1.ProjectIncomeAmount * (commission.PspCommission / 100))
+
+	totalCommission := pmCommission + pspCommission - toUserCommission
+	assert.Equal(suite.T(), totalCommission, order1.ProjectFeeAmount.AmountPaymentMethodCurrency)
+
+	totalCommission1 := tools.FormatAmount(totalCommission / rate.Rate)
+	assert.Equal(suite.T(), totalCommission1, order1.ProjectFeeAmount.AmountMerchantCurrency)
+
+	assert.Equal(suite.T(), pspCommission, order1.PspFeeAmount.AmountPaymentMethodCurrency)
+	assert.Equal(suite.T(), pspCommission, order1.PspFeeAmount.AmountPspCurrency)
+
+	pspCommission1 := tools.FormatAmount(pspCommission / rate.Rate)
+	assert.Equal(suite.T(), pspCommission1, order1.PspFeeAmount.AmountMerchantCurrency)
+
+	assert.Equal(suite.T(), pmCommission, order1.PaymentSystemFeeAmount.AmountPaymentMethodCurrency)
+	assert.Equal(suite.T(), pmCommission, order1.PaymentSystemFeeAmount.AmountPaymentSystemCurrency)
+
+	pmCommission1 := tools.FormatAmount(pmCommission / rate.Rate)
+	assert.Equal(suite.T(), pmCommission1, order1.PaymentSystemFeeAmount.AmountMerchantCurrency)
+
+	pmOutAmount := order1.ProjectIncomeAmount + orderVat + toUserCommission
+	assert.Equal(suite.T(), pmOutAmount, order1.PaymentMethodOutcomeAmount)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessValidation_Error() {
@@ -4426,7 +4472,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 			Locale: "Europe/Moscow",
 		},
 		PaymentData: &billing.CallbackCardPayPaymentData{
-			Id:          order.Id,
+			Id:          bson.NewObjectId().Hex(),
 			Amount:      order1.PaymentMethodOutcomeAmount,
 			Currency:    order1.PaymentMethodOutcomeCurrency.CodeA3,
 			Description: order.Description,
@@ -4456,4 +4502,14 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 	err = suite.service.PaymentCallbackProcess(context.TODO(), callbackData, callbackResponse)
 
 	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.StatusOK, callbackResponse.Status)
+
+	var order2 *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order2)
+	suite.NotNil(suite.T(), order2)
+
+	assert.Equal(suite.T(), int32(constant.OrderStatusPaymentSystemComplete), order2.Status)
+	assert.Equal(suite.T(), callbackRequest.PaymentData.Id, order2.PaymentMethodOrderId)
+	assert.Equal(suite.T(), callbackRequest.PaymentData.Amount, order2.PaymentMethodIncomeAmount)
+	assert.Equal(suite.T(), callbackRequest.PaymentData.Currency, order2.PaymentMethodIncomeCurrency.CodeA3)
 }

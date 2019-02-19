@@ -197,44 +197,42 @@ message Order {
     double payment_method_income_amount = 17; // order amount received from payment system in notification request
     // @inject_tag: bson:"pm_income_currency" structure:"pm_income_currency"
     Currency payment_method_income_currency = 18; // order currency received from payment system in notification request
-    // @inject_tag: bson:"-" json:"-" structure:"-"
-    string payment_method_income_currency_a3 = 19;
     // @inject_tag: bson:"pm_order_close_date" structure:"pm_order_close_date,timestamp"
-    google.protobuf.Timestamp payment_method_order_closed_at = 20; // date of ended payment operation in payment system
+    google.protobuf.Timestamp payment_method_order_closed_at = 19; // date of ended payment operation in payment system
     // @inject_tag: bson:"status" structure:"status"
-    int32 status = 21; // order status
+    int32 status = 20; // order status
     // @inject_tag: bson:"created_at" structure:"created_at,timestamp"
-    google.protobuf.Timestamp created_at = 22; // date of create order
+    google.protobuf.Timestamp created_at = 21; // date of create order
     // @inject_tag: bson:"updated_at" structure:"updated_at,timestamp"
-    google.protobuf.Timestamp updated_at = 23; // date of last update order data
+    google.protobuf.Timestamp updated_at = 22; // date of last update order data
     // @inject_tag: bson:"created_by_json" structure:"created_by_json"
-    bool is_json_request = 24; // is order create by json request
+    bool is_json_request = 23; // is order create by json request
     // @inject_tag: bson:"amount_psp_ac" structure:"amount_psp_ac"
-    double amount_in_psp_accounting_currency = 25; // operation amount in accounting currency of PSP
+    double amount_in_psp_accounting_currency = 24; // operation amount in accounting currency of PSP
     // @inject_tag: bson:"amount_in_merchant_ac" structure:"amount_in_merchant_ac"
-    double amount_in_merchant_accounting_currency = 26; // received from project operation amount in project owner (merchant) accounting currency
+    double amount_in_merchant_accounting_currency = 25; // received from project operation amount in project owner (merchant) accounting currency
     // @inject_tag: bson:"amount_out_merchant_ac" structure:"amount_out_merchant_ac"
-    double amount_out_merchant_accounting_currency = 27; // received from payment system operation amount in project owner (merchant) accounting currency
+    double amount_out_merchant_accounting_currency = 26; // received from payment system operation amount in project owner (merchant) accounting currency
     // @inject_tag: bson:"amount_ps_ac" structure:"amount_ps_ac"
-    double amount_in_payment_system_accounting_currency = 28; // operation amount in payment system accounting currency
+    double amount_in_payment_system_accounting_currency = 27; // operation amount in payment system accounting currency
     // @inject_tag: bson:"pm_account" structure:"pm_account"
-    string payment_method_payer_account = 29; // account of payer in payment system
+    string payment_method_payer_account = 28; // account of payer in payment system
     // @inject_tag: bson:"pm_txn_params" structure:"pm_txn_params"
-    map<string, string> payment_method_txn_params = 30; // any params received in request of payment system about payment
+    map<string, string> payment_method_txn_params = 29; // any params received in request of payment system about payment
     // @inject_tag: bson:"fixed_package" structure:"fixed_package"
-    FixedPackage fixed_package = 31; // fixed package which buy payer
+    FixedPackage fixed_package = 30; // fixed package which buy payer
     // @inject_tag: bson:"payment_requisites" json:"-" structure:"payment_requisites"
-    map<string, string> payment_requisites = 32;
+    map<string, string> payment_requisites = 31;
     // @inject_tag: bson:"psp_fee_amount" structure:"psp_fee_amount"
-    OrderFeePsp psp_fee_amount = 33; // PSP (P1) fee amount
+    OrderFeePsp psp_fee_amount = 32; // PSP (P1) fee amount
     // @inject_tag: bson:"project_fee_amount" structure:"project_fee_amount"
-    OrderFee project_fee_amount = 34; // fee is charged with the project for the operation
+    OrderFee project_fee_amount = 33; // fee is charged with the project for the operation
     // @inject_tag: bson:"to_payer_fee_amount" structure:"to_payer_fee_amount"
-    OrderFee to_payer_fee_amount = 35; // value of fee which added to payer amount
+    OrderFee to_payer_fee_amount = 34; // value of fee which added to payer amount
     // @inject_tag: bson:"vat_amount" structure:"vat_amount"
-    double vat_amount = 36; // vat amount
+    double vat_amount = 35; // vat amount
     // @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
-    OrderFeePaymentSystem payment_system_fee_amount = 37; // payment system fee for payment operation
+    OrderFeePaymentSystem payment_system_fee_amount = 36; // payment system fee for payment operation
 }
 
 message Currency {

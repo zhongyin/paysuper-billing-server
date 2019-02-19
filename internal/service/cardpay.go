@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/ProtocolONE/payone-repository/pkg/constant"
 	"github.com/ProtocolONE/payone-repository/tools"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -180,7 +182,7 @@ func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err e
 
 	b, _ := json.Marshal(cpOrder)
 
-	client := tools.NewLoggedHttpClient(h.processor.log)
+	client := tools.NewLoggedHttpClient(zap.S())
 	req, err := http.NewRequest(cardPayPaths[cardPayActionCreatePayment].method, qUrl, bytes.NewBuffer(b))
 
 	token := h.getToken(h.processor.order.PaymentMethod.Params.ExternalId)
@@ -191,7 +193,15 @@ func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err e
 
 	resp, err := client.Do(req)
 
-	if resp.StatusCode != http.StatusOK {
+	if err != nil {
+		zap.L().Error(
+			fmt.Sprintf("[PAYONE_BILLING] %s", "CardPay create payment failer"),
+			zap.Error(err),
+			zap.Any("request", cpOrder),
+		)
+	}
+
+	if err != nil || resp.StatusCode != http.StatusOK {
 		return "", errors.New(paymentSystemErrorCreateRequestFailed)
 	}
 
@@ -284,7 +294,7 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 	order.PaymentMethodOrderId = req.PaymentData.Id
 	order.PaymentMethodOrderClosedAt = ts
 	order.PaymentMethodIncomeAmount = req.PaymentData.Amount
-	order.PaymentMethodIncomeCurrencyA3 = req.PaymentData.Currency
+	order.PaymentMethodIncomeCurrency = order.PaymentMethodOutcomeCurrency
 
 	return
 }
@@ -306,7 +316,7 @@ func (h *cardPay) auth(pmKey string) error {
 		return err
 	}
 
-	client := tools.NewLoggedHttpClient(h.processor.log)
+	client := tools.NewLoggedHttpClient(zap.S())
 	req, err := http.NewRequest(cardPayPaths[cardPayActionAuthenticate].method, qUrl, strings.NewReader(data.Encode()))
 
 	if err != nil {
@@ -358,7 +368,7 @@ func (h *cardPay) refresh(pmKey string) error {
 		return err
 	}
 
-	client := tools.NewLoggedHttpClient(h.processor.log)
+	client := tools.NewLoggedHttpClient(zap.S())
 	req, err := http.NewRequest(cardPayPaths[cardPayActionRefresh].method, qUrl, strings.NewReader(data.Encode()))
 
 	if err != nil {

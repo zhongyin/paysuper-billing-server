@@ -33,7 +33,6 @@ type Application struct {
 	cacheExit chan bool
 
 	logger     *zap.Logger
-	loggerUndo func()
 }
 
 type appHealthCheck struct{}
@@ -106,8 +105,7 @@ func (app *Application) initLogger() {
 	if err != nil {
 		log.Fatalf("[PAYONE_BILLING] Application logger initialization failed with error: %s\n", err)
 	}
-
-	app.loggerUndo = zap.ReplaceGlobals(app.logger)
+	zap.ReplaceGlobals(app.logger)
 }
 
 func (app *Application) initDatabase() {
@@ -195,8 +193,6 @@ func (app *Application) Stop() {
 		}
 
 	}()
-
-	app.loggerUndo()
 }
 
 func (c *appHealthCheck) Status() (interface{}, error) {

@@ -19,7 +19,6 @@ type FinanceTestSuite struct {
 	suite.Suite
 	service *Service
 	log     *zap.Logger
-	logUndo func()
 
 	project       *billing.Project
 	paymentMethod *billing.PaymentMethod
@@ -231,7 +230,6 @@ func (suite *FinanceTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
-	suite.logUndo = zap.ReplaceGlobals(suite.log)
 
 	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
 	err = suite.service.Init()
@@ -254,7 +252,6 @@ func (suite *FinanceTestSuite) TearDownTest() {
 	if err := suite.log.Sync(); err != nil {
 		suite.FailNow("Logger sync failed", "%v", err)
 	}
-	suite.logUndo()
 }
 
 func (suite *FinanceTestSuite) TestFinance_GetCurrencyByCodeA3Ok() {

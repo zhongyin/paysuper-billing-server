@@ -835,7 +835,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	o.ProjectFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: tools.FormatAmount(totalCommission)}
 
 	// convert amount of fee to project to accounting currency of merchant
-	amount, err := v.Service.Convert(pmOutCur, mAccCur, commission.ToUserCommission)
+	amount, err := v.Service.Convert(pmOutCur, mAccCur, totalCommission)
 
 	if err != nil {
 		return err

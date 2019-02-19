@@ -5,7 +5,6 @@ import (
 	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 	"github.com/golang/protobuf/proto"
-	"go.uber.org/zap"
 )
 
 const (
@@ -45,7 +44,6 @@ type PaymentSystem interface {
 
 type paymentProcessor struct {
 	cfg   *config.PaymentSystemConfig
-	log   *zap.SugaredLogger
 	order *billing.Order
 }
 
