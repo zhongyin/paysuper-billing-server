@@ -229,3 +229,15 @@ func (s *Service) UpdateMerchant(ctx context.Context, req *billing.Merchant, rsp
 
 	return nil
 }
+
+func (s *Service) GetConvertRate(ctx context.Context, req *grpc.ConvertRateRequest, rsp *grpc.ConvertRateResponse) error {
+	rate, err := s.Convert(req.From, req.To, 1)
+
+	if err != nil {
+		s.logError("Get convert rate failed", []interface{}{"error", err.Error(), "from", req.From, "to", req.To})
+	} else {
+		rsp.Rate = rate
+	}
+
+	return nil
+}
