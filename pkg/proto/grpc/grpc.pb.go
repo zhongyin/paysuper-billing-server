@@ -6,7 +6,7 @@ package grpc // import "github.com/ProtocolONE/payone-billing-service/pkg/proto/
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+import billing "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -19,19 +19,523 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-func init() { proto.RegisterFile("grpc/grpc.proto", fileDescriptor_grpc_7e960ac275d50521) }
+type EmptyRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
 
-var fileDescriptor_grpc_7e960ac275d50521 = []byte{
-	// 164 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4f, 0x2f, 0x2a, 0x48,
-	0xd6, 0x07, 0x11, 0x7a, 0x05, 0x45, 0xf9, 0x25, 0xf9, 0x42, 0x2c, 0x20, 0xb6, 0x94, 0x68, 0x52,
-	0x66, 0x4e, 0x4e, 0x66, 0x5e, 0xba, 0x3e, 0x94, 0x86, 0x48, 0x1a, 0x85, 0x72, 0xf1, 0x39, 0x41,
-	0x04, 0x82, 0x53, 0x8b, 0xca, 0x32, 0x93, 0x53, 0x85, 0x9c, 0xb9, 0x84, 0xfc, 0x8b, 0x52, 0x52,
-	0x8b, 0x9c, 0x8b, 0x52, 0x13, 0x4b, 0x52, 0x03, 0x8a, 0xf2, 0x93, 0x53, 0x8b, 0x8b, 0x85, 0xa4,
-	0xf5, 0x60, 0xfa, 0x90, 0x24, 0x83, 0x52, 0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0xa4, 0xf8, 0x50, 0x25,
-	0x95, 0x18, 0x9c, 0xec, 0xa2, 0x6c, 0xd2, 0x33, 0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73,
-	0xf5, 0x03, 0x40, 0x56, 0x25, 0xe7, 0xe7, 0xf8, 0xfb, 0xb9, 0xea, 0x17, 0x24, 0x56, 0xe6, 0xe7,
-	0xa5, 0xea, 0x42, 0x35, 0xe8, 0x16, 0x43, 0x6c, 0xd5, 0x2f, 0xc8, 0x4e, 0xd7, 0x07, 0xbb, 0x08,
-	0xec, 0xf2, 0x24, 0x36, 0x30, 0xdb, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xc5, 0x74, 0xfd, 0xe3,
-	0xcd, 0x00, 0x00, 0x00,
+func (m *EmptyRequest) Reset()         { *m = EmptyRequest{} }
+func (m *EmptyRequest) String() string { return proto.CompactTextString(m) }
+func (*EmptyRequest) ProtoMessage()    {}
+func (*EmptyRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{0}
+}
+func (m *EmptyRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EmptyRequest.Unmarshal(m, b)
+}
+func (m *EmptyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EmptyRequest.Marshal(b, m, deterministic)
+}
+func (dst *EmptyRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EmptyRequest.Merge(dst, src)
+}
+func (m *EmptyRequest) XXX_Size() int {
+	return xxx_messageInfo_EmptyRequest.Size(m)
+}
+func (m *EmptyRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EmptyRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EmptyRequest proto.InternalMessageInfo
+
+type EmptyResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *EmptyResponse) Reset()         { *m = EmptyResponse{} }
+func (m *EmptyResponse) String() string { return proto.CompactTextString(m) }
+func (*EmptyResponse) ProtoMessage()    {}
+func (*EmptyResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{1}
+}
+func (m *EmptyResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EmptyResponse.Unmarshal(m, b)
+}
+func (m *EmptyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EmptyResponse.Marshal(b, m, deterministic)
+}
+func (dst *EmptyResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EmptyResponse.Merge(dst, src)
+}
+func (m *EmptyResponse) XXX_Size() int {
+	return xxx_messageInfo_EmptyResponse.Size(m)
+}
+func (m *EmptyResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EmptyResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EmptyResponse proto.InternalMessageInfo
+
+type PaymentCreateRequest struct {
+	Data                 map[string]string `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte            `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32             `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentCreateRequest) Reset()         { *m = PaymentCreateRequest{} }
+func (m *PaymentCreateRequest) String() string { return proto.CompactTextString(m) }
+func (*PaymentCreateRequest) ProtoMessage()    {}
+func (*PaymentCreateRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{2}
+}
+func (m *PaymentCreateRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentCreateRequest.Unmarshal(m, b)
+}
+func (m *PaymentCreateRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentCreateRequest.Marshal(b, m, deterministic)
+}
+func (dst *PaymentCreateRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentCreateRequest.Merge(dst, src)
+}
+func (m *PaymentCreateRequest) XXX_Size() int {
+	return xxx_messageInfo_PaymentCreateRequest.Size(m)
+}
+func (m *PaymentCreateRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentCreateRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentCreateRequest proto.InternalMessageInfo
+
+func (m *PaymentCreateRequest) GetData() map[string]string {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type PaymentCreateResponse struct {
+	Status               int32    `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
+	RedirectUrl          string   `protobuf:"bytes,2,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
+	Error                string   `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentCreateResponse) Reset()         { *m = PaymentCreateResponse{} }
+func (m *PaymentCreateResponse) String() string { return proto.CompactTextString(m) }
+func (*PaymentCreateResponse) ProtoMessage()    {}
+func (*PaymentCreateResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{3}
+}
+func (m *PaymentCreateResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentCreateResponse.Unmarshal(m, b)
+}
+func (m *PaymentCreateResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentCreateResponse.Marshal(b, m, deterministic)
+}
+func (dst *PaymentCreateResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentCreateResponse.Merge(dst, src)
+}
+func (m *PaymentCreateResponse) XXX_Size() int {
+	return xxx_messageInfo_PaymentCreateResponse.Size(m)
+}
+func (m *PaymentCreateResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentCreateResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentCreateResponse proto.InternalMessageInfo
+
+func (m *PaymentCreateResponse) GetStatus() int32 {
+	if m != nil {
+		return m.Status
+	}
+	return 0
+}
+
+func (m *PaymentCreateResponse) GetRedirectUrl() string {
+	if m != nil {
+		return m.RedirectUrl
+	}
+	return ""
+}
+
+func (m *PaymentCreateResponse) GetError() string {
+	if m != nil {
+		return m.Error
+	}
+	return ""
+}
+
+type PaymentFormJsonDataRequest struct {
+	OrderId              string   `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Scheme               string   `protobuf:"bytes,2,opt,name=scheme,proto3" json:"scheme,omitempty"`
+	Host                 string   `protobuf:"bytes,3,opt,name=host,proto3" json:"host,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentFormJsonDataRequest) Reset()         { *m = PaymentFormJsonDataRequest{} }
+func (m *PaymentFormJsonDataRequest) String() string { return proto.CompactTextString(m) }
+func (*PaymentFormJsonDataRequest) ProtoMessage()    {}
+func (*PaymentFormJsonDataRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{4}
+}
+func (m *PaymentFormJsonDataRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentFormJsonDataRequest.Unmarshal(m, b)
+}
+func (m *PaymentFormJsonDataRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentFormJsonDataRequest.Marshal(b, m, deterministic)
+}
+func (dst *PaymentFormJsonDataRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentFormJsonDataRequest.Merge(dst, src)
+}
+func (m *PaymentFormJsonDataRequest) XXX_Size() int {
+	return xxx_messageInfo_PaymentFormJsonDataRequest.Size(m)
+}
+func (m *PaymentFormJsonDataRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentFormJsonDataRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentFormJsonDataRequest proto.InternalMessageInfo
+
+func (m *PaymentFormJsonDataRequest) GetOrderId() string {
+	if m != nil {
+		return m.OrderId
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataRequest) GetScheme() string {
+	if m != nil {
+		return m.Scheme
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataRequest) GetHost() string {
+	if m != nil {
+		return m.Host
+	}
+	return ""
+}
+
+type PaymentFormJsonDataProject struct {
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// @inject_tag: json:"url_success,omitempty"
+	UrlSuccess string `protobuf:"bytes,2,opt,name=url_success,json=urlSuccess,proto3" json:"url_success,omitempty"`
+	// @inject_tag: json:"url_fail,omitempty"
+	UrlFail              string   `protobuf:"bytes,3,opt,name=url_fail,json=urlFail,proto3" json:"url_fail,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentFormJsonDataProject) Reset()         { *m = PaymentFormJsonDataProject{} }
+func (m *PaymentFormJsonDataProject) String() string { return proto.CompactTextString(m) }
+func (*PaymentFormJsonDataProject) ProtoMessage()    {}
+func (*PaymentFormJsonDataProject) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{5}
+}
+func (m *PaymentFormJsonDataProject) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentFormJsonDataProject.Unmarshal(m, b)
+}
+func (m *PaymentFormJsonDataProject) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentFormJsonDataProject.Marshal(b, m, deterministic)
+}
+func (dst *PaymentFormJsonDataProject) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentFormJsonDataProject.Merge(dst, src)
+}
+func (m *PaymentFormJsonDataProject) XXX_Size() int {
+	return xxx_messageInfo_PaymentFormJsonDataProject.Size(m)
+}
+func (m *PaymentFormJsonDataProject) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentFormJsonDataProject.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentFormJsonDataProject proto.InternalMessageInfo
+
+func (m *PaymentFormJsonDataProject) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataProject) GetUrlSuccess() string {
+	if m != nil {
+		return m.UrlSuccess
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataProject) GetUrlFail() string {
+	if m != nil {
+		return m.UrlFail
+	}
+	return ""
+}
+
+type PaymentFormJsonDataResponse struct {
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// @inject_tag: json:"account,omitempty"
+	Account               string                              `protobuf:"bytes,2,opt,name=account,proto3" json:"account,omitempty"`
+	HasVat                bool                                `protobuf:"varint,3,opt,name=has_vat,json=hasVat,proto3" json:"has_vat,omitempty"`
+	HasUserCommission     bool                                `protobuf:"varint,4,opt,name=has_user_commission,json=hasUserCommission,proto3" json:"has_user_commission,omitempty"`
+	Project               *PaymentFormJsonDataProject         `protobuf:"bytes,5,opt,name=project,proto3" json:"project,omitempty"`
+	PaymentMethods        []*billing.PaymentFormPaymentMethod `protobuf:"bytes,6,rep,name=payment_methods,json=paymentMethods,proto3" json:"payment_methods,omitempty"`
+	InlineFormRedirectUrl string                              `protobuf:"bytes,7,opt,name=inline_form_redirect_url,json=inlineFormRedirectUrl,proto3" json:"inline_form_redirect_url,omitempty"`
+	Token                 string                              `protobuf:"bytes,8,opt,name=token,proto3" json:"token,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}                            `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized      []byte                              `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache         int32                               `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentFormJsonDataResponse) Reset()         { *m = PaymentFormJsonDataResponse{} }
+func (m *PaymentFormJsonDataResponse) String() string { return proto.CompactTextString(m) }
+func (*PaymentFormJsonDataResponse) ProtoMessage()    {}
+func (*PaymentFormJsonDataResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{6}
+}
+func (m *PaymentFormJsonDataResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentFormJsonDataResponse.Unmarshal(m, b)
+}
+func (m *PaymentFormJsonDataResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentFormJsonDataResponse.Marshal(b, m, deterministic)
+}
+func (dst *PaymentFormJsonDataResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentFormJsonDataResponse.Merge(dst, src)
+}
+func (m *PaymentFormJsonDataResponse) XXX_Size() int {
+	return xxx_messageInfo_PaymentFormJsonDataResponse.Size(m)
+}
+func (m *PaymentFormJsonDataResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentFormJsonDataResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentFormJsonDataResponse proto.InternalMessageInfo
+
+func (m *PaymentFormJsonDataResponse) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataResponse) GetAccount() string {
+	if m != nil {
+		return m.Account
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataResponse) GetHasVat() bool {
+	if m != nil {
+		return m.HasVat
+	}
+	return false
+}
+
+func (m *PaymentFormJsonDataResponse) GetHasUserCommission() bool {
+	if m != nil {
+		return m.HasUserCommission
+	}
+	return false
+}
+
+func (m *PaymentFormJsonDataResponse) GetProject() *PaymentFormJsonDataProject {
+	if m != nil {
+		return m.Project
+	}
+	return nil
+}
+
+func (m *PaymentFormJsonDataResponse) GetPaymentMethods() []*billing.PaymentFormPaymentMethod {
+	if m != nil {
+		return m.PaymentMethods
+	}
+	return nil
+}
+
+func (m *PaymentFormJsonDataResponse) GetInlineFormRedirectUrl() string {
+	if m != nil {
+		return m.InlineFormRedirectUrl
+	}
+	return ""
+}
+
+func (m *PaymentFormJsonDataResponse) GetToken() string {
+	if m != nil {
+		return m.Token
+	}
+	return ""
+}
+
+type PaymentNotifyRequest struct {
+	OrderId              string   `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	Request              []byte   `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	Signature            string   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentNotifyRequest) Reset()         { *m = PaymentNotifyRequest{} }
+func (m *PaymentNotifyRequest) String() string { return proto.CompactTextString(m) }
+func (*PaymentNotifyRequest) ProtoMessage()    {}
+func (*PaymentNotifyRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{7}
+}
+func (m *PaymentNotifyRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentNotifyRequest.Unmarshal(m, b)
+}
+func (m *PaymentNotifyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentNotifyRequest.Marshal(b, m, deterministic)
+}
+func (dst *PaymentNotifyRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentNotifyRequest.Merge(dst, src)
+}
+func (m *PaymentNotifyRequest) XXX_Size() int {
+	return xxx_messageInfo_PaymentNotifyRequest.Size(m)
+}
+func (m *PaymentNotifyRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentNotifyRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentNotifyRequest proto.InternalMessageInfo
+
+func (m *PaymentNotifyRequest) GetOrderId() string {
+	if m != nil {
+		return m.OrderId
+	}
+	return ""
+}
+
+func (m *PaymentNotifyRequest) GetRequest() []byte {
+	if m != nil {
+		return m.Request
+	}
+	return nil
+}
+
+func (m *PaymentNotifyRequest) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
+type PaymentNotifyResponse struct {
+	Status               int32    `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
+	Error                string   `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-"`
+}
+
+func (m *PaymentNotifyResponse) Reset()         { *m = PaymentNotifyResponse{} }
+func (m *PaymentNotifyResponse) String() string { return proto.CompactTextString(m) }
+func (*PaymentNotifyResponse) ProtoMessage()    {}
+func (*PaymentNotifyResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_grpc_e2ca5313c9cc96fd, []int{8}
+}
+func (m *PaymentNotifyResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PaymentNotifyResponse.Unmarshal(m, b)
+}
+func (m *PaymentNotifyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PaymentNotifyResponse.Marshal(b, m, deterministic)
+}
+func (dst *PaymentNotifyResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PaymentNotifyResponse.Merge(dst, src)
+}
+func (m *PaymentNotifyResponse) XXX_Size() int {
+	return xxx_messageInfo_PaymentNotifyResponse.Size(m)
+}
+func (m *PaymentNotifyResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_PaymentNotifyResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PaymentNotifyResponse proto.InternalMessageInfo
+
+func (m *PaymentNotifyResponse) GetStatus() int32 {
+	if m != nil {
+		return m.Status
+	}
+	return 0
+}
+
+func (m *PaymentNotifyResponse) GetError() string {
+	if m != nil {
+		return m.Error
+	}
+	return ""
+}
+
+func init() {
+	proto.RegisterType((*EmptyRequest)(nil), "grpc.EmptyRequest")
+	proto.RegisterType((*EmptyResponse)(nil), "grpc.EmptyResponse")
+	proto.RegisterType((*PaymentCreateRequest)(nil), "grpc.PaymentCreateRequest")
+	proto.RegisterMapType((map[string]string)(nil), "grpc.PaymentCreateRequest.DataEntry")
+	proto.RegisterType((*PaymentCreateResponse)(nil), "grpc.PaymentCreateResponse")
+	proto.RegisterType((*PaymentFormJsonDataRequest)(nil), "grpc.PaymentFormJsonDataRequest")
+	proto.RegisterType((*PaymentFormJsonDataProject)(nil), "grpc.PaymentFormJsonDataProject")
+	proto.RegisterType((*PaymentFormJsonDataResponse)(nil), "grpc.PaymentFormJsonDataResponse")
+	proto.RegisterType((*PaymentNotifyRequest)(nil), "grpc.PaymentNotifyRequest")
+	proto.RegisterType((*PaymentNotifyResponse)(nil), "grpc.PaymentNotifyResponse")
+}
+
+func init() { proto.RegisterFile("grpc/grpc.proto", fileDescriptor_grpc_e2ca5313c9cc96fd) }
+
+var fileDescriptor_grpc_e2ca5313c9cc96fd = []byte{
+	// 714 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x55, 0xdd, 0x6e, 0xd3, 0x30,
+	0x14, 0x5e, 0x7f, 0xd6, 0x6e, 0xa7, 0xa5, 0x03, 0xef, 0x87, 0xd0, 0x21, 0xd1, 0x45, 0x5c, 0xec,
+	0x66, 0xad, 0x34, 0x2e, 0x36, 0x26, 0xc4, 0xc5, 0x4a, 0x27, 0x31, 0x89, 0xad, 0x64, 0x1a, 0x17,
+	0xdc, 0x44, 0xae, 0xe3, 0x35, 0xa6, 0x4e, 0x1c, 0x6c, 0x67, 0x52, 0x1f, 0x81, 0x87, 0xe0, 0xf9,
+	0x78, 0x0d, 0x14, 0xc7, 0x09, 0xed, 0xd4, 0x01, 0x37, 0xed, 0xf9, 0xf3, 0xf9, 0xce, 0x39, 0xfe,
+	0x7c, 0x02, 0x5b, 0x53, 0x99, 0x90, 0x41, 0xf6, 0xd3, 0x4f, 0xa4, 0xd0, 0x02, 0xd5, 0x33, 0xb9,
+	0xbb, 0x3b, 0x61, 0x9c, 0xb3, 0x78, 0x3a, 0xb0, 0xff, 0xb9, 0xd3, 0xed, 0x40, 0x7b, 0x14, 0x25,
+	0x7a, 0xee, 0xd1, 0xef, 0x29, 0x55, 0xda, 0xdd, 0x82, 0x27, 0x56, 0x57, 0x89, 0x88, 0x15, 0x75,
+	0x7f, 0x54, 0x60, 0x67, 0x8c, 0xe7, 0x11, 0x8d, 0xf5, 0x50, 0x52, 0xac, 0xa9, 0x8d, 0x44, 0xa7,
+	0x50, 0x0f, 0xb0, 0xc6, 0x4e, 0xa5, 0x57, 0x3b, 0x6c, 0x1d, 0xbf, 0xee, 0x1b, 0xc4, 0x55, 0x91,
+	0xfd, 0x0f, 0x58, 0xe3, 0x51, 0xac, 0xe5, 0xdc, 0x33, 0x27, 0xba, 0x27, 0xb0, 0x59, 0x9a, 0xd0,
+	0x53, 0xa8, 0xcd, 0xe8, 0xdc, 0xa9, 0xf4, 0x2a, 0x87, 0x9b, 0x5e, 0x26, 0xa2, 0x1d, 0x58, 0xbf,
+	0xc7, 0x3c, 0xa5, 0x4e, 0xd5, 0xd8, 0x72, 0xe5, 0xac, 0x7a, 0x5a, 0x71, 0x43, 0xd8, 0x7d, 0x00,
+	0x90, 0x17, 0x89, 0xf6, 0xa0, 0xa1, 0x34, 0xd6, 0xa9, 0x32, 0x79, 0xd6, 0x3d, 0xab, 0xa1, 0x03,
+	0x68, 0x4b, 0x1a, 0x30, 0x49, 0x89, 0xf6, 0x53, 0xc9, 0x6d, 0xc6, 0x56, 0x61, 0xbb, 0x95, 0x3c,
+	0x43, 0xa3, 0x52, 0x0a, 0xe9, 0xd4, 0x72, 0x34, 0xa3, 0xb8, 0x04, 0xba, 0x16, 0xe9, 0x42, 0xc8,
+	0xe8, 0x52, 0x89, 0x38, 0xab, 0xb8, 0x68, 0xfd, 0x05, 0x6c, 0x08, 0x19, 0x50, 0xe9, 0xb3, 0xc0,
+	0x16, 0xde, 0x34, 0xfa, 0xc7, 0xc0, 0x54, 0x42, 0x42, 0x1a, 0x15, 0xd5, 0x5b, 0x0d, 0x21, 0xa8,
+	0x87, 0x42, 0x69, 0x8b, 0x62, 0x64, 0x97, 0xaf, 0x04, 0x19, 0x4b, 0xf1, 0x8d, 0x12, 0x9d, 0x9d,
+	0x88, 0x71, 0x44, 0x2d, 0x80, 0x91, 0xd1, 0x2b, 0x68, 0xa5, 0x92, 0xfb, 0x2a, 0x25, 0x84, 0x2a,
+	0x65, 0x21, 0x20, 0x95, 0xfc, 0x26, 0xb7, 0x64, 0x95, 0x65, 0x01, 0x77, 0x98, 0x71, 0x0b, 0xd5,
+	0x4c, 0x25, 0xbf, 0xc0, 0x8c, 0xbb, 0xbf, 0xaa, 0xb0, 0xbf, 0xb2, 0x27, 0x3b, 0xc3, 0x0e, 0x54,
+	0xcb, 0x76, 0xaa, 0x2c, 0x40, 0x0e, 0x34, 0x31, 0x21, 0x22, 0x8d, 0xb5, 0xc5, 0x29, 0x54, 0xf4,
+	0x1c, 0x9a, 0x21, 0x56, 0xfe, 0x3d, 0xce, 0xdb, 0xd9, 0xf0, 0x1a, 0x21, 0x56, 0x5f, 0xb0, 0x46,
+	0x7d, 0xd8, 0xce, 0x1c, 0xa9, 0xa2, 0xd2, 0x27, 0x22, 0x8a, 0x98, 0x52, 0x4c, 0xc4, 0x4e, 0xdd,
+	0x04, 0x3d, 0x0b, 0xb1, 0xba, 0x55, 0x54, 0x0e, 0x4b, 0x07, 0x3a, 0x83, 0x66, 0x92, 0x77, 0xeb,
+	0xac, 0xf7, 0x2a, 0x87, 0xad, 0xe3, 0xde, 0x12, 0x8b, 0x56, 0x4c, 0xc5, 0x2b, 0x0e, 0xa0, 0x4b,
+	0xd8, 0x4a, 0xf2, 0x30, 0x3f, 0xa2, 0x3a, 0x14, 0x81, 0x72, 0x1a, 0x86, 0x89, 0x07, 0xfd, 0x82,
+	0xe1, 0x0b, 0x69, 0xac, 0xf8, 0xc9, 0x44, 0x7a, 0x9d, 0x64, 0x51, 0x55, 0xe8, 0x04, 0x1c, 0x16,
+	0x73, 0x16, 0x53, 0xff, 0x4e, 0xc8, 0xc8, 0x5f, 0xa2, 0x4c, 0xd3, 0xf4, 0xbe, 0x9b, 0xfb, 0xb3,
+	0x54, 0xde, 0x32, 0x79, 0xb4, 0x98, 0xd1, 0xd8, 0xd9, 0xc8, 0xc9, 0x63, 0x14, 0x97, 0x95, 0x2f,
+	0xe6, 0x4a, 0x68, 0x76, 0x37, 0xff, 0x0f, 0xda, 0x38, 0xd0, 0x94, 0x79, 0x94, 0x19, 0x76, 0xdb,
+	0x2b, 0x54, 0xf4, 0x12, 0x36, 0x15, 0x9b, 0xc6, 0x58, 0xa7, 0x92, 0xda, 0x2b, 0xfd, 0x63, 0x70,
+	0x47, 0xe5, 0x8b, 0x28, 0xa0, 0xfe, 0xf1, 0x22, 0x4a, 0xba, 0x57, 0x17, 0xe8, 0x7e, 0xfc, 0xb3,
+	0x06, 0x9d, 0xf3, 0x7c, 0x6a, 0x37, 0x54, 0xde, 0x33, 0x42, 0xd1, 0x10, 0xd0, 0x75, 0x56, 0x5c,
+	0xfe, 0xd2, 0xc6, 0x52, 0x18, 0x7e, 0xed, 0x97, 0xc3, 0x5d, 0x70, 0xda, 0xfe, 0xba, 0x9d, 0x65,
+	0xa7, 0xbb, 0x86, 0xc8, 0x63, 0x0c, 0x37, 0xc9, 0x1e, 0xbf, 0xed, 0x22, 0xe3, 0xc1, 0x5f, 0x22,
+	0xec, 0x7e, 0x5a, 0x43, 0x9f, 0x1f, 0x2c, 0xa8, 0x22, 0x7d, 0xf7, 0xf1, 0x95, 0xd4, 0xdd, 0x5f,
+	0xe9, 0x2b, 0x53, 0xde, 0xc0, 0x5e, 0xe1, 0xc2, 0x9c, 0x4f, 0x30, 0x99, 0xad, 0x4e, 0xba, 0x74,
+	0xbf, 0x0f, 0x92, 0x2e, 0x5f, 0x88, 0xbb, 0x86, 0xde, 0x42, 0xdb, 0xa3, 0x93, 0x94, 0xf1, 0x60,
+	0x88, 0x49, 0x48, 0x11, 0xca, 0xc3, 0x17, 0xd7, 0x6f, 0x77, 0x7b, 0xc9, 0x56, 0x1c, 0x3d, 0x7f,
+	0xff, 0xf5, 0xdd, 0x94, 0xe9, 0x30, 0x9d, 0xf4, 0x89, 0x88, 0x06, 0xe3, 0x6c, 0x73, 0x13, 0xc1,
+	0xaf, 0xaf, 0x46, 0x83, 0x04, 0xcf, 0x45, 0x4c, 0x8f, 0xec, 0xe0, 0x8f, 0x54, 0x7e, 0x7b, 0x83,
+	0x64, 0x36, 0x1d, 0x98, 0x05, 0x6f, 0x3e, 0x04, 0x93, 0x86, 0x91, 0xdf, 0xfc, 0x0e, 0x00, 0x00,
+	0xff, 0xff, 0x6c, 0x8f, 0xb7, 0x53, 0x1c, 0x06, 0x00, 0x00,
 }

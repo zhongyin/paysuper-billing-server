@@ -4,12 +4,17 @@ import (
 	"context"
 	"github.com/InVisionApp/go-health"
 	"github.com/InVisionApp/go-health/handlers"
+	"github.com/ProtocolONE/geoip-service/pkg"
+	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	metrics "github.com/ProtocolONE/go-micro-plugins/wrapper/monitoring/prometheus"
+	"github.com/ProtocolONE/payone-billing-service/internal/config"
 	"github.com/ProtocolONE/payone-billing-service/internal/database"
 	"github.com/ProtocolONE/payone-billing-service/internal/service"
 	"github.com/ProtocolONE/payone-billing-service/pkg"
 	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/ProtocolONE/payone-repository/pkg/constant"
+	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
+	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/micro/go-micro"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -18,19 +23,8 @@ import (
 	"time"
 )
 
-type Config struct {
-	MongoHost          string `envconfig:"MONGO_HOST" required:"true"`
-	MongoDatabase      string `envconfig:"MONGO_DB" required:"true"`
-	MongoUser          string `envconfig:"MONGO_USER" required:"true"`
-	MongoPassword      string `envconfig:"MONGO_PASSWORD" required:"true"`
-	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" required:"true" default:"EUR"`
-	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8085"`
-
-	*service.CacheConfig
-}
-
 type Application struct {
-	cfg        *Config
+	cfg        *config.Config
 	database   *database.Source
 	service    micro.Service
 	httpServer *http.Server
@@ -38,8 +32,7 @@ type Application struct {
 
 	cacheExit chan bool
 
-	logger    *zap.Logger
-	sugLogger *zap.SugaredLogger
+	logger     *zap.Logger
 }
 
 type appHealthCheck struct{}
@@ -50,21 +43,21 @@ func NewApplication() *Application {
 
 func (app *Application) Init() {
 	app.initLogger()
-	app.initConfig()
 
-	settings := database.Connection{
-		Host:     app.cfg.MongoHost,
-		Database: app.cfg.MongoDatabase,
-		User:     app.cfg.MongoUser,
-		Password: app.cfg.MongoPassword,
-	}
-	db, err := database.GetDatabase(settings)
+	cfg, err := config.NewConfig()
 
 	if err != nil {
-		app.logger.Fatal("[PAYONE_BILLING] Database connection failed", zap.Error(err))
+		app.logger.Fatal("[PAYONE_BILLING] Config load failed", zap.Error(err))
 	}
 
-	app.database = db
+	app.cfg = cfg
+	app.initDatabase()
+
+	broker, err := rabbitmq.NewBroker(app.cfg.BrokerAddress)
+
+	if err != nil {
+		app.logger.Fatal("Creating RabbitMQ publisher failed", zap.Error(err), zap.String("broker_address", app.cfg.BrokerAddress))
+	}
 
 	app.service = micro.NewService(
 		micro.Name(pkg.ServiceName),
@@ -77,9 +70,19 @@ func (app *Application) Init() {
 	)
 	app.service.Init()
 
-	svc, err := service.NewBillingService(app.database, app.sugLogger, app.cfg.CacheConfig, app.cacheExit)
+	geoService := proto.NewGeoIpService(geoip.ServiceName, app.service.Client())
+	repService := repository.NewRepositoryService(constant.PayOneRepositoryServiceName, app.service.Client())
 
-	if err != nil {
+	svc := service.NewBillingService(
+		app.database,
+		app.cfg,
+		app.cacheExit,
+		geoService,
+		repService,
+		broker,
+	)
+
+	if err := svc.Init(); err != nil {
 		app.logger.Fatal("[PAYONE_BILLING] Create service instance failed", zap.Error(err))
 	}
 
@@ -102,18 +105,24 @@ func (app *Application) initLogger() {
 	if err != nil {
 		log.Fatalf("[PAYONE_BILLING] Application logger initialization failed with error: %s\n", err)
 	}
-
-	app.sugLogger = app.logger.Sugar()
+	zap.ReplaceGlobals(app.logger)
 }
 
-func (app *Application) initConfig() {
-	cfg := &Config{}
-
-	if err := envconfig.Process("", cfg); err != nil {
-		app.logger.Fatal("[PAYONE_BILLING] Config init failed", zap.Error(err))
+func (app *Application) initDatabase() {
+	settings := database.Connection{
+		Host:     app.cfg.MongoHost,
+		Database: app.cfg.MongoDatabase,
+		User:     app.cfg.MongoUser,
+		Password: app.cfg.MongoPassword,
 	}
 
-	app.cfg = cfg
+	db, err := database.NewDatabase(settings)
+
+	if err != nil {
+		app.logger.Fatal("[PAYONE_BILLING] Database connection failed", zap.Error(err))
+	}
+
+	app.database = db
 }
 
 func (app *Application) initHealth() {
@@ -183,14 +192,6 @@ func (app *Application) Stop() {
 			app.logger.Info("Logger synced")
 		}
 
-	}()
-
-	func() {
-		if err := app.sugLogger.Sync(); err != nil {
-			app.logger.Fatal("Sugared logger sync failed", zap.Error(err))
-		} else {
-			app.logger.Info("Sugared logger synced")
-		}
 	}()
 }
 

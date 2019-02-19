@@ -52,7 +52,7 @@ func (c Connection) String() (s string) {
 	return u.String()
 }
 
-func GetDatabase(c Connection) (*Source, error) {
+func NewDatabase(c Connection) (*Source, error) {
 	d := &Source{}
 
 	if err := d.Open(c); err != nil {
@@ -102,6 +102,10 @@ func (s *Source) Clone() (*Source, error) {
 	}
 
 	return clone, nil
+}
+
+func (s *Source) Drop() error {
+	return s.database.DropDatabase()
 }
 
 func (s *Source) Collection(name string) *Collection {

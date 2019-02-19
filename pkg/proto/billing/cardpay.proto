@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+option go_package = "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing";
+package billing;
+
+message CardPayAddress {
+    string country = 1;
+    string city = 2;
+    string phone = 3;
+    string state = 4;
+    string street = 5;
+    string zip = 6;
+}
+
+message CardPayItem {
+    string name = 1;
+    string description = 2;
+    int32 count = 3;
+    double price = 4;
+}
+
+message CardPayMerchantOrder {
+    string id = 1;
+    string description = 2;
+    repeated CardPayItem items = 3;
+    CardPayAddress shipping_address = 4;
+}
+
+message CallbackCardPayBankCardAccount {
+    string holder = 1;
+    string issuing_country_code = 2;
+    string masked_pan = 3;
+    string token = 4;
+}
+
+message CallbackCardPayCryptoCurrencyAccount {
+    string crypto_address = 1;
+    string crypto_transaction_id = 2;
+    string prc_amount = 3;
+    string prc_currency = 4;
+}
+
+message CardPayCustomer {
+    string email = 1;
+    string ip = 2;
+    string id = 3;
+    string locale = 4;
+}
+
+message CardPayEWalletAccount {
+    string id = 1;
+}
+
+message CallbackCardPayPaymentData {
+    string id = 1;
+    double amount = 2;
+    string auth_code = 3;
+    string created = 4;
+    string currency = 5;
+    string decline_code = 6;
+    string decline_reason = 7;
+    string description = 8;
+    bool is_3d = 9;
+    string note = 10;
+    string rrn = 11;
+    string status = 12;
+}
+
+message CardPayPaymentCallback {
+    CardPayMerchantOrder merchant_order = 1;
+    string payment_method = 2;
+    string callback_time = 3;
+    CallbackCardPayBankCardAccount card_account = 4;
+    CallbackCardPayCryptoCurrencyAccount cryptocurrency_account = 5;
+    CardPayCustomer customer = 6;
+    CardPayEWalletAccount ewallet_account = 7;
+    CallbackCardPayPaymentData payment_data = 8;
+}

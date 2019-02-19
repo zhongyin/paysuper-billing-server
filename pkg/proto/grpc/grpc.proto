@@ -6,9 +6,61 @@ package grpc;
 import "billing/billing.proto";
 
 service BillingService {
-    rpc OrderCreateProcess(billing.OrderCreateRequest) returns (billing.Order) {}
-    rpc InitCache(EmptyRequest) returns (EmptyResponse) {}
+    rpc OrderCreateProcess (billing.OrderCreateRequest) returns (billing.Order) {}
+    rpc PaymentFormJsonDataProcess (PaymentFormJsonDataRequest) returns (PaymentFormJsonDataResponse) {}
+    rpc PaymentCreateProcess (PaymentCreateRequest) returns (PaymentCreateResponse) {}
+    rpc PaymentCallbackProcess (PaymentNotifyRequest) returns (PaymentNotifyResponse) {}
+    rpc RebuildCache (EmptyRequest) returns (EmptyResponse) {}
 }
 
-message EmptyRequest{}
-message EmptyResponse{}
+message EmptyRequest {
+}
+message EmptyResponse {
+}
+
+message PaymentCreateRequest {
+    map<string, string> data = 1;
+}
+
+message PaymentCreateResponse {
+    int32 status = 1;
+    string redirect_url = 2;
+    string error = 3;
+}
+
+message PaymentFormJsonDataRequest {
+    string order_id = 1;
+    string scheme = 2;
+    string host = 3;
+}
+
+message PaymentFormJsonDataProject {
+    string name = 1; // project name
+    // @inject_tag: json:"url_success,omitempty"
+    string url_success = 2; // url to redirect user after successfully completed payment. may be NULL if not set in project settings
+    // @inject_tag: json:"url_fail,omitempty"
+    string url_fail = 3; // url to redirect user after failed payment. may be NULL if not set in project settings
+}
+
+message PaymentFormJsonDataResponse {
+    string id = 1; // order unique identifier
+    // @inject_tag: json:"account,omitempty"
+    string account = 2; // user account, may be null
+    bool has_vat = 3; // flag to show VAT commission amount in payment form
+    bool has_user_commission = 4; // flag to show commission amount changed to user in payment form
+    PaymentFormJsonDataProject project = 5; // contain data about project
+    repeated billing.PaymentFormPaymentMethod payment_methods = 6; // contain data about payment methods
+    string inline_form_redirect_url = 7; // url to redirect user to inline form in PSP side
+    string token = 8; // access token to websocket private chanel
+}
+
+message PaymentNotifyRequest {
+    string order_id = 1;
+    bytes request = 2;
+    string signature = 3;
+}
+
+message PaymentNotifyResponse {
+    int32 status = 1;
+    string error = 2;
+}
