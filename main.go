@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/ProtocolONE/paysuper-billing-server/internal"
 	_ "github.com/micro/go-plugins/registry/kubernetes"
+	"github.com/paysuper/paysuper-billing-server/internal"
 	"os"
 	"os/signal"
 	"syscall"

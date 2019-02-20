@@ -25,7 +25,7 @@ package grpc
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import billing "github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
+import billing "github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 
 import (
 	context "context"

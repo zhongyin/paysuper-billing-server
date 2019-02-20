@@ -1,6 +1,6 @@
 package billing
 
-import "github.com/ProtocolONE/paysuper-billing-server/pkg"
+import "github.com/paysuper/paysuper-billing-server/pkg"
 
 var (
 	cardPayPaymentCallbackAllowedStatuses = map[string]bool{

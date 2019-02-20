@@ -2,9 +2,9 @@ package service
 
 import (
 	"fmt"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
+	"github.com/paysuper/paysuper-billing-server/pkg"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 )
 
 type Project Currency
@@ -66,7 +66,7 @@ func (h *PaymentMethod) setCache(recs []interface{}) {
 			h.svc.paymentMethodCache[pm.Group] = make(map[int32]*billing.PaymentMethod, len(pm.Currencies))
 		}
 
-		for _, v := range pm.Currencies  {
+		for _, v := range pm.Currencies {
 			h.svc.paymentMethodCache[pm.Group][v] = pm
 		}
 

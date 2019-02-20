@@ -2,12 +2,12 @@ package service
 
 import (
 	"fmt"
-	"github.com/ProtocolONE/paysuper-billing-server/internal/config"
-	"github.com/ProtocolONE/paysuper-billing-server/internal/database"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/paysuper/paysuper-billing-server/internal/config"
+	"github.com/paysuper/paysuper-billing-server/internal/database"
+	"github.com/paysuper/paysuper-billing-server/pkg"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"

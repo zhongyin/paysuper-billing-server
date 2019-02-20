@@ -3,15 +3,15 @@ package mock
 import (
 	"context"
 	"errors"
-	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/entity"
-	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/globalsign/mgo/bson"
 	"github.com/micro/go-micro/client"
+	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/entity"
+	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
 )
 
-type RepositoryServiceOk struct {}
-type RepositoryServiceEmpty struct {}
-type RepositoryServiceError struct {}
+type RepositoryServiceOk struct{}
+type RepositoryServiceEmpty struct{}
+type RepositoryServiceError struct{}
 
 func NewRepositoryServiceOk() repository.RepositoryService {
 	return &RepositoryServiceOk{}
@@ -51,20 +51,20 @@ func (r *RepositoryServiceOk) FindSavedCards(
 	return &repository.SavedCardList{
 		SavedCards: []*entity.SavedCard{
 			{
-				Id: bson.NewObjectId().Hex(),
-				Account: "test@unit.unit",
+				Id:        bson.NewObjectId().Hex(),
+				Account:   "test@unit.unit",
 				ProjectId: projectId,
 				MaskedPan: "555555******4444",
-				Expire: &entity.CardExpire{Month: "12", Year: "2019"},
-				IsActive: true,
+				Expire:    &entity.CardExpire{Month: "12", Year: "2019"},
+				IsActive:  true,
 			},
 			{
-				Id: bson.NewObjectId().Hex(),
-				Account: "test@unit.unit",
+				Id:        bson.NewObjectId().Hex(),
+				Account:   "test@unit.unit",
 				ProjectId: projectId,
 				MaskedPan: "400000******0002",
-				Expire: &entity.CardExpire{Month: "12", Year: "2019"},
-				IsActive: true,
+				Expire:    &entity.CardExpire{Month: "12", Year: "2019"},
+				IsActive:  true,
 			},
 		},
 	}, nil

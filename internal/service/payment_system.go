@@ -2,9 +2,9 @@ package service
 
 import (
 	"errors"
-	"github.com/ProtocolONE/paysuper-billing-server/internal/config"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
 	"github.com/golang/protobuf/proto"
+	"github.com/paysuper/paysuper-billing-server/internal/config"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 )
 
 const (

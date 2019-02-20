@@ -7,15 +7,15 @@ import (
 	"github.com/ProtocolONE/geoip-service/pkg"
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	metrics "github.com/ProtocolONE/go-micro-plugins/wrapper/monitoring/prometheus"
-	"github.com/ProtocolONE/paysuper-billing-server/internal/config"
-	"github.com/ProtocolONE/paysuper-billing-server/internal/database"
-	"github.com/ProtocolONE/paysuper-billing-server/internal/service"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg"
-	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/grpc"
-	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/constant"
-	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/micro/go-micro"
+	"github.com/paysuper/paysuper-billing-server/internal/config"
+	"github.com/paysuper/paysuper-billing-server/internal/database"
+	"github.com/paysuper/paysuper-billing-server/internal/service"
+	"github.com/paysuper/paysuper-billing-server/pkg"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
+	"github.com/paysuper/paysuper-recurring-repository/pkg/constant"
+	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"log"
@@ -31,7 +31,7 @@ type Application struct {
 	router     *http.ServeMux
 
 	cacheExit chan bool
-	logger     *zap.Logger
+	logger    *zap.Logger
 }
 
 type appHealthCheck struct{}
