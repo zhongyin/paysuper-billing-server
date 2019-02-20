@@ -36,10 +36,6 @@ spec:
         role: {{ $deployment.role }}
     spec:
       serviceAccountName: {{ .Release.Name }}
-      volumes:
-      - name: {{ .Chart.Name }}-cardpay
-        secret:
-          secretName: {{ .Chart.Name }}-cardpay
       containers:
       - name: {{ $deployment.name }}
         image: {{ $deployment.image }}:{{ $deployment.imageTag }}
