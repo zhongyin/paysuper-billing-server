@@ -6,14 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ProtocolONE/payone-billing-service/internal/config"
-	"github.com/ProtocolONE/payone-billing-service/internal/database"
-	"github.com/ProtocolONE/payone-billing-service/internal/mock"
-	"github.com/ProtocolONE/payone-billing-service/pkg"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
-	"github.com/ProtocolONE/payone-repository/pkg/constant"
-	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/ProtocolONE/paysuper-billing-server/internal/config"
+	"github.com/ProtocolONE/paysuper-billing-server/internal/database"
+	"github.com/ProtocolONE/paysuper-billing-server/internal/mock"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/grpc"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/constant"
+	"github.com/ProtocolONE/paysuper-recurring-repository/tools"
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
@@ -4514,9 +4514,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 	hash.Write([]byte(string(buf) + order1.PaymentMethod.Params.CallbackPassword))
 
 	callbackData := &grpc.PaymentNotifyRequest{
-		OrderId:    order.Id,
-		Request:    buf,
-		Signature:  hex.EncodeToString(hash.Sum(nil)),
+		OrderId:   order.Id,
+		Request:   buf,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
 	}
 
 	callbackResponse := &grpc.PaymentNotifyResponse{}
@@ -4530,7 +4530,117 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 	suite.NotNil(suite.T(), order2)
 
 	assert.Equal(suite.T(), int32(constant.OrderStatusPaymentSystemComplete), order2.Status)
-	assert.Equal(suite.T(), callbackRequest.PaymentData.Id, order2.PaymentMethodOrderId)
-	assert.Equal(suite.T(), callbackRequest.PaymentData.Amount, order2.PaymentMethodIncomeAmount)
-	assert.Equal(suite.T(), callbackRequest.PaymentData.Currency, order2.PaymentMethodIncomeCurrency.CodeA3)
+	assert.Equal(suite.T(), callbackRequest.GetId(), order2.PaymentMethodOrderId)
+	assert.Equal(suite.T(), callbackRequest.GetAmount(), order2.PaymentMethodIncomeAmount)
+	assert.Equal(suite.T(), callbackRequest.GetCurrency(), order2.PaymentMethodIncomeCurrency.CodeA3)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Recurring_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+
+	var order1 *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order1)
+	suite.NotNil(suite.T(), order1)
+
+	callbackRequest := &billing.CardPayPaymentCallback{
+		PaymentMethod: suite.paymentMethod.Params.ExternalId,
+		CallbackTime:  time.Now().Format("2006-01-02T15:04:05Z"),
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id:          order.Id,
+			Description: order.Description,
+			Items: []*billing.CardPayItem{
+				{
+					Name:        order.FixedPackage.Name,
+					Description: order.FixedPackage.Name,
+					Count:       1,
+					Price:       order.FixedPackage.Price,
+				},
+			},
+		},
+		CardAccount: &billing.CallbackCardPayBankCardAccount{
+			Holder:             order.PaymentRequisites[pkg.PaymentCreateFieldHolder],
+			IssuingCountryCode: "RU",
+			MaskedPan:          order.PaymentRequisites[pkg.PaymentCreateFieldPan],
+			Token:              bson.NewObjectId().Hex(),
+		},
+		Customer: &billing.CardPayCustomer{
+			Email:  order.PayerData.Email,
+			Ip:     order.PayerData.Ip,
+			Id:     order.ProjectAccount,
+			Locale: "Europe/Moscow",
+		},
+		RecurringData: &billing.CardPayCallbackRecurringData{
+			Id:          bson.NewObjectId().Hex(),
+			Amount:      order1.PaymentMethodOutcomeAmount,
+			Currency:    order1.PaymentMethodOutcomeCurrency.CodeA3,
+			Description: order.Description,
+			Is_3D:       true,
+			Rrn:         bson.NewObjectId().Hex(),
+			Status:      pkg.CardPayPaymentResponseStatusCompleted,
+			Filing: &billing.CardPayCallbackRecurringDataFilling{
+				Id: bson.NewObjectId().Hex(),
+			},
+		},
+	}
+
+	buf, err := json.Marshal(callbackRequest)
+	assert.Nil(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(buf) + order1.PaymentMethod.Params.CallbackPassword))
+
+	callbackData := &grpc.PaymentNotifyRequest{
+		OrderId:   order.Id,
+		Request:   buf,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+
+	callbackResponse := &grpc.PaymentNotifyResponse{}
+	err = suite.service.PaymentCallbackProcess(context.TODO(), callbackData, callbackResponse)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.StatusOK, callbackResponse.Status)
+
+	var order2 *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order2)
+	suite.NotNil(suite.T(), order2)
+
+	assert.Equal(suite.T(), int32(constant.OrderStatusPaymentSystemComplete), order2.Status)
+	assert.Equal(suite.T(), callbackRequest.GetId(), order2.PaymentMethodOrderId)
+	assert.Equal(suite.T(), callbackRequest.GetAmount(), order2.PaymentMethodIncomeAmount)
+	assert.Equal(suite.T(), callbackRequest.GetCurrency(), order2.PaymentMethodIncomeCurrency.CodeA3)
 }

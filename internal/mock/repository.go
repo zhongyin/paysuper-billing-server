@@ -3,8 +3,8 @@ package mock
 import (
 	"context"
 	"errors"
-	"github.com/ProtocolONE/payone-repository/pkg/proto/billing"
-	"github.com/ProtocolONE/payone-repository/pkg/proto/repository"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/entity"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/globalsign/mgo/bson"
 	"github.com/micro/go-micro/client"
 )
@@ -23,22 +23,6 @@ func NewRepositoryServiceEmpty() repository.RepositoryService {
 
 func NewRepositoryServiceError() repository.RepositoryService {
 	return &RepositoryServiceError{}
-}
-
-func (r *RepositoryServiceOk) FindBinData(
-	ctx context.Context,
-	in *repository.FindByStringValue,
-	opts ...client.CallOption,
-) (*billing.BinData, error) {
-	return &billing.BinData{
-		CardBin: 123,
-		CardBrand: "Mock",
-		CardType: "Mock",
-		CardCategory: "Mock",
-		BankName: "Mock",
-		BankCountryName: "Russia",
-		BankCountryCodeInt: 643,
-	}, nil
 }
 
 func (r *RepositoryServiceOk) InsertSavedCard(
@@ -65,49 +49,33 @@ func (r *RepositoryServiceOk) FindSavedCards(
 	projectId := bson.NewObjectId().Hex()
 
 	return &repository.SavedCardList{
-		SavedCards: []*billing.SavedCard{
+		SavedCards: []*entity.SavedCard{
 			{
 				Id: bson.NewObjectId().Hex(),
 				Account: "test@unit.unit",
 				ProjectId: projectId,
-				Pan: "555555******4444",
-				Expire: &billing.CardExpire{Month: "12", Year: "2019"},
+				MaskedPan: "555555******4444",
+				Expire: &entity.CardExpire{Month: "12", Year: "2019"},
 				IsActive: true,
 			},
 			{
 				Id: bson.NewObjectId().Hex(),
 				Account: "test@unit.unit",
 				ProjectId: projectId,
-				Pan: "400000******0002",
-				Expire: &billing.CardExpire{Month: "12", Year: "2019"},
+				MaskedPan: "400000******0002",
+				Expire: &entity.CardExpire{Month: "12", Year: "2019"},
 				IsActive: true,
 			},
 		},
 	}, nil
 }
 
-func (r *RepositoryServiceOk) FindSavedCard(
-	ctx context.Context, 
-	in *repository.SavedCardRequest, 
-	opts ...client.CallOption,
-) (*billing.SavedCard, error) {
-	return &billing.SavedCard{}, nil
-}
-
 func (r *RepositoryServiceOk) FindSavedCardById(
 	ctx context.Context,
 	in *repository.FindByStringValue,
 	opts ...client.CallOption,
-) (*billing.SavedCard, error) {
-	return &billing.SavedCard{}, nil
-}
-
-func (r *RepositoryServiceEmpty) FindBinData(
-	ctx context.Context,
-	in *repository.FindByStringValue,
-	opts ...client.CallOption,
-) (*billing.BinData, error) {
-	return &billing.BinData{}, nil
+) (*entity.SavedCard, error) {
+	return &entity.SavedCard{}, nil
 }
 
 func (r *RepositoryServiceEmpty) InsertSavedCard(
@@ -134,28 +102,12 @@ func (r *RepositoryServiceEmpty) FindSavedCards(
 	return &repository.SavedCardList{}, nil
 }
 
-func (r *RepositoryServiceEmpty) FindSavedCard(
-	ctx context.Context,
-	in *repository.SavedCardRequest,
-	opts ...client.CallOption,
-) (*billing.SavedCard, error) {
-	return &billing.SavedCard{}, nil
-}
-
 func (r *RepositoryServiceEmpty) FindSavedCardById(
 	ctx context.Context,
 	in *repository.FindByStringValue,
 	opts ...client.CallOption,
-) (*billing.SavedCard, error) {
-	return &billing.SavedCard{}, nil
-}
-
-func (r *RepositoryServiceError) FindBinData(
-	ctx context.Context,
-	in *repository.FindByStringValue,
-	opts ...client.CallOption,
-) (*billing.BinData, error) {
-	return &billing.BinData{}, errors.New("some error")
+) (*entity.SavedCard, error) {
+	return &entity.SavedCard{}, nil
 }
 
 func (r *RepositoryServiceError) InsertSavedCard(
@@ -182,18 +134,10 @@ func (r *RepositoryServiceError) FindSavedCards(
 	return &repository.SavedCardList{}, errors.New("some error")
 }
 
-func (r *RepositoryServiceError) FindSavedCard(
-	ctx context.Context,
-	in *repository.SavedCardRequest,
-	opts ...client.CallOption,
-) (*billing.SavedCard, error) {
-	return &billing.SavedCard{}, nil
-}
-
 func (r *RepositoryServiceError) FindSavedCardById(
 	ctx context.Context,
 	in *repository.FindByStringValue,
 	opts ...client.CallOption,
-) (*billing.SavedCard, error) {
-	return &billing.SavedCard{}, nil
+) (*entity.SavedCard, error) {
+	return &entity.SavedCard{}, nil
 }

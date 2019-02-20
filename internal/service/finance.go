@@ -2,9 +2,9 @@ package service
 
 import (
 	"fmt"
-	"github.com/ProtocolONE/payone-billing-service/pkg"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
-	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
+	"github.com/ProtocolONE/paysuper-recurring-repository/tools"
 	"github.com/globalsign/mgo/bson"
 	"time"
 )

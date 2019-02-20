@@ -16,6 +16,8 @@ It has these top-level messages:
 	CardPayCustomer
 	CardPayEWalletAccount
 	CallbackCardPayPaymentData
+	CardPayCallbackRecurringDataFilling
+	CardPayCallbackRecurringData
 	CardPayPaymentCallback
 */
 package billing

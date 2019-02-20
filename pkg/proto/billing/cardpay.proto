@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/ProtocolONE/payone-billing-service/pkg/proto/billing";
+option go_package = "github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing";
 package billing;
 
 message CardPayAddress {
@@ -66,6 +66,26 @@ message CallbackCardPayPaymentData {
     string status = 12;
 }
 
+message CardPayCallbackRecurringDataFilling {
+    string id = 1;
+}
+
+message CardPayCallbackRecurringData {
+    string id = 1;
+    double amount = 2;
+    string auth_code = 3;
+    string created = 4;
+    string currency = 5;
+    string decline_code = 6;
+    string decline_reason = 7;
+    string description = 8;
+    bool is_3d = 9;
+    string note = 10;
+    string rrn = 11;
+    string status = 12;
+    CardPayCallbackRecurringDataFilling filing = 13;
+}
+
 message CardPayPaymentCallback {
     CardPayMerchantOrder merchant_order = 1;
     string payment_method = 2;
@@ -74,5 +94,8 @@ message CardPayPaymentCallback {
     CallbackCardPayCryptoCurrencyAccount cryptocurrency_account = 5;
     CardPayCustomer customer = 6;
     CardPayEWalletAccount ewallet_account = 7;
+    // @inject_tag: json:"payment_data,omitempty"
     CallbackCardPayPaymentData payment_data = 8;
+    // @inject_tag: json:"recurring_data,omitempty"
+    CardPayCallbackRecurringData recurring_data = 9;
 }

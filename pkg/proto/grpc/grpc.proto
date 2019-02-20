@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc";
+option go_package = "github.com/ProtocolONE/paysuper-billing-server/pkg/proto/grpc";
 package grpc;
 
 import "billing/billing.proto";

@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ProtocolONE/payone-billing-service/pkg"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
-	"github.com/ProtocolONE/payone-repository/pkg/constant"
-	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/constant"
+	"github.com/ProtocolONE/paysuper-recurring-repository/tools"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"go.uber.org/zap"
@@ -251,6 +251,10 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 		return NewError(paymentSystemErrorRequestStatusIsInvalid, pkg.StatusErrorValidation)
 	}
 
+	if req.IsRecurring() && (req.RecurringData.Filing == nil || req.RecurringData.Filing.Id == "") {
+		return NewError(paymentSystemErrorRequestRecurringIdFieldIsInvalid, pkg.StatusErrorValidation)
+	}
+
 	t, err := time.Parse(cardPayDateFormat, req.CallbackTime)
 
 	if err != nil {
@@ -267,8 +271,10 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 		return NewError(paymentSystemErrorRequestPaymentMethodIsInvalid, pkg.StatusErrorValidation)
 	}
 
-	if req.PaymentData.Amount != order.PaymentMethodOutcomeAmount ||
-		req.PaymentData.Currency != order.PaymentMethodOutcomeCurrency.CodeA3 {
+	reqAmount := req.GetAmount()
+
+	if reqAmount != order.PaymentMethodOutcomeAmount ||
+		req.GetCurrency() != order.PaymentMethodOutcomeCurrency.CodeA3 {
 		return NewError(paymentSystemErrorRequestAmountOrCurrencyIsInvalid, pkg.StatusErrorValidation)
 	}
 
@@ -292,7 +298,7 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 		return NewError(paymentSystemErrorRequestPaymentMethodIsInvalid, pkg.StatusErrorValidation)
 	}
 
-	switch req.PaymentData.Status {
+	switch req.GetStatus() {
 	case pkg.CardPayPaymentResponseStatusDeclined:
 		order.Status = constant.OrderStatusPaymentSystemDeclined
 		break
@@ -306,12 +312,20 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 		return NewError(paymentSystemErrorRequestTemporarySkipped, pkg.StatusTemporary)
 	}
 
-	order.PaymentMethodOrderId = req.PaymentData.Id
+	order.PaymentMethodOrderId = req.GetId()
 	order.PaymentMethodOrderClosedAt = ts
-	order.PaymentMethodIncomeAmount = req.PaymentData.Amount
+	order.PaymentMethodIncomeAmount = reqAmount
 	order.PaymentMethodIncomeCurrency = order.PaymentMethodOutcomeCurrency
 
 	return
+}
+
+func (h *cardPay) IsRecurringCallback(request proto.Message) bool {
+	return request.(*billing.CardPayPaymentCallback).IsRecurring()
+}
+
+func (h *cardPay) GetRecurringId(request proto.Message) string {
+	return request.(*billing.CardPayPaymentCallback).RecurringData.Filing.Id
 }
 
 func (h *cardPay) auth(pmKey string) error {

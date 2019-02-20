@@ -2,8 +2,8 @@ package service
 
 import (
 	"errors"
-	"github.com/ProtocolONE/payone-billing-service/internal/config"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
+	"github.com/ProtocolONE/paysuper-billing-server/internal/config"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -17,6 +17,7 @@ const (
 	paymentSystemErrorEWalletIdentifierIsInvalid       = "wallet identifier is invalid"
 	paymentSystemErrorRequestSignatureIsInvalid        = "request signature is invalid"
 	paymentSystemErrorRequestTimeFieldIsInvalid        = "time field in request is invalid"
+	paymentSystemErrorRequestRecurringIdFieldIsInvalid = "recurring id field in request is invalid"
 	paymentSystemErrorRequestStatusIsInvalid           = "status is invalid"
 	paymentSystemErrorRequestPaymentMethodIsInvalid    = "payment method from request not match with value in order"
 	paymentSystemErrorRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in order"
@@ -40,6 +41,8 @@ type Path struct {
 type PaymentSystem interface {
 	CreatePayment(map[string]string) (string, error)
 	ProcessPayment(request proto.Message, rawRequest string, signature string) error
+	IsRecurringCallback(request proto.Message) bool
+	GetRecurringId(request proto.Message) string
 }
 
 type paymentProcessor struct {

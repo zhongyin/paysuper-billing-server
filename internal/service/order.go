@@ -8,12 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
-	"github.com/ProtocolONE/payone-billing-service/pkg"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/billing"
-	"github.com/ProtocolONE/payone-billing-service/pkg/proto/grpc"
-	"github.com/ProtocolONE/payone-repository/pkg/constant"
-	repo "github.com/ProtocolONE/payone-repository/pkg/proto/repository"
-	"github.com/ProtocolONE/payone-repository/tools"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
+	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/grpc"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/constant"
+	repo "github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/repository"
+	"github.com/ProtocolONE/paysuper-recurring-repository/tools"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -417,6 +417,10 @@ func (s *Service) PaymentCallbackProcess(
 	}
 
 	if pErr == nil {
+		if h.IsRecurringCallback(data) {
+
+		}
+
 		err = s.broker.Publish(constant.PayOneTopicNotifyPaymentName, order, amqp.Table{"x-retry-count": int32(0)})
 
 		if err != nil {

@@ -3,7 +3,7 @@ package billing
 import (
 	"errors"
 	"fmt"
-	"github.com/ProtocolONE/payone-repository/pkg/constant"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/constant"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"time"
