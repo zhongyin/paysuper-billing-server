@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/ProtocolONE/payone-billing-service/internal"
+	_ "github.com/micro/go-plugins/registry/kubernetes"
 	"os"
 	"os/signal"
 	"syscall"

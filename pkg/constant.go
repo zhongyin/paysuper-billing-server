@@ -29,6 +29,8 @@ const (
 	PaymentCreateFieldHolder          = "card_holder"
 	PaymentCreateFieldEWallet         = "ewallet"
 	PaymentCreateFieldCrypto          = "address"
+	PaymentCreateFieldStoreData       = "store_data"
+	PaymentCreateFieldRecurringId     = "recurring_id"
 
 	TxnParamsFieldBankCardEmissionCountry = "emission_country"
 	TxnParamsFieldBankCardToken           = "token"

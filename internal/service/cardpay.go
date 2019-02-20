@@ -36,12 +36,13 @@ const (
 	cardPayActionRefresh       = "refresh"
 	cardPayActionCreatePayment = "create_payment"
 
-	cardPayDateFormat = "2006-01-02T15:04:05Z"
+	cardPayDateFormat          = "2006-01-02T15:04:05Z"
+	cardPayInitiatorCardholder = "cit"
 )
 
 var (
 	cardPayTokens = map[string]*cardPayToken{}
-	cardPayPaths = map[string]*Path{
+	cardPayPaths  = map[string]*Path{
 		cardPayActionAuthenticate: {
 			path:   "/api/auth/token",
 			method: http.MethodPost,
@@ -83,11 +84,24 @@ type CardPayEWalletAccount struct {
 	Id string `json:"id"`
 }
 
+type CardPayRecurringDataFiling struct {
+	Id string `json:"id"`
+}
+
 type CardPayPaymentData struct {
 	Currency   string  `json:"currency"`
 	Amount     float64 `json:"amount"`
 	Descriptor string  `json:"dynamic_descriptor"`
 	Note       string  `json:"note"`
+}
+
+type CardPayRecurringData struct {
+	Currency   string                      `json:"currency"`
+	Amount     float64                     `json:"amount"`
+	Filing     *CardPayRecurringDataFiling `json:"filing,omitempty"`
+	Descriptor string                      `json:"dynamic_descriptor"`
+	Note       string                      `json:"note"`
+	Initiator  string                      `json:"initiator"`
 }
 
 type CardPayCustomer struct {
@@ -145,7 +159,8 @@ type CardPayOrder struct {
 	MerchantOrder         *CardPayMerchantOrder         `json:"merchant_order"`
 	Description           string                        `json:"description"`
 	PaymentMethod         string                        `json:"payment_method"`
-	PaymentData           *CardPayPaymentData           `json:"payment_data"`
+	PaymentData           *CardPayPaymentData           `json:"payment_data,omitempty"`
+	RecurringData         *CardPayRecurringData         `json:"recurring_data,omitempty"`
 	CardAccount           *CardPayCardAccount           `json:"card_account,omitempty"`
 	Customer              *CardPayCustomer              `json:"customer"`
 	EWalletAccount        *CardPayEWalletAccount        `json:"ewallet_account,omitempty"`
@@ -481,15 +496,34 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 		},
 		Description:   order.Description,
 		PaymentMethod: order.PaymentMethod.Params.ExternalId,
-		PaymentData: &CardPayPaymentData{
-			Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
-			Amount:   order.PaymentMethodOutcomeAmount,
-		},
 		Customer: &CardPayCustomer{
 			Email:   order.PayerData.Email,
 			Ip:      order.PayerData.Ip,
 			Account: order.ProjectAccount,
 		},
+	}
+
+	storeData, okStoreData := requisites[pkg.PaymentCreateFieldStoreData]
+	recurringId, okRecurringId := requisites[pkg.PaymentCreateFieldRecurringId]
+
+	if order.PaymentMethod.IsBankCard() && (okStoreData && storeData == "1") ||
+		(okRecurringId && recurringId != "") {
+		cardPayOrder.RecurringData = &CardPayRecurringData{
+			Currency:  order.PaymentMethodOutcomeCurrency.CodeA3,
+			Amount:    order.PaymentMethodOutcomeAmount,
+			Initiator: cardPayInitiatorCardholder,
+		}
+
+		if okRecurringId == true && recurringId != "" {
+			cardPayOrder.RecurringData.Filing = &CardPayRecurringDataFiling{
+				Id: recurringId,
+			}
+		}
+	} else {
+		cardPayOrder.PaymentData = &CardPayPaymentData{
+			Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
+			Amount:   order.PaymentMethodOutcomeAmount,
+		}
 	}
 
 	if order.Project.UrlSuccess != "" || order.Project.UrlFail != "" {

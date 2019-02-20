@@ -1243,6 +1243,10 @@ func (m *PaymentMethod) IsBankCard() bool {
 	return m.Group == constant.PaymentSystemGroupAliasBankCard
 }
 
+func (m *PaymentMethodOrder) IsBankCard() bool {
+	return m.Group == constant.PaymentSystemGroupAliasBankCard
+}
+
 func (m *Order) HasEndedStatus() bool {
 	return m.Status == constant.OrderStatusPaymentSystemReject || m.Status == constant.OrderStatusProjectComplete ||
 		m.Status == constant.OrderStatusProjectReject || m.Status == constant.OrderStatusRefund ||
