@@ -12,6 +12,7 @@ import (
 	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/billing"
 	"github.com/ProtocolONE/paysuper-billing-server/pkg/proto/grpc"
 	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/constant"
+	"github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/entity"
 	repo "github.com/ProtocolONE/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/ProtocolONE/paysuper-recurring-repository/tools"
 	"github.com/dgrijalva/jwt-go"
@@ -418,7 +419,7 @@ func (s *Service) PaymentCallbackProcess(
 
 	if pErr == nil {
 		if h.IsRecurringCallback(data) {
-
+			s.saveRecurringCard(order, h.GetRecurringId(data))
 		}
 
 		err = s.broker.Publish(constant.PayOneTopicNotifyPaymentName, order, amqp.Table{"x-retry-count": int32(0)})
@@ -431,6 +432,31 @@ func (s *Service) PaymentCallbackProcess(
 	}
 
 	return nil
+}
+
+func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
+	req := &repo.SavedCardRequest{
+		Account:   order.ProjectAccount,
+		ProjectId: order.Project.Id,
+		MaskedPan: order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
+		Expire: &entity.CardExpire{
+			Month: order.PaymentRequisites[pkg.PaymentCreateFieldMonth],
+			Year:  order.PaymentRequisites[pkg.PaymentCreateFieldYear],
+		},
+		RecurringId: recurringId,
+	}
+
+	_, err := s.rep.InsertSavedCard(context.TODO(), req)
+
+	if err != nil {
+		s.logError(
+			"Call repository service to save recurring card failed",
+			[]interface{}{
+				"err", err.Error(),
+				"request", req,
+			},
+		)
+	}
 }
 
 func (s *Service) getOrderById(id string) (order *billing.Order, err error) {

@@ -321,7 +321,8 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 }
 
 func (h *cardPay) IsRecurringCallback(request proto.Message) bool {
-	return request.(*billing.CardPayPaymentCallback).IsRecurring()
+	req := request.(*billing.CardPayPaymentCallback)
+	return req.PaymentMethod == constant.PaymentSystemGroupAliasBankCard && req.IsRecurring()
 }
 
 func (h *cardPay) GetRecurringId(request proto.Message) string {

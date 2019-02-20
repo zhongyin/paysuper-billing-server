@@ -203,7 +203,7 @@ func (s *Service) isProductionEnvironment() bool {
 }
 
 func (s *Service) logError(msg string, data []interface{}) {
-	zap.S().Errorw(fmt.Sprintf("[PAYONE_BILLING] %s", msg), data...)
+	zap.S().Errorw(fmt.Sprintf("[PAYSUPER_BILLING] %s", msg), data...)
 }
 
 func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res *grpc.EmptyResponse) error {
