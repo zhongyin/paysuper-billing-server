@@ -7,8 +7,6 @@ stages:
 
 build:
   stage: build
-  variables:
-    GIT_STRATEGY: none
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
   script:
