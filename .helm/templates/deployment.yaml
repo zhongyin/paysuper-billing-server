@@ -52,7 +52,7 @@ spec:
           value: "static"
         - name: METRICS_PORT
           value: "{{ $deployment.healthPort }}"
-        {{- range .Values.frontend.env }}
+        {{- range .Values.backend.env }}
         - name: {{ . }}
           valueFrom:
             secretKeyRef:
