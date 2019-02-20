@@ -1,0 +1,31 @@
+{{- $deployment := .Values.backend -}}
+{{- $svcName := printf "%s" .Release.Name }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  labels:
+    app: {{ .Chart.Name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    role: {{ $deployment.role }}
+spec:
+  type: {{ $deployment.service.type }}
+  ports:
+  - name: micro
+    port: {{ $deployment.service.port }}
+    targetPort: {{ $deployment.port }}
+    protocol: {{ $deployment.service.protocol }}
+  {{- if $deployment.ingressPort }}
+  - name: ingress
+    port: {{ $deployment.ingressPort }}
+    targetPort: {{ $deployment.ingressPort  }}
+    protocol: {{ $deployment.service.protocol }}
+  {{- end }}
+  selector:
+    app: {{ .Chart.Name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    role: {{ $deployment.role }}

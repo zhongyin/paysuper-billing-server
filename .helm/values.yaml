@@ -1,0 +1,50 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+enableCertIssuer: false
+
+ingress:
+  hostname: 
+  path: /
+
+certIssuer:
+  email: admin@protocol.one
+
+backend:
+  name: gobackend
+  role: gobackend
+  image: "p1hub/p1paybilling"
+  imageTag: latest
+  port: 8080
+  healthPort: 8081
+  replicas: 1
+  service: 
+    type: ClusterIP
+    port: 8080
+    protocol: TCP
+  env:
+    - MONGO_HOST
+    - MONGO_DB
+    - MONGO_USER
+    - MONGO_PASSWORD
+    - CENTRIFUGO_SECRET
+    - CARD_PAY_ORDER_CREATE_URL
+    - BROKER_ADDRESS
+    
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

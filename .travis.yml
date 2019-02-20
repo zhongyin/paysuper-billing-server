@@ -1,0 +1,18 @@
+language: go
+sudo: false
+go:
+- 1.11.x
+services:
+- mongodb
+env:
+  global:
+  - GO111MODULE=on
+install: true
+script:
+- go test ./... -coverprofile=coverage.out -covermode=atomic -p=1
+after_success:
+- bash <(curl -s https://codecov.io/bash)
+notifications:
+  email: false
+  slack:
+    secure: TNjvJwLocb9aJHFv+KECW/09dTTqRl4jE2p+MKDnr2uf+CqfDAjsanx2eEPjw9rUeSPfJUQ1ZUVTyv+nQKslMippgCpz9Wo9+PPw/gaNoY5niVpNPRE2TmjKyZoDx8xYYfXi+gwUWWOz6hHCv6Vb1edBmDvsoXXSuNuUxYLsUjN9mDFDutrFNC29K9iDfTHr9yBgVmjffOdph0dtybpr6aunBXnvVhBIX/XNNf697Yu6DkJAOfSPcCbREXmR/J5BGwNAgEA/jBH5XjLdYFyuJGHuDAAgOv0OPPC6Laly4cb+6yb7cqjD8iN1RnQm5k1hFBFYZA7lWjy9bHcf24pzGg2dHSvSEuFGpvV6EKx2wv7rWSPpQM5tug0nDTGJJAU23iKWsXK7cmjb11m3acrKyUj84ckmmBrRD9urUGOISphOYynclg2em7jRh64lf4aLoO8ErFm2VlD+KCN1qTBblIHPm6h2aUaT0WPlekYXssh177xfroLuO6QZIwj+4ipP9/but2vqA0jXyzk2jAl4fUrowDH0+VbWxpaYE0YYbt8VgyZpn/TbJv3C0Ni58/txOeKcUmoYOiZuJqOPWiIWpjixCrtru8lvck28EyIH3IQCqN5WZ8beBkC2HQKsZu+ktTATRYrghprqGmaAqbWr17JZ6mob/rXvNE4+PtPNow4=
