@@ -15,14 +15,14 @@ type CacheConfig struct {
 }
 
 type PaymentSystemConfig struct {
-	CardPayOrderCreateUrl string `envconfig:"CARD_PAY_ORDER_CREATE_URL" required:"false"`
+	CardPayApiUrl    string `envconfig:"CARD_PAY_API_URL" required:"true"`
 }
 
 type Config struct {
 	MongoHost          string `envconfig:"MONGO_HOST" required:"true"`
 	MongoDatabase      string `envconfig:"MONGO_DB" required:"true"`
-	MongoUser          string `envconfig:"MONGO_USER" required:"true"`
-	MongoPassword      string `envconfig:"MONGO_PASSWORD" required:"true"`
+	MongoUser          string `envconfig:"MONGO_USER" default:""`
+	MongoPassword      string `envconfig:"MONGO_PASSWORD" default:""`
 	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" required:"true" default:"EUR"`
 	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8086"`
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`

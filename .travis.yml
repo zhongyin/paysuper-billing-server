@@ -4,9 +4,14 @@ go:
 - 1.11.x
 services:
 - mongodb
+- rabbitmq
 env:
   global:
   - GO111MODULE=on
+  - MONGO_HOST=127.0.0.1:27017
+  - MONGO_DB=paysuper_test
+  - CENTRIFUGO_SECRET=secret
+  - CARD_PAY_API_URL=https://sandbox.cardpay.com
 install: true
 script:
 - go test ./... -coverprofile=coverage.out -covermode=atomic -p=1

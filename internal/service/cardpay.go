@@ -32,9 +32,10 @@ const (
 	cardPayGrantTypePassword     = "password"
 	cardPayGrantTypeRefreshToken = "refresh_token"
 
-	cardPayActionAuthenticate  = "auth"
-	cardPayActionRefresh       = "refresh"
-	cardPayActionCreatePayment = "create_payment"
+	cardPayActionAuthenticate     = "auth"
+	cardPayActionRefresh          = "refresh"
+	cardPayActionCreatePayment    = "create_payment"
+	cardPayActionRecurringPayment = "recurring_payment"
 
 	cardPayDateFormat          = "2006-01-02T15:04:05Z"
 	cardPayInitiatorCardholder = "cit"
@@ -53,6 +54,10 @@ var (
 		},
 		cardPayActionCreatePayment: {
 			path:   "/api/payments",
+			method: http.MethodPost,
+		},
+		cardPayActionRecurringPayment: {
+			path:   "/api/recurrings",
 			method: http.MethodPost,
 		},
 	}
@@ -181,13 +186,19 @@ func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err e
 		return
 	}
 
-	qUrl, err := h.getUrl(cardPayActionCreatePayment)
+	cpOrder, err := h.getCardPayOrder(h.processor.order, requisites)
 
 	if err != nil {
 		return
 	}
 
-	cpOrder, err := h.getCardPayOrder(h.processor.order, requisites)
+	action := cardPayActionCreatePayment
+
+	if cpOrder.RecurringData != nil {
+		action = cardPayActionRecurringPayment
+	}
+
+	qUrl, err := h.getUrl(action)
 
 	if err != nil {
 		return
@@ -198,7 +209,7 @@ func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err e
 	b, _ := json.Marshal(cpOrder)
 
 	client := tools.NewLoggedHttpClient(zap.S())
-	req, err := http.NewRequest(cardPayPaths[cardPayActionCreatePayment].method, qUrl, bytes.NewBuffer(b))
+	req, err := http.NewRequest(cardPayPaths[action].method, qUrl, bytes.NewBuffer(b))
 
 	token := h.getToken(h.processor.order.PaymentMethod.Params.ExternalId)
 	auth := strings.Title(token.TokenType) + " " + token.AccessToken
@@ -438,7 +449,7 @@ func (h *cardPay) refresh(pmKey string) error {
 }
 
 func (h *cardPay) getUrl(action string) (string, error) {
-	u, err := url.ParseRequestURI(h.processor.cfg.CardPayOrderCreateUrl)
+	u, err := url.ParseRequestURI(h.processor.cfg.CardPayApiUrl)
 
 	if err != nil {
 		return "", err

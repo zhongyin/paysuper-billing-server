@@ -51,7 +51,7 @@ func Test_Order(t *testing.T) {
 func (suite *OrderTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
 	cfg.AccountingCurrency = "RUB"
-	cfg.CardPayOrderCreateUrl = "https://sandbox.cardpay.com"
+	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
@@ -4563,6 +4563,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Recurring_Ok() {
 			pkg.PaymentCreateFieldMonth:           "02",
 			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
 			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+			pkg.PaymentCreateFieldStoreData:       "1",
 		},
 	}
 
