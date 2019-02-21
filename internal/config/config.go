@@ -23,12 +23,12 @@ type Config struct {
 	MongoDatabase      string `envconfig:"MONGO_DB" required:"true"`
 	MongoUser          string `envconfig:"MONGO_USER" default:""`
 	MongoPassword      string `envconfig:"MONGO_PASSWORD" default:""`
-	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" required:"true" default:"EUR"`
+	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" default:"EUR"`
 	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8086"`
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 
 	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
-	BrokerAddress    string `envconfig:"BROKER_ADDRESS" required:"true" default:"amqp://127.0.0.1:5672"`
+	BrokerAddress    string `envconfig:"BROKER_ADDRESS" default:"amqp://127.0.0.1:5672"`
 
 	*CacheConfig
 	*PaymentSystemConfig
