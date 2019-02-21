@@ -30,8 +30,6 @@ This service contain all business logic for payment processing
 
 ## Docker Deployment
 
-Before start deployment you must write correct for you values to environment variables 
-
 ```bash
 docker build -f Dockerfile -t paysuper_billing_service .
 docker run -d -e "MONGO_HOST=127.0.0.1:27017" -e "MONGO_DB="paysuper" ... e="CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT=600" paysuper_billing_service
