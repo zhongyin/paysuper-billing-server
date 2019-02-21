@@ -529,6 +529,19 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 		},
 	}
 
+	if order.Project.UrlSuccess != "" || order.Project.UrlFail != "" {
+		cardPayOrder.ReturnUrls = &CardPayReturnUrls{}
+
+		if order.Project.UrlSuccess != "" {
+			cardPayOrder.ReturnUrls.SuccessUrl = order.Project.UrlSuccess
+		}
+
+		if order.Project.UrlFail != "" {
+			cardPayOrder.ReturnUrls.DeclineUrl = order.Project.UrlFail
+			cardPayOrder.ReturnUrls.CancelUrl = order.Project.UrlFail
+		}
+	}
+
 	storeData, okStoreData := requisites[pkg.PaymentCreateFieldStoreData]
 	recurringId, okRecurringId := requisites[pkg.PaymentCreateFieldRecurringId]
 
@@ -545,23 +558,12 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 				Id: recurringId,
 			}
 		}
+
+		return cardPayOrder, nil
 	} else {
 		cardPayOrder.PaymentData = &CardPayPaymentData{
 			Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
 			Amount:   order.PaymentMethodOutcomeAmount,
-		}
-	}
-
-	if order.Project.UrlSuccess != "" || order.Project.UrlFail != "" {
-		cardPayOrder.ReturnUrls = &CardPayReturnUrls{}
-
-		if order.Project.UrlSuccess != "" {
-			cardPayOrder.ReturnUrls.SuccessUrl = order.Project.UrlSuccess
-		}
-
-		if order.Project.UrlFail != "" {
-			cardPayOrder.ReturnUrls.DeclineUrl = order.Project.UrlFail
-			cardPayOrder.ReturnUrls.CancelUrl = order.Project.UrlFail
 		}
 	}
 

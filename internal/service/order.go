@@ -57,6 +57,7 @@ const (
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
 	orderErrorUnknown                                  = "unknown error. try request later"
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
+	orderGetSavedCardError                             = "saved card data with specified identifier not found"
 	paymentRequestIncorrect                            = "payment request has incorrect format"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
@@ -296,6 +297,11 @@ func (s *Service) PaymentCreateProcess(
 		rsp.Status = pkg.StatusErrorSystem
 
 		return nil
+	}
+
+	if _, ok := order.PaymentRequisites[pkg.PaymentCreateFieldRecurringId]; ok {
+		req.Data[pkg.PaymentCreateFieldRecurringId] = order.PaymentRequisites[pkg.PaymentCreateFieldRecurringId]
+		delete(order.PaymentRequisites, pkg.PaymentCreateFieldRecurringId)
 	}
 
 	err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
@@ -1121,21 +1127,39 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 	delete(v.data, pkg.PaymentCreateFieldEmail)
 
 	if processor.checked.paymentMethod.IsBankCard() == true {
-		validator := &bankCardValidator{
-			Pan:    v.data[pkg.PaymentCreateFieldPan],
-			Cvv:    v.data[pkg.PaymentCreateFieldCvv],
-			Month:  v.data[pkg.PaymentCreateFieldMonth],
-			Year:   v.data[pkg.PaymentCreateFieldYear],
-			Holder: v.data[pkg.PaymentCreateFieldHolder],
-		}
+		if id, ok := v.data[pkg.PaymentCreateFieldStoredCardId]; ok {
+			storedCard, err := v.service.rep.FindSavedCardById(context.TODO(), &repo.FindByStringValue{Value: id})
 
-		if err := validator.Validate(); err != nil {
-			return err
-		}
+			if err != nil {
+				v.service.logError("Get data about stored card failed", []interface{}{"err", err.Error(), "id", id})
+			}
 
-		order.PaymentRequisites[pkg.PaymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[pkg.PaymentCreateFieldPan])
-		order.PaymentRequisites[pkg.PaymentCreateFieldMonth] = v.data[pkg.PaymentCreateFieldMonth]
-		order.PaymentRequisites[pkg.PaymentCreateFieldYear] = v.data[pkg.PaymentCreateFieldYear]
+			if err != nil || storedCard == nil {
+				v.service.logError("Get data about stored card failed", []interface{}{"err", err.Error(), "id", id})
+				return errors.New(orderGetSavedCardError)
+			}
+
+			order.PaymentRequisites[pkg.PaymentCreateFieldPan] = storedCard.MaskedPan
+			order.PaymentRequisites[pkg.PaymentCreateFieldMonth] = storedCard.Expire.Month
+			order.PaymentRequisites[pkg.PaymentCreateFieldYear] = storedCard.Expire.Year
+			order.PaymentRequisites[pkg.PaymentCreateFieldRecurringId] = storedCard.RecurringId
+		} else {
+			validator := &bankCardValidator{
+				Pan:    v.data[pkg.PaymentCreateFieldPan],
+				Cvv:    v.data[pkg.PaymentCreateFieldCvv],
+				Month:  v.data[pkg.PaymentCreateFieldMonth],
+				Year:   v.data[pkg.PaymentCreateFieldYear],
+				Holder: v.data[pkg.PaymentCreateFieldHolder],
+			}
+
+			if err := validator.Validate(); err != nil {
+				return err
+			}
+
+			order.PaymentRequisites[pkg.PaymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[pkg.PaymentCreateFieldPan])
+			order.PaymentRequisites[pkg.PaymentCreateFieldMonth] = v.data[pkg.PaymentCreateFieldMonth]
+			order.PaymentRequisites[pkg.PaymentCreateFieldYear] = v.data[pkg.PaymentCreateFieldYear]
+		}
 
 		bin := v.service.getBinData(order.PaymentRequisites[pkg.PaymentCreateFieldPan])
 

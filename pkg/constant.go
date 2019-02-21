@@ -31,6 +31,7 @@ const (
 	PaymentCreateFieldCrypto          = "address"
 	PaymentCreateFieldStoreData       = "store_data"
 	PaymentCreateFieldRecurringId     = "recurring_id"
+	PaymentCreateFieldStoredCardId    = "stored_card_id"
 
 	TxnParamsFieldBankCardEmissionCountry = "emission_country"
 	TxnParamsFieldBankCardToken           = "token"
