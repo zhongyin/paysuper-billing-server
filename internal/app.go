@@ -9,6 +9,7 @@ import (
 	metrics "github.com/ProtocolONE/go-micro-plugins/wrapper/monitoring/prometheus"
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/micro/go-micro"
+	k8s "github.com/micro/kubernetes/go/micro"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
 	"github.com/paysuper/paysuper-billing-server/internal/service"
@@ -58,7 +59,7 @@ func (app *Application) Init() {
 		app.logger.Fatal("Creating RabbitMQ publisher failed", zap.Error(err), zap.String("broker_address", app.cfg.BrokerAddress))
 	}
 
-	app.service = micro.NewService(
+	options := []micro.Option{
 		micro.Name(pkg.ServiceName),
 		micro.Version(pkg.ServiceVersion),
 		micro.WrapHandler(metrics.NewHandlerWrapper()),
@@ -66,7 +67,16 @@ func (app *Application) Init() {
 			app.logger.Info("Micro service stopped")
 			return nil
 		}),
-	)
+	}
+
+	if app.cfg.MicroRegistry == constant.RegistryKubernetes {
+		app.service = k8s.NewService(options...)
+		app.logger.Info("[PAYSUPER_REPOSITORY] Initialize k8s service")
+	} else {
+		app.service = micro.NewService(options...)
+		app.logger.Info("[PAYSUPER_REPOSITORY] Initialize micro service")
+	}
+
 	app.service.Init()
 
 	geoService := proto.NewGeoIpService(geoip.ServiceName, app.service.Client())

@@ -15,7 +15,7 @@ type CacheConfig struct {
 }
 
 type PaymentSystemConfig struct {
-	CardPayApiUrl    string `envconfig:"CARD_PAY_API_URL" required:"true"`
+	CardPayApiUrl string `envconfig:"CARD_PAY_API_URL" required:"true"`
 }
 
 type Config struct {
@@ -29,6 +29,8 @@ type Config struct {
 
 	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
 	BrokerAddress    string `envconfig:"BROKER_ADDRESS" default:"amqp://127.0.0.1:5672"`
+
+	MicroRegistry string `envconfig:"MICRO_REGISTRY" required:"false"`
 
 	*CacheConfig
 	*PaymentSystemConfig

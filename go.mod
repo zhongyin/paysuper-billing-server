@@ -11,7 +11,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/micro/go-micro v0.26.1
 	github.com/micro/go-plugins v0.25.0
-	github.com/paysuper/paysuper-recurring-repository v1.0.96
+	github.com/paysuper/paysuper-recurring-repository v1.0.99
 	github.com/prometheus/client_golang v0.9.2
 	github.com/streadway/amqp v0.0.0-20181205114330-a314942b2fd9
 	github.com/stretchr/testify v1.3.0

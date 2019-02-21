@@ -122,6 +122,7 @@ github.com/aws/aws-sdk-go v1.15.64/go.mod h1:E3/ieXAlvM0XWO57iftYVDLLvQ824smPP3A
 github.com/aws/aws-sdk-go v1.16.23/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.16.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.16.27/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
+github.com/aws/aws-sdk-go v1.16.28/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.16.33/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/benbjohnson/tmpl v1.0.0/go.mod h1:igT620JFIi44B6awvU9IsDhR77IXWtFigTLil/RPdps=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
@@ -455,6 +456,8 @@ github.com/micro/go-config v0.14.0/go.mod h1:ijvLjvxxfDdlH5vO36ZBrzMVGpiGysuwFot
 github.com/micro/go-grpc v0.6.0 h1:wKKaMTyPu1B9Jb5uDz2Vd3kIU3miNnd8fbAOQvJ5+CY=
 github.com/micro/go-grpc v0.6.0/go.mod h1:m8NMevmhL63muB3I1AnI8uf7YaW4YVjNIDW8PpQPRg8=
 github.com/micro/go-grpc v0.9.0/go.mod h1:0oVU9jFs55Pcu4J5+ZI9c4MKgQBm0UWWSiPZyUdQPJo=
+github.com/micro/go-grpc v0.11.0 h1:MS2o39ylM8wnO9n1isDilbMQBg3hfAxVbOTyToWXHqY=
+github.com/micro/go-grpc v0.11.0/go.mod h1:h3kBu5jC0+8t8TxKazW5MODo08PiQo0N9GNy2RTfLwA=
 github.com/micro/go-log v0.0.0-20170512141327-cbfa9447f9b6/go.mod h1:QikSuviYcIE8V0CY4e0RRqVs3Oh8EuzX+qCEOnh9Qh8=
 github.com/micro/go-log v0.1.0 h1:szYSR+yyTsomZM2jyinJC5562DlqffSjHmTZFaeZ2vY=
 github.com/micro/go-log v0.1.0/go.mod h1:qaFBF6d6Jk01Gz4cbMkCA2vVuLk3FSaLLjmEGrMCreA=
@@ -492,6 +495,8 @@ github.com/micro/h2c v1.0.0/go.mod h1:54sOOQW/GRlHhH43vKwOhUb+kHaXhVxR0d3CJhn9al
 github.com/micro/hipchat v0.0.0-20160328000638-4c67119ac956/go.mod h1:9LPnmAqs2JarMBCqn4eUNkATVCsGQFphxNoQEi28uLU=
 github.com/micro/kubernetes v0.2.0 h1:BbjDvVUwRuu8juowgXbbWQOPMZGCi9kPOPVcnRL47GI=
 github.com/micro/kubernetes v0.2.0/go.mod h1:YMCRhiXTTNCND35/YcgACDFd1tOTmrDFAEqsvkID6pw=
+github.com/micro/kubernetes v0.7.0 h1:urpV6XiEOqQVh/ZWIwCizAz5yhPOd6aEkIumJeyWCHQ=
+github.com/micro/kubernetes v0.7.0/go.mod h1:tfIj7hfrfZ7pIuknY0V36hABp7uPuLHJEV9LYhBPmNw=
 github.com/micro/mdns v0.0.0-20181201230301-9c3770d4057a/go.mod h1:SQG6o/94RinohLuB5noHSevg2Iqg2wXLDUn4lj2LWWo=
 github.com/micro/mdns v0.1.0 h1:fuLybUsfynbigJmCot/54i+gwe0hpc/vtCMvWt2WfDI=
 github.com/micro/mdns v0.1.0/go.mod h1:KJ0dW7KmicXU2BV++qkLlmHYcVv7/hHnbtguSWt9Aoc=
@@ -577,6 +582,8 @@ github.com/paysuper/paysuper-recurring-repository v1.0.95 h1:Dc5GQGEyF/ucw7qy/Wq
 github.com/paysuper/paysuper-recurring-repository v1.0.95/go.mod h1:AMfAm/DunBcDf1sifp0Xc26NEhFy9Y5rUrJ6CWvFi8A=
 github.com/paysuper/paysuper-recurring-repository v1.0.96 h1:DeE2og1Zgp7wJiZml1ee5o1HZef+AW1t4S4zpCsG1OI=
 github.com/paysuper/paysuper-recurring-repository v1.0.96/go.mod h1:6Gk7PjsswLISAaZTD/g15UHFtDsypGSX4685Lw2ZgKk=
+github.com/paysuper/paysuper-recurring-repository v1.0.99 h1:3VSKIVwtxMgKUMBjz92GjwBPSqpA1g4bY0N684Rn+6s=
+github.com/paysuper/paysuper-recurring-repository v1.0.99/go.mod h1:5jCFa70wHevei2I6zA0gg5DWSTDIe17P4OPbTFZCMFs=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-buffruneio v0.2.0/go.mod h1:JkE26KsDizTr40EUHkXVtNPvgGtbSNq5BcowyYOWdKo=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
@@ -767,6 +774,7 @@ gocloud.dev v0.10.0/go.mod h1:r5F6zlO+/+UrAYKfeMIAe8nTrjEhFPRjDm1A8wsAXUM=
 golang.org/x/build v0.0.0-20190111050920-041ab4dc3f9d/go.mod h1:OWs+y06UdEOHN4y+MfF/py+xQ/tYqIWW03b70/CG9Rw=
 golang.org/x/build v0.0.0-20190201181641-63986c177d1f/go.mod h1:OWs+y06UdEOHN4y+MfF/py+xQ/tYqIWW03b70/CG9Rw=
 golang.org/x/build v0.0.0-20190205044948-0fbf6af331f6/go.mod h1:OWs+y06UdEOHN4y+MfF/py+xQ/tYqIWW03b70/CG9Rw=
+golang.org/x/build v0.0.0-20190206002922-e21a90b64ba0/go.mod h1:OWs+y06UdEOHN4y+MfF/py+xQ/tYqIWW03b70/CG9Rw=
 golang.org/x/crypto v0.0.0-20180505025534-4ec37c66abab/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20180608092829-8ac0e0d97ce4/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20180820150726-614d502a4dac/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
@@ -863,6 +871,7 @@ golang.org/x/tools v0.0.0-20181221154417-3ad2d988d5e2/go.mod h1:n7NCudcB/nEzxVGm
 golang.org/x/tools v0.0.0-20190125232054-d66bd3c5d5a6/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190202235157-7414d4c1f71c/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190205181801-90c8b4f75bb8/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+golang.org/x/tools v0.0.0-20190206041539-40960b6deb8e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/xerrors v0.0.0-20190129162528-20feca13ea86/go.mod h1:/lyp46tcDBI65C0XC8F4d0/XVb7MT7RScVRech7dX/4=
 gonum.org/v1/gonum v0.0.0-20181121035319-3f7ecaa7e8ca/go.mod h1:Y+Yx5eoAFn32cQvJDxZx5Dpnq+c3wtXuadVZAcxbbBo=
 gonum.org/v1/netlib v0.0.0-20181029234149-ec6d1f5cefe6/go.mod h1:wa6Ws7BG/ESfp6dHfk7C6KdzKA7wR7u/rKwOGE66zvw=
@@ -947,6 +956,7 @@ k8s.io/api v0.0.0-20181221193117-173ce66c1e39/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j
 k8s.io/api v0.0.0-20190126160303-ccdd560a045f/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/api v0.0.0-20190202010521-49be0e3344fe/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/api v0.0.0-20190205051315-663a691defed/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
+k8s.io/api v0.0.0-20190206011303-7d75eb91fcfa/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/apimachinery v0.0.0-20190119020841-d41becfba9ee/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/apimachinery v0.0.0-20190126155707-0e6dcdd1b5ce/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/apimachinery v0.0.0-20190201131811-df262fa1a1ba/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
@@ -959,6 +969,7 @@ k8s.io/utils v0.0.0-20190204185745-a326ccf4f02b/go.mod h1:8k8uAuAQ0rXslZKaEWd0c3
 layeh.com/radius v0.0.0-20190118135028-0f678f039617/go.mod h1:fywZKyu//X7iRzaxLgPWsvc0L26IUpVvE/aeIL2JtIQ=
 pack.ag/amqp v0.8.0/go.mod h1:4/cbmt4EJXSKlG6LCfWHoqmN0uFdy5i/+YFz+fTfhV4=
 pack.ag/amqp v0.10.2/go.mod h1:4/cbmt4EJXSKlG6LCfWHoqmN0uFdy5i/+YFz+fTfhV4=
+sigs.k8s.io/structured-merge-diff v0.0.0-20190130003954-e5e029740eb8/go.mod h1:wWxsB5ozmmv/SG7nM11ayaAW51xMvak/t1r0CSlcokI=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sourcegraph.com/sourcegraph/go-diff v0.5.0/go.mod h1:kuch7UrkMzY0X+p9CRK03kfuPQ2zzQcaEFbx8wA8rck=
 sourcegraph.com/sqs/pbtypes v0.0.0-20180604144634-d3ebe8f20ae4/go.mod h1:ketZ/q3QxT9HOBeFhu6RdvsftgpsbFHBF5Cas6cDKZ0=
