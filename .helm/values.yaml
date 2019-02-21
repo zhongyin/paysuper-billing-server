@@ -28,7 +28,7 @@ backend:
     - MONGO_USER
     - MONGO_PASSWORD
     - CENTRIFUGO_SECRET
-    - CARD_PAY_ORDER_CREATE_URL
+    - CARD_PAY_API_URL
     - BROKER_ADDRESS
     
 resources: {}
