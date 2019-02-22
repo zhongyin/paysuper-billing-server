@@ -14,7 +14,7 @@ env:
   - CARD_PAY_API_URL=https://sandbox.cardpay.com
 install: true
 script:
-- go test ./... -coverprofile=coverage.out -covermode=atomic
+- go test ./... -coverprofile=coverage.out -covermode=atomic -p=1
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 notifications:

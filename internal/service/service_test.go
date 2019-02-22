@@ -441,10 +441,6 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 	}
 
 	suite.db.Close()
-
-	if err := suite.log.Sync(); err != nil {
-		suite.FailNow("Logger sync failed", "%v", err)
-	}
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
