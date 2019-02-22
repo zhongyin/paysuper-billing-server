@@ -22,6 +22,9 @@ const (
 	paymentSystemErrorRequestPaymentMethodIsInvalid    = "payment method from request not match with value in order"
 	paymentSystemErrorRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in order"
 	paymentSystemErrorRequestTemporarySkipped          = "notification skipped with temporary status"
+
+	defaultHttpClientTimeout = 10
+	defaultResponseBodyLimit = 512
 )
 
 var paymentSystemHandlers = map[string]func(*paymentProcessor) PaymentSystem{
@@ -75,4 +78,25 @@ func (e *Error) Error() string {
 
 func (e *Error) Status() int32 {
 	return e.status
+}
+
+func (h *paymentProcessor) cutBytes(body []byte, limit int) string {
+	sBody := string(body)
+	r := []rune(sBody)
+
+	if len(r) >= limit {
+		return string(r[:limit])
+	}
+
+	return sBody
+}
+
+func (h *paymentProcessor) httpHeadersToString(headers map[string][]string) string {
+	var out string
+
+	for k, v := range headers {
+		out += k + ":" + v[0] + "\n "
+	}
+
+	return out
 }

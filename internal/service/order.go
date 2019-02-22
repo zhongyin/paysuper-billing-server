@@ -823,7 +823,7 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
-	pmOutAmount := o.PaymentMethodOutcomeAmount
+	pmOutAmount := o.ProjectIncomeAmount
 	mAccCur := o.Project.Merchant.Currency.CodeInt
 	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 
@@ -918,7 +918,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	amount, _ = v.Service.Convert(pmOutCur, mAccCur, commission.PMCommission)
 
 	o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
-	o.PaymentMethodOutcomeAmount = pmOutAmount
+	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
 
 	return nil
 }
@@ -1158,6 +1158,11 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 
 			order.PaymentRequisites[pkg.PaymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[pkg.PaymentCreateFieldPan])
 			order.PaymentRequisites[pkg.PaymentCreateFieldMonth] = v.data[pkg.PaymentCreateFieldMonth]
+
+			if len(v.data[pkg.PaymentCreateFieldYear]) < 3 {
+				v.data[pkg.PaymentCreateFieldYear] = strconv.Itoa(time.Now().UTC().Year())[:2] + v.data[pkg.PaymentCreateFieldYear]
+			}
+
 			order.PaymentRequisites[pkg.PaymentCreateFieldYear] = v.data[pkg.PaymentCreateFieldYear]
 		}
 
