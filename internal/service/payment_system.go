@@ -84,7 +84,7 @@ func (h *paymentProcessor) cutBytes(body []byte, limit int) string {
 	sBody := string(body)
 	r := []rune(sBody)
 
-	if len(r) >= limit {
+	if len(r) > limit {
 		return string(r[:limit])
 	}
 
