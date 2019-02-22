@@ -59,6 +59,7 @@ const (
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
 	orderGetSavedCardError                             = "saved card data with specified identifier not found"
 	paymentRequestIncorrect                            = "payment request has incorrect format"
+	paymentDuplicateError                              = "duplicate of payment create request. payment by order created early"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
@@ -118,7 +119,11 @@ type BinData struct {
 	BankPhone          string        `bson:"bank_phone"`
 }
 
-func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCreateRequest, rsp *billing.Order) error {
+func (s *Service) OrderCreateProcess(
+	ctx context.Context,
+	req *billing.OrderCreateRequest,
+	rsp *billing.Order,
+) error {
 	processor := &OrderCreateRequestProcessor{Service: s, request: req, checked: &orderCreateRequestProcessorChecked{}}
 
 	if err := processor.processProject(); err != nil {
@@ -474,6 +479,10 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 
 	if order == nil {
 		return order, errors.New(orderErrorNotFound)
+	}
+
+	if order.Status != constant.OrderStatusNew {
+		return order, errors.New(paymentDuplicateError)
 	}
 
 	return
