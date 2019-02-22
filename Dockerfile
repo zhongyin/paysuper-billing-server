@@ -10,7 +10,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . ./
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o $GOPATH/bin/paysuper_billing_service .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o ./bin/paysuper_billing_service .
+
+FROM alpine:3.9
+
+WORKDIR /application
+
+COPY --from=builder /application /application
 
 ENV MONGO_HOST = "localhost:3002"
 ENV MONGO_DB = "payone"
@@ -19,4 +25,4 @@ ENV MONGO_PASSWORD = ""
 ENV CENTRIFUGO_SECRET = "secret"
 ENV CARD_PAY_API_URL = "https://sandbox.cardpay.com"
 
-ENTRYPOINT $GOPATH/bin/paysuper_billing_service
+ENTRYPOINT /application/bin/paysuper_billing_service
