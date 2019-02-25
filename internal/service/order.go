@@ -481,10 +481,6 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 		return order, errors.New(orderErrorNotFound)
 	}
 
-	if order.Status != constant.OrderStatusNew {
-		return order, errors.New(paymentDuplicateError)
-	}
-
 	return
 }
 
