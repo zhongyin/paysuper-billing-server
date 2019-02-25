@@ -17,12 +17,4 @@ FROM alpine:3.9
 WORKDIR /application
 
 COPY --from=builder /application /application
-
-ENV MONGO_HOST = "localhost:3002"
-ENV MONGO_DB = "payone"
-ENV MONGO_USER = ""
-ENV MONGO_PASSWORD = ""
-ENV CENTRIFUGO_SECRET = "secret"
-ENV CARD_PAY_API_URL = "https://sandbox.cardpay.com"
-
 ENTRYPOINT /application/bin/paysuper_billing_service

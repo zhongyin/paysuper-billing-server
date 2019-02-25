@@ -1,7 +1,7 @@
 package pkg
 
 const (
-	ServiceName    = "p1paymentbillingservice"
+	ServiceName    = "p1paybilling"
 	ServiceVersion = "latest"
 
 	CollectionCurrency      = "currency"

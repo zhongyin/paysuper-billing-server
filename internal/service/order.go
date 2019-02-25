@@ -59,6 +59,7 @@ const (
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
 	orderGetSavedCardError                             = "saved card data with specified identifier not found"
 	paymentRequestIncorrect                            = "payment request has incorrect format"
+	paymentDuplicateError                              = "duplicate of payment create request. payment by order created early"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
@@ -118,7 +119,11 @@ type BinData struct {
 	BankPhone          string        `bson:"bank_phone"`
 }
 
-func (s *Service) OrderCreateProcess(ctx context.Context, req *billing.OrderCreateRequest, rsp *billing.Order) error {
+func (s *Service) OrderCreateProcess(
+	ctx context.Context,
+	req *billing.OrderCreateRequest,
+	rsp *billing.Order,
+) error {
 	processor := &OrderCreateRequestProcessor{Service: s, request: req, checked: &orderCreateRequestProcessorChecked{}}
 
 	if err := processor.processProject(); err != nil {
@@ -476,6 +481,10 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 		return order, errors.New(orderErrorNotFound)
 	}
 
+	if order.Status != constant.OrderStatusNew {
+		return order, errors.New(paymentDuplicateError)
+	}
+
 	return
 }
 
@@ -823,7 +832,7 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
-	pmOutAmount := o.PaymentMethodOutcomeAmount
+	pmOutAmount := o.ProjectIncomeAmount
 	mAccCur := o.Project.Merchant.Currency.CodeInt
 	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 
@@ -918,7 +927,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	amount, _ = v.Service.Convert(pmOutCur, mAccCur, commission.PMCommission)
 
 	o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
-	o.PaymentMethodOutcomeAmount = pmOutAmount
+	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
 
 	return nil
 }
@@ -1158,6 +1167,11 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 
 			order.PaymentRequisites[pkg.PaymentCreateFieldPan] = tools.MaskBankCardNumber(v.data[pkg.PaymentCreateFieldPan])
 			order.PaymentRequisites[pkg.PaymentCreateFieldMonth] = v.data[pkg.PaymentCreateFieldMonth]
+
+			if len(v.data[pkg.PaymentCreateFieldYear]) < 3 {
+				v.data[pkg.PaymentCreateFieldYear] = strconv.Itoa(time.Now().UTC().Year())[:2] + v.data[pkg.PaymentCreateFieldYear]
+			}
+
 			order.PaymentRequisites[pkg.PaymentCreateFieldYear] = v.data[pkg.PaymentCreateFieldYear]
 		}
 

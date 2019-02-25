@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -66,6 +67,15 @@ var (
 type cardPay struct {
 	processor *paymentProcessor
 	mu        sync.Mutex
+}
+
+type cardPayTransport struct {
+	Transport http.RoundTripper
+	processor *paymentProcessor
+}
+
+type cardPayContextKey struct {
+	name string
 }
 
 type cardPayToken struct {
@@ -208,7 +218,11 @@ func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err e
 
 	b, _ := json.Marshal(cpOrder)
 
-	client := tools.NewLoggedHttpClient(zap.S())
+	client := &http.Client{
+		Transport: &cardPayTransport{},
+		Timeout:   time.Duration(defaultHttpClientTimeout * time.Second),
+	}
+
 	req, err := http.NewRequest(cardPayPaths[action].method, qUrl, bytes.NewBuffer(b))
 
 	token := h.getToken(h.processor.order.PaymentMethod.Params.ExternalId)
@@ -588,13 +602,7 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 }
 
 func (h *cardPay) geBankCardCardPayOrder(cpo *CardPayOrder, requisites map[string]string) {
-	year := requisites[pkg.PaymentCreateFieldYear]
-
-	if len(year) < 3 {
-		year = strconv.Itoa(time.Now().UTC().Year())[:2] + year
-	}
-
-	expire := requisites[pkg.PaymentCreateFieldMonth] + "/" + year
+	expire := requisites[pkg.PaymentCreateFieldMonth] + "/" + requisites[pkg.PaymentCreateFieldYear]
 
 	cpo.CardAccount = &CardPayCardAccount{
 		Card: &CardPayBankCardAccount{
@@ -627,4 +635,69 @@ func (h *cardPay) checkCallbackRequestSignature(raw, signature string) error {
 	}
 
 	return nil
+}
+
+func (t *cardPayTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	ctx := context.WithValue(req.Context(), &cardPayContextKey{name: "CardPayRequestStart"}, time.Now())
+	req = req.WithContext(ctx)
+
+	var reqBody []byte
+
+	if req.Body != nil {
+		reqBody, _ = ioutil.ReadAll(req.Body)
+	}
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+
+	resp, err := t.transport().RoundTrip(req)
+	if err != nil {
+		return resp, err
+	}
+
+	t.log(req.URL.Path, req.Header, reqBody, resp)
+
+	return resp, err
+}
+
+func (t *cardPayTransport) transport() http.RoundTripper {
+	if t.Transport != nil {
+		return t.Transport
+	}
+
+	return http.DefaultTransport
+}
+
+func (t *cardPayTransport) log(reqUrl string, reqHeader http.Header, reqBody []byte, resp *http.Response) {
+	var resBody []byte
+
+	if resp.Body != nil {
+		resBody, _ = ioutil.ReadAll(resp.Body)
+	}
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(resBody))
+
+	cpOrder := &CardPayOrder{}
+	err := json.Unmarshal(reqBody, cpOrder)
+
+	if err != nil {
+		return
+	}
+
+	if cpOrder.CardAccount != nil {
+		cpOrder.CardAccount.Card.Pan = tools.MaskBankCardNumber(cpOrder.CardAccount.Card.Pan)
+		cpOrder.CardAccount.Card.Cvv = "***"
+	}
+
+	request, err := json.Marshal(cpOrder)
+
+	if err != nil {
+		return
+	}
+
+	zap.L().Info(
+		reqUrl,
+		zap.String("request_headers", t.processor.httpHeadersToString(reqHeader)),
+		zap.String("request_body", string(request)),
+		zap.Int("response_status", resp.StatusCode),
+		zap.String("response_headers", t.processor.httpHeadersToString(resp.Header)),
+		zap.String("response_body", t.processor.cutBytes(resBody, defaultResponseBodyLimit)),
+	)
 }
