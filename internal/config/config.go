@@ -6,6 +6,7 @@ import (
 
 type CacheConfig struct {
 	CurrencyTimeout             int64 `envconfig:"CACHE_CURRENCY_TIMEOUT" default:"15552000"`
+	CountryTimeout              int64 `envconfig:"CACHE_COUNTRY_TIMEOUT" default:"15552000"`
 	ProjectTimeout              int64 `envconfig:"CACHE_PROJECT_TIMEOUT" default:"10800"`
 	CurrencyRateTimeout         int64 `envconfig:"CACHE_CURRENCY_RATE_TIMEOUT" default:"86400"`
 	VatTimeout                  int64 `envconfig:"CACHE_VAT_TIMEOUT" default:"2592000"`

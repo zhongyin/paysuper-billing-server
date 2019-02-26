@@ -12,7 +12,6 @@ It has these top-level messages:
 	OrderCreateRequest
 	Project
 	ProjectOrder
-	OnboardingRequest
 	MerchantContact
 	MerchantContactTechnical
 	MerchantContactAuthorized

@@ -9,6 +9,7 @@ import (
 
 type Project Currency
 type PaymentMethod Currency
+type Country Currency
 
 func newProjectHandler(svc *Service) Cacher {
 	c := &Project{svc: svc}
@@ -109,6 +110,45 @@ func (s *Service) GetPaymentMethodById(id string) (*billing.PaymentMethod, error
 
 	if !ok {
 		return nil, fmt.Errorf(errorNotFound, pkg.CollectionPaymentMethod)
+	}
+
+	return rec, nil
+}
+
+func newCountryHandler(svc *Service) Cacher {
+	c := &Country{svc: svc}
+
+	return c
+}
+
+func (h *Country) setCache(recs []interface{}) {
+	h.svc.countryCache = make(map[string]*billing.Country, len(recs))
+
+	for _, r := range recs {
+		country := r.(*billing.Country)
+		h.svc.countryCache[country.CodeA2] = country
+	}
+}
+
+func (h *Country) getAll() (recs []interface{}, err error) {
+	var data []*billing.Country
+
+	err = h.svc.db.Collection(pkg.CollectionCountry).Find(bson.M{"is_active": true}).All(&data)
+
+	if data != nil {
+		for _, v := range data {
+			recs = append(recs, v)
+		}
+	}
+
+	return
+}
+
+func (s *Service) GetCountryByCodeA2(id string) (*billing.Country, error) {
+	rec, ok := s.countryCache[id]
+
+	if !ok {
+		return nil, fmt.Errorf(errorNotFound, pkg.CollectionCountry)
 	}
 
 	return rec, nil

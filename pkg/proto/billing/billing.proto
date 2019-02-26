@@ -131,46 +131,6 @@ message ProjectOrder {
     Merchant merchant = 12;
 }
 
-message OnboardingRequest {
-    //@inject_tag: validate:"required"
-    string name = 4;
-    string alternative_name = 5;
-    //@inject_tag: validate:"required"
-    string website = 6;
-    //@inject_tag: validate:"required,len=2"
-    string country = 7;
-    //@inject_tag: validate:"required"
-    string state = 8;
-    //@inject_tag: validate:"required"
-    string zip = 9;
-    //@inject_tag: validate:"required"
-    string city = 10;
-    //@inject_tag: validate:"required"
-    string address = 11;
-    string address_additional = 12;
-    //@inject_tag: validate:"required"
-    string registration_number = 13;
-    //@inject_tag: validate:"required"
-    string tax_id = 14;
-    // @inject_tag: validate:"required,dive"
-    MerchantContact contacts = 15;
-
-    // @inject_tag: json:"banking" validate:"required,dive"
-    message Banking {
-        //@inject_tag: validate:"required,len=3"
-        string currency = 1;
-        //@inject_tag: validate:"required"
-        string name = 2;
-        //@inject_tag: validate:"required"
-        string address = 3;
-        //@inject_tag: validate:"required"
-        string account_number = 4;
-        //@inject_tag: validate:"required"
-        string swift = 5;
-        string details = 6;
-    }
-}
-
 message MerchantContact {
     // @inject_tag: validate:"required,dive"
     MerchantContactAuthorized authorized = 1;
