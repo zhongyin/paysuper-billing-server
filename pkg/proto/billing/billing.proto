@@ -131,25 +131,56 @@ message ProjectOrder {
     Merchant merchant = 12;
 }
 
+message MerchantContact {
+    MerchantContactAuthorized authorized = 1;
+    MerchantContactAuthorized technical = 2;
+}
+
+message MerchantContactTechnical {
+    string name = 1;
+    string email = 2;
+    string phone = 3;
+}
+
+message MerchantContactAuthorized {
+    string name = 1;
+    string email = 2;
+    string phone = 3;
+    string position = 4;
+}
+
+message MerchantBanking {
+    Currency currency = 1;
+    string name = 2;
+    string address = 3;
+    string account_number = 4;
+    string swift = 5;
+    string details = 6;
+}
+
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
     // @inject_tag: bson:"external_id"
     string external_id = 2;
     // @inject_tag: bson:"email"
-    string email = 3; // merchant email
-    // @inject_tag: bson:"name"
-    string name = 4;
-    // @inject_tag: bson:"country"
-    Country country = 5;
-    // @inject_tag: bson:"accounting_period"
-    string accounting_period = 6;
-    // @inject_tag: bson:"currency"
-    Currency currency = 7;
-    // @inject_tag: bson:"is_vat_enabled"
-    bool is_vat_enabled = 8;
-    // @inject_tag: bson:"is_commission_to_user_enabled"
-    bool is_commission_to_user_enabled = 9;
+    string account_email = 3; // merchant email
+
+    string company_name = 4;
+    string alternative_name = 5;
+    string website = 6;
+    Country country = 7;
+    string state = 8;
+    string zip = 9;
+    string city = 10;
+    string address = 11;
+    string address_additional = 12;
+    string registration_number = 13;
+    string tax_id = 14;
+
+    MerchantContact contacts = 15;
+    MerchantBanking banking = 16;
+
     // @inject_tag: bson:"status"
     int32 status = 10;
     // @inject_tag: bson:"created_at"
