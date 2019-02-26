@@ -268,9 +268,36 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		IsActive: true,
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  usd,
+			Id:           bson.NewObjectId().Hex(),
+			ExternalId:   bson.NewObjectId().Hex(),
+			AccountEmail: "test@unit.test",
+			CompanyName:  "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: usd,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -331,9 +358,36 @@ func (suite *OrderTestSuite) SetupTest() {
 			"US": {FixedPackage: []*billing.FixedPackage{}},
 		},
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  amd,
+			Id:           bson.NewObjectId().Hex(),
+			ExternalId:   bson.NewObjectId().Hex(),
+			AccountEmail: "test@unit.test",
+			CompanyName:  "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: amd,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -359,9 +413,36 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		IsActive: true,
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  uah,
+			Id:           bson.NewObjectId().Hex(),
+			ExternalId:   bson.NewObjectId().Hex(),
+			AccountEmail: "test@unit.test",
+			CompanyName:  "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: uah,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -387,9 +468,36 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		IsActive: true,
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  uah,
+			Id:           bson.NewObjectId().Hex(),
+			ExternalId:   bson.NewObjectId().Hex(),
+			AccountEmail: "test@unit.test",
+			CompanyName:  "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: uah,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              false,
 			IsCommissionToUserEnabled: false,
 			Status:                    1,
@@ -1964,7 +2072,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
 	err = processor.processProjectOrderId()
 	assert.Nil(suite.T(), err)
 
-	processor.checked.project.Merchant.Currency = &billing.Currency{
+	processor.checked.project.Merchant.Banking.Currency = &billing.Currency{
 		CodeInt:  980,
 		CodeA3:   "UAH",
 		Name:     &billing.Name{Ru: "Украинская гривна", En: "Ukrainian Hryvnia"},
@@ -4222,7 +4330,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), vat)
 
-	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.Currency.CodeInt]
+	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.Banking.Currency.CodeInt]
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), rate)
 

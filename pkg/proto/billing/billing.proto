@@ -131,21 +131,68 @@ message ProjectOrder {
     Merchant merchant = 12;
 }
 
+message OnboardingRequest {
+    //@inject_tag: validate:"required"
+    string name = 4;
+    string alternative_name = 5;
+    //@inject_tag: validate:"required"
+    string website = 6;
+    //@inject_tag: validate:"required,len=2"
+    string country = 7;
+    //@inject_tag: validate:"required"
+    string state = 8;
+    //@inject_tag: validate:"required"
+    string zip = 9;
+    //@inject_tag: validate:"required"
+    string city = 10;
+    //@inject_tag: validate:"required"
+    string address = 11;
+    string address_additional = 12;
+    //@inject_tag: validate:"required"
+    string registration_number = 13;
+    //@inject_tag: validate:"required"
+    string tax_id = 14;
+    // @inject_tag: validate:"required,dive"
+    MerchantContact contacts = 15;
+
+    // @inject_tag: json:"banking" validate:"required,dive"
+    message Banking {
+        //@inject_tag: validate:"required,len=3"
+        string currency = 1;
+        //@inject_tag: validate:"required"
+        string name = 2;
+        //@inject_tag: validate:"required"
+        string address = 3;
+        //@inject_tag: validate:"required"
+        string account_number = 4;
+        //@inject_tag: validate:"required"
+        string swift = 5;
+        string details = 6;
+    }
+}
+
 message MerchantContact {
+    // @inject_tag: validate:"required,dive"
     MerchantContactAuthorized authorized = 1;
-    MerchantContactAuthorized technical = 2;
+    MerchantContactTechnical technical = 2;
 }
 
 message MerchantContactTechnical {
     string name = 1;
+    // @inject_tag: validate:"omitempty,email"
     string email = 2;
+    // @inject_tag: validate:"omitempty,phone"
     string phone = 3;
 }
 
 message MerchantContactAuthorized {
+    // @inject_tag: validate:"required"
     string name = 1;
+    // @inject_tag: validate:"required,email"
     string email = 2;
+    // @inject_tag: validate:"required,phone"
     string phone = 3;
+    // @inject_tag: validate:"required"
     string position = 4;
 }
 
@@ -163,9 +210,8 @@ message Merchant {
     string id = 1;
     // @inject_tag: bson:"external_id"
     string external_id = 2;
-    // @inject_tag: bson:"email"
-    string account_email = 3; // merchant email
-
+    // @inject_tag: bson:"account_email"
+    string account_email = 3;
     string company_name = 4;
     string alternative_name = 5;
     string website = 6;
@@ -177,18 +223,20 @@ message Merchant {
     string address_additional = 12;
     string registration_number = 13;
     string tax_id = 14;
-
     MerchantContact contacts = 15;
     MerchantBanking banking = 16;
-
     // @inject_tag: bson:"status"
-    int32 status = 10;
+    int32 status = 17;
     // @inject_tag: bson:"created_at"
-    google.protobuf.Timestamp created_at = 11;
+    google.protobuf.Timestamp created_at = 18;
     // @inject_tag: bson:"updated_at"
-    google.protobuf.Timestamp updated_at = 12;
+    google.protobuf.Timestamp updated_at = 19;
     // @inject_tag: bson:"first_payment_at"
-    google.protobuf.Timestamp first_payment_at = 13;
+    google.protobuf.Timestamp first_payment_at = 20;
+    // @inject_tag: json:"-"
+    bool is_vat_enabled = 21;
+    // @inject_tag: json:"-"
+    bool is_commission_to_user_enabled = 22;
 }
 
 message Order {

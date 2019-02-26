@@ -520,8 +520,12 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		return nil, errors.New(orderErrorDynamicRedirectUrlsNotAllowed)
 	}
 
-	if v.checked.currency.CodeInt != v.checked.project.Merchant.Currency.CodeInt {
-		amount, err := v.Service.Convert(v.checked.currency.CodeInt, v.checked.project.Merchant.Currency.CodeInt, v.request.Amount)
+	if v.checked.currency.CodeInt != v.checked.project.Merchant.Banking.Currency.CodeInt {
+		amount, err := v.Service.Convert(
+			v.checked.currency.CodeInt,
+			v.checked.project.Merchant.Banking.Currency.CodeInt,
+			v.request.Amount,
+		)
 
 		if err != nil {
 			return nil, err
@@ -829,7 +833,7 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
 	pmOutAmount := o.ProjectIncomeAmount
-	mAccCur := o.Project.Merchant.Currency.CodeInt
+	mAccCur := o.Project.Merchant.Banking.Currency.CodeInt
 	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 
 	// if merchant enable VAT calculation then we're need to calculate VAT for payer
@@ -1254,7 +1258,7 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 
 	order.AmountOutMerchantAccountingCurrency, err = v.service.Convert(
 		order.PaymentMethodIncomeCurrency.CodeInt,
-		order.Project.Merchant.Currency.CodeInt,
+		order.Project.Merchant.Banking.Currency.CodeInt,
 		order.PaymentMethodOutcomeAmount,
 	)
 
@@ -1264,7 +1268,7 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 			[]interface{}{
 				"error", err.Error(),
 				"from", order.PaymentMethodIncomeCurrency.CodeInt,
-				"to", order.Project.Merchant.Currency.CodeInt,
+				"to", order.Project.Merchant.Banking.Currency.CodeInt,
 				"order_id", order.Id,
 			},
 		)
@@ -1284,7 +1288,7 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 			[]interface{}{
 				"error", err.Error(),
 				"from", order.PaymentMethodIncomeCurrency.CodeInt,
-				"to", order.Project.Merchant.Currency.CodeInt,
+				"to", order.Project.Merchant.Banking.Currency.CodeInt,
 				"order_id", order.Id,
 			},
 		)

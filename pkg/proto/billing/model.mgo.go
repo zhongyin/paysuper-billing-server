@@ -52,19 +52,28 @@ type MgoProject struct {
 }
 
 type MgoMerchant struct {
-	Id                        bson.ObjectId `bson:"_id"`
-	ExternalId                string        `bson:"external_id"`
-	Email                     string        `bson:"email"`
-	Name                      string        `bson:"name"`
-	Country                   *Country      `bson:"country"`
-	AccountingPeriod          string        `bson:"accounting_period"`
-	Currency                  *Currency     `bson:"currency"`
-	IsVatEnabled              bool          `bson:"is_vat_enabled"`
-	IsCommissionToUserEnabled bool          `bson:"is_commission_to_user_enabled"`
-	Status                    int32         `bson:"status"`
-	CreatedAt                 time.Time     `bson:"created_at"`
-	UpdatedAt                 time.Time     `bson:"updated_at"`
-	FirstPaymentAt            time.Time     `bson:"first_payment_at"`
+	Id                        bson.ObjectId
+	ExternalId                string
+	AccountEmail              string
+	CompanyName               string
+	AlternativeName           string
+	Website                   string
+	Country                   *Country
+	State                     string
+	Zip                       string
+	City                      string
+	Address                   string
+	AddressAdditional         string
+	RegistrationNumber        string
+	TaxId                     string
+	Contacts                  *MerchantContact
+	Banking                   *MerchantBanking
+	Status                    int32
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	FirstPaymentAt            time.Time
+	IsVatEnabled              bool
+	IsCommissionToUserEnabled bool
 }
 
 type MgoCurrencyRate struct {
@@ -341,14 +350,23 @@ func (m *Project) GetBSON() (interface{}, error) {
 		st.Merchant = &MgoMerchant{
 			Id:                        bson.ObjectIdHex(m.Merchant.Id),
 			ExternalId:                m.Merchant.ExternalId,
-			Email:                     m.Merchant.Email,
-			Name:                      m.Merchant.Name,
+			AccountEmail:              m.Merchant.AccountEmail,
+			CompanyName:               m.Merchant.CompanyName,
+			AlternativeName:           m.Merchant.AlternativeName,
+			Website:                   m.Merchant.Website,
 			Country:                   m.Merchant.Country,
-			AccountingPeriod:          m.Merchant.AccountingPeriod,
-			Currency:                  m.Merchant.Currency,
+			State:                     m.Merchant.State,
+			Zip:                       m.Merchant.Zip,
+			City:                      m.Merchant.City,
+			Address:                   m.Merchant.Address,
+			AddressAdditional:         m.Merchant.AddressAdditional,
+			RegistrationNumber:        m.Merchant.RegistrationNumber,
+			TaxId:                     m.Merchant.TaxId,
+			Contacts:                  m.Merchant.Contacts,
+			Banking:                   m.Merchant.Banking,
+			Status:                    m.Merchant.Status,
 			IsVatEnabled:              m.Merchant.IsVatEnabled,
 			IsCommissionToUserEnabled: m.Merchant.IsCommissionToUserEnabled,
-			Status:                    m.Merchant.Status,
 		}
 
 		if m.Merchant.CreatedAt != nil {
@@ -408,14 +426,23 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 		m.Merchant = &Merchant{
 			Id:                        decoded.Merchant.Id.Hex(),
 			ExternalId:                decoded.Merchant.ExternalId,
-			Email:                     decoded.Merchant.Email,
-			Name:                      decoded.Merchant.Name,
+			AccountEmail:              decoded.Merchant.AccountEmail,
+			CompanyName:               decoded.Merchant.CompanyName,
+			AlternativeName:           decoded.Merchant.AlternativeName,
+			Website:                   decoded.Merchant.Website,
 			Country:                   decoded.Merchant.Country,
-			AccountingPeriod:          decoded.Merchant.AccountingPeriod,
-			Currency:                  decoded.Merchant.Currency,
+			State:                     decoded.Merchant.State,
+			Zip:                       decoded.Merchant.Zip,
+			City:                      decoded.Merchant.City,
+			Address:                   decoded.Merchant.Address,
+			AddressAdditional:         decoded.Merchant.AddressAdditional,
+			RegistrationNumber:        decoded.Merchant.RegistrationNumber,
+			TaxId:                     decoded.Merchant.TaxId,
+			Contacts:                  decoded.Merchant.Contacts,
+			Banking:                   decoded.Merchant.Banking,
+			Status:                    decoded.Merchant.Status,
 			IsVatEnabled:              decoded.Merchant.IsVatEnabled,
 			IsCommissionToUserEnabled: decoded.Merchant.IsCommissionToUserEnabled,
-			Status:                    decoded.Merchant.Status,
 		}
 
 		m.Merchant.CreatedAt, err = ptypes.TimestampProto(decoded.Merchant.CreatedAt)
@@ -651,14 +678,23 @@ func (m *Order) GetBSON() (interface{}, error) {
 			Merchant: &MgoMerchant{
 				Id:                        bson.ObjectIdHex(m.Project.Merchant.Id),
 				ExternalId:                m.Project.Merchant.ExternalId,
-				Email:                     m.Project.Merchant.Email,
-				Name:                      m.Project.Merchant.Name,
+				AccountEmail:              m.Project.Merchant.AccountEmail,
+				CompanyName:               m.Project.Merchant.CompanyName,
+				AlternativeName:           m.Project.Merchant.AlternativeName,
+				Website:                   m.Project.Merchant.Website,
 				Country:                   m.Project.Merchant.Country,
-				AccountingPeriod:          m.Project.Merchant.AccountingPeriod,
-				Currency:                  m.Project.Merchant.Currency,
+				State:                     m.Project.Merchant.State,
+				Zip:                       m.Project.Merchant.Zip,
+				City:                      m.Project.Merchant.City,
+				Address:                   m.Project.Merchant.Address,
+				AddressAdditional:         m.Project.Merchant.AddressAdditional,
+				RegistrationNumber:        m.Project.Merchant.RegistrationNumber,
+				TaxId:                     m.Project.Merchant.TaxId,
+				Contacts:                  m.Project.Merchant.Contacts,
+				Banking:                   m.Project.Merchant.Banking,
+				Status:                    m.Project.Merchant.Status,
 				IsVatEnabled:              m.Project.Merchant.IsVatEnabled,
 				IsCommissionToUserEnabled: m.Project.Merchant.IsCommissionToUserEnabled,
-				Status:                    m.Project.Merchant.Status,
 			},
 		},
 		ProjectOrderId:                          m.ProjectOrderId,
@@ -816,14 +852,23 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 		Merchant: &Merchant{
 			Id:                        decoded.Project.Merchant.Id.Hex(),
 			ExternalId:                decoded.Project.Merchant.ExternalId,
-			Email:                     decoded.Project.Merchant.Email,
-			Name:                      decoded.Project.Merchant.Name,
+			AccountEmail:              decoded.Project.Merchant.AccountEmail,
+			CompanyName:               decoded.Project.Merchant.CompanyName,
+			AlternativeName:           decoded.Project.Merchant.AlternativeName,
+			Website:                   decoded.Project.Merchant.Website,
 			Country:                   decoded.Project.Merchant.Country,
-			AccountingPeriod:          decoded.Project.Merchant.AccountingPeriod,
-			Currency:                  decoded.Project.Merchant.Currency,
+			State:                     decoded.Project.Merchant.State,
+			Zip:                       decoded.Project.Merchant.Zip,
+			City:                      decoded.Project.Merchant.City,
+			Address:                   decoded.Project.Merchant.Address,
+			AddressAdditional:         decoded.Project.Merchant.AddressAdditional,
+			RegistrationNumber:        decoded.Project.Merchant.RegistrationNumber,
+			TaxId:                     decoded.Project.Merchant.TaxId,
+			Contacts:                  decoded.Project.Merchant.Contacts,
+			Banking:                   decoded.Project.Merchant.Banking,
+			Status:                    decoded.Project.Merchant.Status,
 			IsVatEnabled:              decoded.Project.Merchant.IsVatEnabled,
 			IsCommissionToUserEnabled: decoded.Project.Merchant.IsCommissionToUserEnabled,
-			Status:                    decoded.Project.Merchant.Status,
 		},
 	}
 
@@ -1138,14 +1183,23 @@ func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
 func (m *Merchant) GetBSON() (interface{}, error) {
 	st := &MgoMerchant{
 		ExternalId:                m.ExternalId,
-		Email:                     m.Email,
-		Name:                      m.Name,
+		AccountEmail:              m.AccountEmail,
+		CompanyName:               m.CompanyName,
+		AlternativeName:           m.AlternativeName,
+		Website:                   m.Website,
 		Country:                   m.Country,
-		AccountingPeriod:          m.AccountingPeriod,
-		Currency:                  m.Currency,
+		State:                     m.State,
+		Zip:                       m.Zip,
+		City:                      m.City,
+		Address:                   m.Address,
+		AddressAdditional:         m.AddressAdditional,
+		RegistrationNumber:        m.RegistrationNumber,
+		TaxId:                     m.TaxId,
+		Contacts:                  m.Contacts,
+		Banking:                   m.Banking,
+		Status:                    m.Status,
 		IsVatEnabled:              m.IsVatEnabled,
 		IsCommissionToUserEnabled: m.IsCommissionToUserEnabled,
-		Status:                    m.Status,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1205,14 +1259,23 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 
 	m.Id = decoded.Id.Hex()
 	m.ExternalId = decoded.ExternalId
-	m.Email = decoded.Email
-	m.Name = decoded.Name
+	m.AccountEmail = decoded.AccountEmail
+	m.CompanyName = decoded.CompanyName
+	m.AlternativeName = decoded.AlternativeName
+	m.Website = decoded.Website
 	m.Country = decoded.Country
-	m.AccountingPeriod = decoded.AccountingPeriod
-	m.Currency = decoded.Currency
+	m.State = decoded.State
+	m.Zip = decoded.Zip
+	m.City = decoded.City
+	m.Address = decoded.Address
+	m.AddressAdditional = decoded.AddressAdditional
+	m.RegistrationNumber = decoded.RegistrationNumber
+	m.TaxId = decoded.TaxId
+	m.Contacts = decoded.Contacts
+	m.Banking = decoded.Banking
+	m.Status = decoded.Status
 	m.IsVatEnabled = decoded.IsVatEnabled
 	m.IsCommissionToUserEnabled = decoded.IsCommissionToUserEnabled
-	m.Status = decoded.Status
 
 	m.FirstPaymentAt, err = ptypes.TimestampProto(decoded.FirstPaymentAt)
 
