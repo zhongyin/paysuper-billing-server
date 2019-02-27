@@ -16,6 +16,7 @@ It has these top-level messages:
 	MerchantContactTechnical
 	MerchantContactAuthorized
 	MerchantBanking
+	MerchantLastPayout
 	Merchant
 	Order
 	Currency

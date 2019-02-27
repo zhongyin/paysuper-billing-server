@@ -165,6 +165,11 @@ message MerchantBanking {
     string details = 6;
 }
 
+message MerchantLastPayout {
+    google.protobuf.Timestamp date = 1;
+    double amount = 2;
+}
+
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
@@ -197,6 +202,11 @@ message Merchant {
     bool is_vat_enabled = 21;
     // @inject_tag: json:"-"
     bool is_commission_to_user_enabled = 22;
+    // @inject_tag: json:"-"
+    bool has_merchant_signature = 23;
+    // @inject_tag: json:"-"
+    bool has_psp_signature = 24;
+    MerchantLastPayout last_payout = 25;
 }
 
 message Order {

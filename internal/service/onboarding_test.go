@@ -139,6 +139,12 @@ func (suite *OnboardingTestSuite) SetupTest() {
 		},
 	}
 
+	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -480))
+
+	if err != nil {
+		suite.FailNow("Generate merchant date failed", "%v", err)
+	}
+
 	merchant := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
 		ExternalId:   bson.NewObjectId().Hex(),
@@ -167,7 +173,18 @@ func (suite *OnboardingTestSuite) SetupTest() {
 		IsVatEnabled:              true,
 		IsCommissionToUserEnabled: true,
 		Status:                    pkg.MerchantStatusDraft,
+		LastPayout:                &billing.MerchantLastPayout{
+			Date: date,
+			Amount: 10000,
+		},
 	}
+
+	date, err = ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
+
+	if err != nil {
+		suite.FailNow("Generate merchant date failed", "%v", err)
+	}
+
 	merchantAgreement := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
 		ExternalId:   bson.NewObjectId().Hex(),
@@ -196,9 +213,46 @@ func (suite *OnboardingTestSuite) SetupTest() {
 		IsVatEnabled:              true,
 		IsCommissionToUserEnabled: true,
 		Status:                    pkg.MerchantStatusAgreementRequested,
+		LastPayout:                &billing.MerchantLastPayout{
+			Date: date,
+			Amount: 10000,
+		},
+	}
+	merchant1 := &billing.Merchant{
+		Id:           bson.NewObjectId().Hex(),
+		ExternalId:   bson.NewObjectId().Hex(),
+		AccountEmail: "test@unit.test",
+		CompanyName:  "merchant1",
+		Country:      country,
+		Zip:          "190000",
+		City:         "St.Petersburg",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "123456789",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "123456789",
+			},
+		},
+		Banking: &billing.MerchantBanking{
+			Currency: rub,
+			Name:     "Bank name",
+		},
+		IsVatEnabled:              true,
+		IsCommissionToUserEnabled: true,
+		Status:                    pkg.MerchantStatusAgreementRequested,
+		LastPayout:                &billing.MerchantLastPayout{
+			Date: date,
+			Amount: 100000,
+		},
 	}
 
-	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement}...)
+	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement, merchant1}...)
 
 	if err != nil {
 		suite.FailNow("Insert merchant test data failed", "%v", err)
@@ -542,4 +596,84 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_CreateMerchant_C
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), merchantErrorCurrencyNotFound, err.Error())
 	assert.Len(suite.T(), rsp.Id, 0)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
+	req := &grpc.FindByIdRequest{
+		Id: suite.merchant.Id,
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.Id) > 0)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp.Id)
+	assert.Equal(suite.T(), suite.merchant.ExternalId, rsp.ExternalId)
+	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.CompanyName)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
+	req := &grpc.FindByIdRequest{
+		Id: bson.NewObjectId().Hex(),
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), rsp.Id, 0)
+	assert.Equal(suite.T(), ErrMerchantNotFound, err)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantByExternalId_Ok() {
+	req := &grpc.FindByIdRequest{
+		Id: suite.merchant.ExternalId,
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.GetMerchantByExternalId(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.Id) > 0)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp.Id)
+	assert.Equal(suite.T(), suite.merchant.ExternalId, rsp.ExternalId)
+	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.CompanyName)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantByExternalId_Error() {
+	req := &grpc.FindByIdRequest{
+		Id: bson.NewObjectId().Hex(),
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.GetMerchantByExternalId(context.TODO(), req, rsp)
+
+	assert.Error(suite.T(), err)
+	assert.Len(suite.T(), rsp.Id, 0)
+	assert.Equal(suite.T(), ErrMerchantNotFound, err)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_EmptyQuery_Ok() {
+	req := &grpc.MerchantListingRequest{}
+	rsp := &grpc.Merchants{}
+
+	err := suite.service.ListMerchants(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Len(suite.T(), rsp.Merchants, 3)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp.Merchants[0].Id)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_NameQuery_Ok() {
+	req := &grpc.MerchantListingRequest{
+		Name: "test",
+	}
+	rsp := &grpc.Merchants{}
+
+	err := suite.service.ListMerchants(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Len(suite.T(), rsp.Merchants, 2)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp.Merchants[0].Id)
 }

@@ -51,29 +51,37 @@ type MgoProject struct {
 	PaymentMethods           map[string]*ProjectPaymentMethod `bson:"payment_methods" json:"payment_methods,omitempty"`
 }
 
+type MgoMerchantLastPayout struct {
+	Date   time.Time `bson:"date"`
+	Amount float64   `bson:"amount"`
+}
+
 type MgoMerchant struct {
-	Id                        bson.ObjectId    `bson:"_id"`
-	ExternalId                string           `bson:"external_id"`
-	AccountEmail              string           `bson:"account_email"`
-	CompanyName               string           `bson:"name"`
-	AlternativeName           string           `bson:"alternative_name"`
-	Website                   string           `bson:"website"`
-	Country                   *Country         `bson:"country"`
-	State                     string           `bson:"state"`
-	Zip                       string           `bson:"zip"`
-	City                      string           `bson:"city"`
-	Address                   string           `bson:"address"`
-	AddressAdditional         string           `bson:"address_additional"`
-	RegistrationNumber        string           `bson:"registration_number"`
-	TaxId                     string           `bson:"tax_id"`
-	Contacts                  *MerchantContact `bson:"contacts"`
-	Banking                   *MerchantBanking `bson:"banking"`
-	Status                    int32            `bson:"status"`
-	CreatedAt                 time.Time        `bson:"created_at"`
-	UpdatedAt                 time.Time        `bson:"updated_at"`
-	FirstPaymentAt            time.Time        `bson:"first_payment_at"`
-	IsVatEnabled              bool             `bson:"is_vat_enabled"`
-	IsCommissionToUserEnabled bool             `bson:"is_commission_to_user_enabled"`
+	Id                        bson.ObjectId          `bson:"_id"`
+	ExternalId                string                 `bson:"external_id"`
+	AccountEmail              string                 `bson:"account_email"`
+	CompanyName               string                 `bson:"name"`
+	AlternativeName           string                 `bson:"alternative_name"`
+	Website                   string                 `bson:"website"`
+	Country                   *Country               `bson:"country"`
+	State                     string                 `bson:"state"`
+	Zip                       string                 `bson:"zip"`
+	City                      string                 `bson:"city"`
+	Address                   string                 `bson:"address"`
+	AddressAdditional         string                 `bson:"address_additional"`
+	RegistrationNumber        string                 `bson:"registration_number"`
+	TaxId                     string                 `bson:"tax_id"`
+	Contacts                  *MerchantContact       `bson:"contacts"`
+	Banking                   *MerchantBanking       `bson:"banking"`
+	Status                    int32                  `bson:"status"`
+	CreatedAt                 time.Time              `bson:"created_at"`
+	UpdatedAt                 time.Time              `bson:"updated_at"`
+	FirstPaymentAt            time.Time              `bson:"first_payment_at"`
+	IsVatEnabled              bool                   `bson:"is_vat_enabled"`
+	IsCommissionToUserEnabled bool                   `bson:"is_commission_to_user_enabled"`
+	HasMerchantSignature      bool                   `bson:"has_merchant_signature"`
+	HasPspSignature           bool                   `bson:"has_psp_signature"`
+	LastPayout                *MgoMerchantLastPayout `bson:"last_payout"`
 }
 
 type MgoCurrencyRate struct {
@@ -1200,6 +1208,8 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		Status:                    m.Status,
 		IsVatEnabled:              m.IsVatEnabled,
 		IsCommissionToUserEnabled: m.IsCommissionToUserEnabled,
+		HasMerchantSignature:      m.HasMerchantSignature,
+		HasPspSignature:           m.HasPspSignature,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1246,6 +1256,20 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		st.UpdatedAt = time.Now()
 	}
 
+	if m.LastPayout != nil {
+		st.LastPayout = &MgoMerchantLastPayout{
+			Amount: m.LastPayout.Amount,
+		}
+
+		t, err := ptypes.Timestamp(m.LastPayout.Date)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.LastPayout.Date = t
+	}
+
 	return st, nil
 }
 
@@ -1276,6 +1300,8 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	m.Status = decoded.Status
 	m.IsVatEnabled = decoded.IsVatEnabled
 	m.IsCommissionToUserEnabled = decoded.IsCommissionToUserEnabled
+	m.HasMerchantSignature = decoded.HasMerchantSignature
+	m.HasPspSignature = decoded.HasPspSignature
 
 	m.FirstPaymentAt, err = ptypes.TimestampProto(decoded.FirstPaymentAt)
 
@@ -1293,6 +1319,18 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 
 	if err != nil {
 		return err
+	}
+
+	if decoded.LastPayout != nil {
+		m.LastPayout = &MerchantLastPayout{
+			Amount: decoded.LastPayout.Amount,
+		}
+
+		m.LastPayout.Date, err = ptypes.TimestampProto(decoded.LastPayout.Date)
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

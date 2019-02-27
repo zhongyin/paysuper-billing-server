@@ -17,8 +17,10 @@ service BillingService {
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
     rpc GetMerchantById(FindByIdRequest) returns (billing.Merchant) {}
-    rpc ListMerchants(CountParams) returns (Merchants) {}
+    rpc GetMerchantByExternalId(FindByIdRequest) returns (billing.Merchant) {}
+    rpc ListMerchants(MerchantListingRequest) returns (Merchants) {}
     rpc ChangeMerchant(OnboardingRequest) returns (billing.Merchant) {}
+    rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
 }
 
 message EmptyRequest {}
@@ -129,11 +131,22 @@ message FindByIdRequest {
     string id = 1;
 }
 
-message CountParams {
-    int32 limit = 1;
-    int32 offset = 2;
+message MerchantListingRequest {
+    string name = 1;
+    bool only_with_agreement = 2;
+    int64 last_payout_date_from = 3;
+    int64 last_payout_date_to = 4;
+    double last_payout_amount = 5;
+    repeated string sort = 6;
+    int32 limit = 7;
+    int32 offset = 8;
 }
 
 message Merchants {
     repeated billing.Merchant merchants = 1;
+}
+
+message MerchantChangeStatusRequest {
+    string id = 1;
+    int32 status = 2;
 }
