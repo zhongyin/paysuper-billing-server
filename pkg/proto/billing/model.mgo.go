@@ -52,28 +52,28 @@ type MgoProject struct {
 }
 
 type MgoMerchant struct {
-	Id                        bson.ObjectId
-	ExternalId                string
-	AccountEmail              string
-	CompanyName               string
-	AlternativeName           string
-	Website                   string
-	Country                   *Country
-	State                     string
-	Zip                       string
-	City                      string
-	Address                   string
-	AddressAdditional         string
-	RegistrationNumber        string
-	TaxId                     string
-	Contacts                  *MerchantContact
-	Banking                   *MerchantBanking
-	Status                    int32
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
-	FirstPaymentAt            time.Time
-	IsVatEnabled              bool
-	IsCommissionToUserEnabled bool
+	Id                        bson.ObjectId    `bson:"_id"`
+	ExternalId                string           `bson:"external_id"`
+	AccountEmail              string           `bson:"account_email"`
+	CompanyName               string           `bson:"name"`
+	AlternativeName           string           `bson:"alternative_name"`
+	Website                   string           `bson:"website"`
+	Country                   *Country         `bson:"country"`
+	State                     string           `bson:"state"`
+	Zip                       string           `bson:"zip"`
+	City                      string           `bson:"city"`
+	Address                   string           `bson:"address"`
+	AddressAdditional         string           `bson:"address_additional"`
+	RegistrationNumber        string           `bson:"registration_number"`
+	TaxId                     string           `bson:"tax_id"`
+	Contacts                  *MerchantContact `bson:"contacts"`
+	Banking                   *MerchantBanking `bson:"banking"`
+	Status                    int32            `bson:"status"`
+	CreatedAt                 time.Time        `bson:"created_at"`
+	UpdatedAt                 time.Time        `bson:"updated_at"`
+	FirstPaymentAt            time.Time        `bson:"first_payment_at"`
+	IsVatEnabled              bool             `bson:"is_vat_enabled"`
+	IsCommissionToUserEnabled bool             `bson:"is_commission_to_user_enabled"`
 }
 
 type MgoCurrencyRate struct {

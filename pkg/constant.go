@@ -50,11 +50,11 @@ const (
 	StatusErrorPaymentSystem = int32(3)
 	StatusTemporary          = int32(4)
 
-	MerchantStatusDraft              = 0
-	MerchantStatusAgreementRequested = 1
-	MerchantStatusVerification       = 2
-	MerchantStatusApproved           = 3
-	MerchantStatusRejected           = 4
-	MerchantStatusAgreementSigning   = 5
-	MerchantStatusAgreementSigned    = 6
+	MerchantStatusDraft              = int32(0)
+	MerchantStatusAgreementRequested = int32(1)
+	MerchantStatusVerification       = int32(2)
+	MerchantStatusApproved           = int32(3)
+	MerchantStatusRejected           = int32(4)
+	MerchantStatusAgreementSigning   = int32(5)
+	MerchantStatusAgreementSigned    = int32(6)
 )

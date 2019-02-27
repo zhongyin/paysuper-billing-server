@@ -213,6 +213,20 @@ func (suite *ProjectTestSuite) SetupTest() {
 		suite.FailNow("Insert commission test data failed", "%v", err)
 	}
 
+	country := &billing.Country{
+		CodeInt:  643,
+		CodeA2:   "RU",
+		CodeA3:   "RUS",
+		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+		IsActive: true,
+	}
+
+	err = db.Collection(pkg.CollectionCountry).Insert(country)
+
+	if err != nil {
+		suite.FailNow("Insert country test data failed", "%v", err)
+	}
+
 	suite.projectId = project.Id
 
 	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
