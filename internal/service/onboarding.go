@@ -81,6 +81,14 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 		query["last_payout.date"] = payoutDates
 	}
 
+	if req.IsAgreement > 0 {
+		if req.IsAgreement == 1 {
+			query["is_agreement"] = false
+		} else {
+			query["is_agreement"] = true
+		}
+	}
+
 	if req.LastPayoutAmount > 0 {
 		query["last_payout.amount"] = req.LastPayoutAmount
 	}
@@ -180,7 +188,7 @@ func (s *Service) ChangeMerchantStatus(
 	req *grpc.MerchantChangeStatusRequest,
 	rsp *billing.Merchant,
 ) error {
-	merchant, err := s.getMerchantBy(bson.M{"_id": req.Id})
+	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
 
 	if err != nil {
 		return err
@@ -264,5 +272,5 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.Banking = merchant.Banking
 	rsp.HasMerchantSignature = merchant.HasMerchantSignature
 	rsp.HasPspSignature = merchant.HasPspSignature
-	rsp.LatPayout = merchant.LatPayout
+	rsp.LastPayout = merchant.LastPayout
 }

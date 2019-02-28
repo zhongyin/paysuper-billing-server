@@ -207,6 +207,7 @@ message Merchant {
     // @inject_tag: json:"-"
     bool has_psp_signature = 24;
     MerchantLastPayout last_payout = 25;
+    bool is_agreement = 26;
 }
 
 message Order {
