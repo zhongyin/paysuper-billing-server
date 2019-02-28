@@ -178,7 +178,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 			Date:   date,
 			Amount: 999999,
 		},
-		IsAgreement: true,
+		IsSigned: true,
 	}
 
 	date, err = ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
@@ -219,7 +219,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 			Date:   date,
 			Amount: 10000,
 		},
-		IsAgreement: true,
+		IsSigned: true,
 	}
 	merchant1 := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
@@ -253,7 +253,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 			Date:   date,
 			Amount: 100000,
 		},
-		IsAgreement: false,
+		IsSigned: false,
 	}
 
 	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement, merchant1}...)
@@ -1518,5 +1518,5 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.ChangeMerchantStatus(context.TODO(), reqChangeStatus, rspChangeStatus)
 
 	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), rspChangeStatus.IsAgreement)
+	assert.True(suite.T(), rspChangeStatus.IsSigned)
 }

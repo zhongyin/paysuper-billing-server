@@ -83,9 +83,9 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 
 	if req.IsAgreement > 0 {
 		if req.IsAgreement == 1 {
-			query["is_agreement"] = false
+			query["is_signed"] = false
 		} else {
-			query["is_agreement"] = true
+			query["is_signed"] = true
 		}
 	}
 
@@ -224,7 +224,7 @@ func (s *Service) ChangeMerchantStatus(
 	merchant.Status = req.Status
 
 	if req.Status == pkg.MerchantStatusAgreementSigned {
-		merchant.IsAgreement = true
+		merchant.IsSigned = true
 	}
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
@@ -277,6 +277,6 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.HasMerchantSignature = merchant.HasMerchantSignature
 	rsp.HasPspSignature = merchant.HasPspSignature
 	rsp.LastPayout = merchant.LastPayout
-	rsp.IsAgreement = merchant.IsAgreement
+	rsp.IsSigned = merchant.IsSigned
 	rsp.TaxInterview = merchant.TaxInterview
 }
