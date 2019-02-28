@@ -18,6 +18,7 @@ It has these top-level messages:
 	MerchantBanking
 	MerchantLastPayout
 	Merchant
+	Notification
 	Order
 	Currency
 	PayerData

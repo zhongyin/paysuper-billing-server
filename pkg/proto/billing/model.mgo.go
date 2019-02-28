@@ -212,6 +212,17 @@ type MgoPaymentMethod struct {
 	AccountRegexp    string               `bson:"account_regexp"`
 }
 
+type MgoNotification struct {
+	Id        bson.ObjectId `bson:"_id"`
+	Title     string        `bson:"title"`
+	Message   string        `bson:"message"`
+	From      bson.ObjectId `bson:"from"`
+	To        bson.ObjectId `bson:"to"`
+	IsRead    bool          `bson:"is_read"`
+	CreatedAt time.Time     `bson:"created_at"`
+	UpdatedAt time.Time     `bson:"updated_at"`
+}
+
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
@@ -1337,6 +1348,94 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *Notification) GetBSON() (interface{}, error) {
+	st := &MgoNotification{
+		Title:   m.Title,
+		Message: m.Message,
+		IsRead:  m.IsRead,
+	}
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.From != "" && bson.IsObjectIdHex(m.From) {
+		st.From = bson.ObjectIdHex(m.From)
+	}
+
+	if m.To != "" && bson.IsObjectIdHex(m.To) {
+		st.To = bson.ObjectIdHex(m.To)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *Notification) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoNotification)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.Title = decoded.Title
+	m.Message = decoded.Message
+	m.IsRead = decoded.IsRead
+
+	if decoded.From != "" {
+		m.From = decoded.From.Hex()
+	}
+
+	if decoded.To != "" {
+		m.To = decoded.To.Hex()
+	}
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
 	}
 
 	return nil

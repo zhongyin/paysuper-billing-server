@@ -149,4 +149,5 @@ message Merchants {
 message MerchantChangeStatusRequest {
     string id = 1;
     int32 status = 2;
+    string message = 3;
 }

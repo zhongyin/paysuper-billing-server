@@ -211,6 +211,17 @@ message Merchant {
     bool tax_interview = 27;
 }
 
+message Notification {
+    string id = 1;
+    string title = 2;
+    string message = 3;
+    string from = 4;
+    string to = 5;
+    bool is_read = 6;
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
+}
+
 message Order {
     // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
     string id = 1; // unique order identifier in Protocol One
