@@ -1458,3 +1458,65 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), merchantErrorSigned, err.Error())
 }
+
+func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigned_Ok() {
+	req := &grpc.OnboardingRequest{
+		ExternalId:         bson.NewObjectId().Hex(),
+		AccountingEmail:    "test@unit.test",
+		Name:               "Change status test",
+		AlternativeName:    "",
+		Website:            "https://unit.test",
+		Country:            "RU",
+		State:              "St.Petersburg",
+		Zip:                "190000",
+		City:               "St.Petersburg",
+		Address:            "",
+		AddressAdditional:  "",
+		RegistrationNumber: "",
+		TaxId:              "",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "1234567890",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "1234567890",
+			},
+		},
+		Banking: &grpc.OnboardingBanking{
+			Currency:      "RUB",
+			Name:          "Bank name",
+			Address:       "Unknown",
+			AccountNumber: "1234567890",
+			Swift:         "TEST",
+			Details:       "",
+		},
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
+
+	rsp.Status = pkg.MerchantStatusAgreementSigning
+	rsp.HasMerchantSignature = true
+	rsp.HasPspSignature = true
+
+	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
+
+	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
+		Id:     rsp.Id,
+		Status: pkg.MerchantStatusAgreementSigned,
+	}
+
+	rspChangeStatus := &billing.Merchant{}
+	err = suite.service.ChangeMerchantStatus(context.TODO(), reqChangeStatus, rspChangeStatus)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), rspChangeStatus.IsAgreement)
+}

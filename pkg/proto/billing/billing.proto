@@ -208,6 +208,7 @@ message Merchant {
     bool has_psp_signature = 24;
     MerchantLastPayout last_payout = 25;
     bool is_agreement = 26;
+    bool tax_interview = 27;
 }
 
 message Order {

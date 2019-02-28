@@ -223,6 +223,10 @@ func (s *Service) ChangeMerchantStatus(
 
 	merchant.Status = req.Status
 
+	if req.Status == pkg.MerchantStatusAgreementSigned {
+		merchant.IsAgreement = true
+	}
+
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
 
 	if err != nil {
@@ -273,4 +277,6 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.HasMerchantSignature = merchant.HasMerchantSignature
 	rsp.HasPspSignature = merchant.HasPspSignature
 	rsp.LastPayout = merchant.LastPayout
+	rsp.IsAgreement = merchant.IsAgreement
+	rsp.TaxInterview = merchant.TaxInterview
 }
