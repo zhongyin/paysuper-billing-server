@@ -131,33 +131,95 @@ message ProjectOrder {
     Merchant merchant = 12;
 }
 
+message MerchantContact {
+    // @inject_tag: validate:"required,dive"
+    MerchantContactAuthorized authorized = 1;
+    MerchantContactTechnical technical = 2;
+}
+
+message MerchantContactTechnical {
+    string name = 1;
+    // @inject_tag: validate:"omitempty,email"
+    string email = 2;
+    // @inject_tag: validate:"omitempty,phone"
+    string phone = 3;
+}
+
+message MerchantContactAuthorized {
+    // @inject_tag: validate:"required"
+    string name = 1;
+    // @inject_tag: validate:"required,email"
+    string email = 2;
+    // @inject_tag: validate:"required,phone"
+    string phone = 3;
+    // @inject_tag: validate:"required"
+    string position = 4;
+}
+
+message MerchantBanking {
+    Currency currency = 1;
+    string name = 2;
+    string address = 3;
+    string account_number = 4;
+    string swift = 5;
+    string details = 6;
+}
+
+message MerchantLastPayout {
+    google.protobuf.Timestamp date = 1;
+    double amount = 2;
+}
+
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
     // @inject_tag: bson:"external_id"
     string external_id = 2;
-    // @inject_tag: bson:"email"
-    string email = 3; // merchant email
-    // @inject_tag: bson:"name"
-    string name = 4;
-    // @inject_tag: bson:"country"
-    Country country = 5;
-    // @inject_tag: bson:"accounting_period"
-    string accounting_period = 6;
-    // @inject_tag: bson:"currency"
-    Currency currency = 7;
-    // @inject_tag: bson:"is_vat_enabled"
-    bool is_vat_enabled = 8;
-    // @inject_tag: bson:"is_commission_to_user_enabled"
-    bool is_commission_to_user_enabled = 9;
+    // @inject_tag: bson:"account_email"
+    string account_email = 3;
+    string company_name = 4;
+    string alternative_name = 5;
+    string website = 6;
+    Country country = 7;
+    string state = 8;
+    string zip = 9;
+    string city = 10;
+    string address = 11;
+    string address_additional = 12;
+    string registration_number = 13;
+    string tax_id = 14;
+    MerchantContact contacts = 15;
+    MerchantBanking banking = 16;
     // @inject_tag: bson:"status"
-    int32 status = 10;
+    int32 status = 17;
     // @inject_tag: bson:"created_at"
-    google.protobuf.Timestamp created_at = 11;
+    google.protobuf.Timestamp created_at = 18;
     // @inject_tag: bson:"updated_at"
-    google.protobuf.Timestamp updated_at = 12;
+    google.protobuf.Timestamp updated_at = 19;
     // @inject_tag: bson:"first_payment_at"
-    google.protobuf.Timestamp first_payment_at = 13;
+    google.protobuf.Timestamp first_payment_at = 20;
+    // @inject_tag: json:"-"
+    bool is_vat_enabled = 21;
+    // @inject_tag: json:"-"
+    bool is_commission_to_user_enabled = 22;
+    // @inject_tag: json:"-"
+    bool has_merchant_signature = 23;
+    // @inject_tag: json:"-"
+    bool has_psp_signature = 24;
+    MerchantLastPayout last_payout = 25;
+    bool is_signed = 26;
+    bool tax_interview = 27;
+}
+
+message Notification {
+    string id = 1;
+    string title = 2;
+    string message = 3;
+    string from = 4;
+    string to = 5;
+    bool is_read = 6;
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
 }
 
 message Order {

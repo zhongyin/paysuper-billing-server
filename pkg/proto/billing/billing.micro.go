@@ -12,7 +12,13 @@ It has these top-level messages:
 	OrderCreateRequest
 	Project
 	ProjectOrder
+	MerchantContact
+	MerchantContactTechnical
+	MerchantContactAuthorized
+	MerchantBanking
+	MerchantLastPayout
 	Merchant
+	Notification
 	Order
 	Currency
 	PayerData

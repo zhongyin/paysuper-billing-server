@@ -1,7 +1,7 @@
 package database
 
 import (
-	. "github.com/globalsign/mgo"
+	"github.com/globalsign/mgo"
 	"net/url"
 	"sync"
 )
@@ -18,9 +18,9 @@ type Connection struct {
 type Source struct {
 	name           string
 	connection     Connection
-	session        *Session
-	collections    map[string]*Collection
-	database       *Database
+	session        *mgo.Session
+	collections    map[string]*mgo.Collection
+	database       *mgo.Database
 	repositoriesMu sync.Mutex
 }
 
@@ -70,15 +70,15 @@ func (s *Source) Open(conn Connection) error {
 func (s *Source) open() error {
 	var err error
 
-	s.session, err = Dial(s.connection.String())
+	s.session, err = mgo.Dial(s.connection.String())
 
 	if err != nil {
 		return err
 	}
 
-	s.session.SetMode(Monotonic, true)
+	s.session.SetMode(mgo.Monotonic, true)
 
-	s.collections = map[string]*Collection{}
+	s.collections = map[string]*mgo.Collection{}
 	s.database = s.session.DB("")
 
 	return nil
@@ -98,7 +98,7 @@ func (s *Source) Clone() (*Source, error) {
 		connection:  s.connection,
 		session:     newSession,
 		database:    newSession.DB(s.database.Name),
-		collections: map[string]*Collection{},
+		collections: map[string]*mgo.Collection{},
 	}
 
 	return clone, nil
@@ -108,11 +108,11 @@ func (s *Source) Drop() error {
 	return s.database.DropDatabase()
 }
 
-func (s *Source) Collection(name string) *Collection {
+func (s *Source) Collection(name string) *mgo.Collection {
 	s.repositoriesMu.Lock()
 	defer s.repositoriesMu.Unlock()
 
-	var col *Collection
+	var col *mgo.Collection
 	var ok bool
 
 	if col, ok = s.collections[name]; !ok {

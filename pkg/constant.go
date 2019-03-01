@@ -5,6 +5,7 @@ const (
 	ServiceVersion = "latest"
 
 	CollectionCurrency      = "currency"
+	CollectionCountry       = "country"
 	CollectionProject       = "project"
 	CollectionCurrencyRate  = "currency_rate"
 	CollectionVat           = "vat"
@@ -48,4 +49,12 @@ const (
 	StatusErrorSystem        = int32(2)
 	StatusErrorPaymentSystem = int32(3)
 	StatusTemporary          = int32(4)
+
+	MerchantStatusDraft              = int32(0)
+	MerchantStatusAgreementRequested = int32(1)
+	MerchantStatusOnReview           = int32(2)
+	MerchantStatusApproved           = int32(3)
+	MerchantStatusRejected           = int32(4)
+	MerchantStatusAgreementSigning   = int32(5)
+	MerchantStatusAgreementSigned    = int32(6)
 )
