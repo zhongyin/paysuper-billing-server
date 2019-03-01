@@ -511,6 +511,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	id := bson.NewObjectId().Hex()
 	amount := tools.FormatAmount(v.request.Amount)
 	merAccAmount := amount
+	merchantBanking := v.checked.project.Merchant.Banking
 
 	if (v.request.UrlVerify != "" || v.request.UrlNotify != "") && v.checked.project.AllowDynamicNotifyUrls == false {
 		return nil, errors.New(orderErrorDynamicNotifyUrlsNotAllowed)
@@ -520,7 +521,8 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		return nil, errors.New(orderErrorDynamicRedirectUrlsNotAllowed)
 	}
 
-	if v.checked.currency.CodeInt != v.checked.project.Merchant.Banking.Currency.CodeInt {
+	if merchantBanking != nil && merchantBanking.Currency != nil &&
+		v.checked.currency.CodeInt != merchantBanking.Currency.CodeInt {
 		amount, err := v.Service.Convert(
 			v.checked.currency.CodeInt,
 			v.checked.project.Merchant.Banking.Currency.CodeInt,

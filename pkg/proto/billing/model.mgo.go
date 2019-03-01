@@ -143,6 +143,7 @@ type MgoOrderPaymentMethod struct {
 
 type MgoOrder struct {
 	Id                                      bson.ObjectId          `bson:"_id"`
+	IdString                                string                 `bson:"id_string"`
 	Project                                 *MgoOrderProject       `bson:"project"`
 	ProjectOrderId                          string                 `bson:"project_order_id"`
 	ProjectAccount                          string                 `bson:"project_account"`
@@ -768,6 +769,8 @@ func (m *Order) GetBSON() (interface{}, error) {
 
 		st.Id = bson.ObjectIdHex(m.Id)
 	}
+
+	st.IdString = st.Id.Hex()
 
 	if m.CreatedAt != nil {
 		t, err := ptypes.Timestamp(m.CreatedAt)

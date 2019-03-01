@@ -28,6 +28,16 @@ const (
 
 var (
 	ErrMerchantNotFound = errors.New(merchantErrorNotFound)
+
+	NotificationStatusChangeTitles = map[int32]string{
+		pkg.MerchantStatusDraft:              "",
+		pkg.MerchantStatusAgreementRequested: "",
+		pkg.MerchantStatusOnReview:           "",
+		pkg.MerchantStatusApproved:           "",
+		pkg.MerchantStatusRejected:           "",
+		pkg.MerchantStatusAgreementSigning:   "",
+		pkg.MerchantStatusAgreementSigned:    "",
+	}
 )
 
 func (s *Service) GetMerchantById(ctx context.Context, req *grpc.FindByIdRequest, rsp *billing.Merchant) error {
