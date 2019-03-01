@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
@@ -30,13 +29,13 @@ var (
 	ErrMerchantNotFound = errors.New(merchantErrorNotFound)
 
 	NotificationStatusChangeTitles = map[int32]string{
-		pkg.MerchantStatusDraft:              "",
-		pkg.MerchantStatusAgreementRequested: "",
-		pkg.MerchantStatusOnReview:           "",
-		pkg.MerchantStatusApproved:           "",
-		pkg.MerchantStatusRejected:           "",
-		pkg.MerchantStatusAgreementSigning:   "",
-		pkg.MerchantStatusAgreementSigned:    "",
+		pkg.MerchantStatusDraft:              "New merchant created",
+		pkg.MerchantStatusAgreementRequested: "Merchant asked for agreement",
+		pkg.MerchantStatusOnReview:           "Merchant on KYC review",
+		pkg.MerchantStatusApproved:           "Merchant approved",
+		pkg.MerchantStatusRejected:           "Merchant rejected",
+		pkg.MerchantStatusAgreementSigning:   "Agreement signing",
+		pkg.MerchantStatusAgreementSigned:    "Agreement signed",
 	}
 )
 
@@ -132,7 +131,6 @@ func (s *Service) ChangeMerchant(ctx context.Context, req *grpc.OnboardingReques
 		merchant = &billing.Merchant{
 			Id:        bson.NewObjectId().Hex(),
 			Status:    pkg.MerchantStatusDraft,
-			CreatedAt: ptypes.TimestampNow(),
 		}
 	}
 
@@ -244,6 +242,10 @@ func (s *Service) ChangeMerchantStatus(
 		return errors.New(merchantErrorUnknown)
 	}
 
+	//if title, ok := NotificationStatusChangeTitles[req.Status]; ok {
+
+	//}
+
 	s.mapMerchantData(rsp, merchant)
 
 	return nil
@@ -289,4 +291,8 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.LastPayout = merchant.LastPayout
 	rsp.IsSigned = merchant.IsSigned
 	rsp.TaxInterview = merchant.TaxInterview
+}
+
+func (s *Service) createNotification() {
+
 }
