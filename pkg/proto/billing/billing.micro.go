@@ -39,6 +39,11 @@ It has these top-level messages:
 	CardExpire
 	SavedCard
 	PaymentFormPaymentMethod
+	MerchantPaymentMethodPerTransactionCommission
+	MerchantPaymentMethodCommissions
+	MerchantPaymentMethodIntegration
+	MerchantPaymentMethodIdentification
+	MerchantPaymentMethod
 */
 package billing
 

@@ -21,6 +21,15 @@ service BillingService {
     rpc ListMerchants(MerchantListingRequest) returns (Merchants) {}
     rpc ChangeMerchant(OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
+
+    rpc CreateNotification(NotificationRequest) returns (billing.Notification) {}
+    rpc GetNotification(FindByIdRequest) returns (billing.Notification) {}
+    rpc ListNotifications(ListingNotificationRequest) returns (Notifications) {}
+    rpc MarkNotificationAsRead(FindByIdRequest) returns (billing.Notification) {}
+
+    rpc ListMerchantPaymentMethods(ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
+    rpc GetMerchantPaymentMethod(GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
+    rpc ChangeMerchantPaymentMethod(MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
 }
 
 message EmptyRequest {}
@@ -147,7 +156,63 @@ message Merchants {
 }
 
 message MerchantChangeStatusRequest {
-    string id = 1;
-    int32 status = 2;
-    string message = 3;
+    string merchant_id = 1;
+    string user_id = 2;
+    int32 status = 3;
+    string message = 4;
+}
+
+message NotificationRequest {
+    // @inject_tag: validate:"required,hexadecimal"
+    string merchant_id = 1;
+    // @inject_tag: validate:"required,hexadecimal"
+    string user_id = 2;
+    // @inject_tag: validate:"required"
+    string title = 3;
+    // @inject_tag: validate:"required"
+    string message = 4;
+}
+
+message Notifications {
+    repeated billing.Notification notifications = 1;
+}
+
+message ListingNotificationRequest {
+    string merchant_id = 1;
+    string user_id = 2;
+    int32 limit = 7;
+    int32 offset = 8;
+}
+
+message ListingMerchantPaymentMethod {
+    repeated billing.MerchantPaymentMethod payment_methods = 1;
+}
+
+message GetMerchantPaymentMethodRequest {
+    string merchant_id = 1;
+    string payment_method_id = 2;
+}
+
+message ListMerchantPaymentMethodsRequest {
+    string merchant_id = 1;
+    string payment_method_name = 2;
+}
+
+message MerchantPaymentMethodRequest {
+    // @inject_tag: validate:"required,hexadecimal"
+    string merchant_id = 2;
+    // @inject_tag: validate:"required,dive"
+    billing.MerchantPaymentMethodIdentification payment_method = 3;
+    // @inject_tag: validate:"required,dive"
+    billing.MerchantPaymentMethodCommissions commission = 4;
+    // @inject_tag: validate:"required,dive"
+    billing.MerchantPaymentMethodIntegration integration = 5;
+    // @inject_tag: validate:"required"
+    bool is_active = 6;
+}
+
+message MerchantPaymentMethodResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.MerchantPaymentMethod item = 3;
 }

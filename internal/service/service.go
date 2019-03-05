@@ -67,8 +67,10 @@ type Service struct {
 	vatCache             map[string]map[string]*billing.Vat
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
-	commissionCache      map[string]map[string]*billing.MgoCommission
 
+	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
+
+	commissionCache           map[string]map[string]*billing.MgoCommission
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
 
 	rebuild      bool
@@ -106,6 +108,7 @@ func (s *Service) Init() (err error) {
 	}
 
 	s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
+	s.merchantPaymentMethods = make(map[string]map[string]*billing.MerchantPaymentMethod)
 	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.cfg.AccountingCurrency)
 
 	if err != nil {

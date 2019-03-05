@@ -10,6 +10,7 @@ import (
 type Project Currency
 type PaymentMethod Currency
 type Country Currency
+type Merchant Currency
 
 func newProjectHandler(svc *Service) Cacher {
 	c := &Project{svc: svc}
@@ -57,8 +58,10 @@ func newPaymentMethodHandler(svc *Service) Cacher {
 }
 
 func (h *PaymentMethod) setCache(recs []interface{}) {
-	h.svc.paymentMethodCache = make(map[string]map[int32]*billing.PaymentMethod, len(recs))
-	h.svc.paymentMethodIdCache = make(map[string]*billing.PaymentMethod, len(recs))
+	recsLen := len(recs)
+
+	h.svc.paymentMethodCache = make(map[string]map[int32]*billing.PaymentMethod, recsLen)
+	h.svc.paymentMethodIdCache = make(map[string]*billing.PaymentMethod, recsLen)
 
 	for _, r := range recs {
 		pm := r.(*billing.PaymentMethod)

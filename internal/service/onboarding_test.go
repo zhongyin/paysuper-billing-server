@@ -179,6 +179,27 @@ func (suite *OnboardingTestSuite) SetupTest() {
 			Amount: 999999,
 		},
 		IsSigned: true,
+		PaymentMethods: map[string]*billing.MerchantPaymentMethod{
+			pmBankCard.Id: {
+				PaymentMethod: &billing.MerchantPaymentMethodIdentification{
+					Id: pmBankCard.Id,
+					Name: pmBankCard.Name,
+				},
+				Commission: &billing.MerchantPaymentMethodCommissions{
+					Fee: 2.5,
+					PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+						Fee: 30,
+						Currency: rub.CodeA3,
+					},
+				},
+				Integration: &billing.MerchantPaymentMethodIntegration{
+					TerminalId: "1234567890",
+					TerminalPassword: "0987654321",
+					Integrated: true,
+				},
+				IsActive: true,
+			},
+		},
 	}
 
 	date, err = ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
@@ -863,8 +884,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Ok() {
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementRequested,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementRequested,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -919,8 +940,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_DraftToDra
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusDraft,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusDraft,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -978,8 +999,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementR
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementRequested,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementRequested,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1037,8 +1058,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_OnReview_E
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusOnReview,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusOnReview,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1093,8 +1114,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Approved_E
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusApproved,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusApproved,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1149,8 +1170,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Rejected_E
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusRejected,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusRejected,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1208,8 +1229,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementSigning,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementSigning,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1267,8 +1288,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementSigned,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementSigned,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1326,8 +1347,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementSigned,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementSigned,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1387,8 +1408,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementSigned,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementSigned,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1448,8 +1469,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementSigned,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementSigned,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1510,8 +1531,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		Id:     rsp.Id,
-		Status: pkg.MerchantStatusAgreementSigned,
+		MerchantId: rsp.Id,
+		Status:     pkg.MerchantStatusAgreementSigned,
 	}
 
 	rspChangeStatus := &billing.Merchant{}
@@ -1519,4 +1540,35 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), rspChangeStatus.IsSigned)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_MerchantPaymentMethodsEmpty_Ok() {
+	var merchant *billing.Merchant
+	err := suite.service.db.Collection(pkg.CollectionMerchant).FindId(bson.ObjectIdHex(suite.merchant1.Id)).One(&merchant)
+
+	assert.NotNil(suite.T(), merchant)
+	assert.Len(suite.T(), merchant.PaymentMethods, 0)
+
+	req := &grpc.ListMerchantPaymentMethodsRequest{
+		MerchantId: suite.merchant1.Id,
+	}
+	rsp := &grpc.ListingMerchantPaymentMethod{}
+	err = suite.service.ListMerchantPaymentMethods(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.PaymentMethods) > 0)
+	assert.Len(suite.T(), rsp.PaymentMethods, len(suite.service.paymentMethodIdCache))
+
+	for _, v := range rsp.PaymentMethods {
+		assert.True(suite.T(), v.PaymentMethod.Id != "")
+		assert.True(suite.T(), v.PaymentMethod.Name != "")
+		assert.True(suite.T(), v.Commission.Fee == 0)
+		assert.NotNil(suite.T(), v.Commission.PerTransaction)
+		assert.True(suite.T(), v.Commission.PerTransaction.Fee == 0)
+		assert.True(suite.T(), v.Commission.PerTransaction.Currency == "")
+		assert.True(suite.T(), v.Integration.TerminalId == "")
+		assert.True(suite.T(), v.Integration.TerminalPassword == "")
+		assert.False(suite.T(), v.Integration.Integrated)
+		assert.True(suite.T(), v.IsActive)
+	}
 }

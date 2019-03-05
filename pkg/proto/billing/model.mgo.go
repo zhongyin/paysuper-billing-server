@@ -56,34 +56,47 @@ type MgoMerchantLastPayout struct {
 	Amount float64   `bson:"amount"`
 }
 
+type MgoMerchantPaymentMethodIdentification struct {
+	Id   bson.ObjectId `bson:"id"`
+	Name string        `bson:"name"`
+}
+
+type MgoMerchantPaymentMethod struct {
+	PaymentMethod *MgoMerchantPaymentMethodIdentification `bson:"payment_method"`
+	Commission    *MerchantPaymentMethodCommissions       `bson:"commission"`
+	Integration   *MerchantPaymentMethodIntegration       `bson:"integration"`
+	IsActive      bool                                    `bson:"is_active"`
+}
+
 type MgoMerchant struct {
-	Id                        bson.ObjectId          `bson:"_id"`
-	ExternalId                string                 `bson:"external_id"`
-	AccountEmail              string                 `bson:"account_email"`
-	CompanyName               string                 `bson:"name"`
-	AlternativeName           string                 `bson:"alternative_name"`
-	Website                   string                 `bson:"website"`
-	Country                   *Country               `bson:"country"`
-	State                     string                 `bson:"state"`
-	Zip                       string                 `bson:"zip"`
-	City                      string                 `bson:"city"`
-	Address                   string                 `bson:"address"`
-	AddressAdditional         string                 `bson:"address_additional"`
-	RegistrationNumber        string                 `bson:"registration_number"`
-	TaxId                     string                 `bson:"tax_id"`
-	Contacts                  *MerchantContact       `bson:"contacts"`
-	Banking                   *MerchantBanking       `bson:"banking"`
-	Status                    int32                  `bson:"status"`
-	CreatedAt                 time.Time              `bson:"created_at"`
-	UpdatedAt                 time.Time              `bson:"updated_at"`
-	FirstPaymentAt            time.Time              `bson:"first_payment_at"`
-	IsVatEnabled              bool                   `bson:"is_vat_enabled"`
-	IsCommissionToUserEnabled bool                   `bson:"is_commission_to_user_enabled"`
-	HasMerchantSignature      bool                   `bson:"has_merchant_signature"`
-	HasPspSignature           bool                   `bson:"has_psp_signature"`
-	LastPayout                *MgoMerchantLastPayout `bson:"last_payout"`
-	IsSigned                  bool                   `bson:"is_signed"`
-	TaxInterview              bool                   `bson:"tax_interview"`
+	Id                        bson.ObjectId                        `bson:"_id"`
+	ExternalId                string                               `bson:"external_id"`
+	AccountEmail              string                               `bson:"account_email"`
+	CompanyName               string                               `bson:"name"`
+	AlternativeName           string                               `bson:"alternative_name"`
+	Website                   string                               `bson:"website"`
+	Country                   *Country                             `bson:"country"`
+	State                     string                               `bson:"state"`
+	Zip                       string                               `bson:"zip"`
+	City                      string                               `bson:"city"`
+	Address                   string                               `bson:"address"`
+	AddressAdditional         string                               `bson:"address_additional"`
+	RegistrationNumber        string                               `bson:"registration_number"`
+	TaxId                     string                               `bson:"tax_id"`
+	Contacts                  *MerchantContact                     `bson:"contacts"`
+	Banking                   *MerchantBanking                     `bson:"banking"`
+	Status                    int32                                `bson:"status"`
+	CreatedAt                 time.Time                            `bson:"created_at"`
+	UpdatedAt                 time.Time                            `bson:"updated_at"`
+	FirstPaymentAt            time.Time                            `bson:"first_payment_at"`
+	IsVatEnabled              bool                                 `bson:"is_vat_enabled"`
+	IsCommissionToUserEnabled bool                                 `bson:"is_commission_to_user_enabled"`
+	HasMerchantSignature      bool                                 `bson:"has_merchant_signature"`
+	HasPspSignature           bool                                 `bson:"has_psp_signature"`
+	LastPayout                *MgoMerchantLastPayout               `bson:"last_payout"`
+	IsSigned                  bool                                 `bson:"is_signed"`
+	TaxInterview              bool                                 `bson:"tax_interview"`
+	PaymentMethods            map[string]*MgoMerchantPaymentMethod `bson:"payment_methods"`
 }
 
 type MgoCurrencyRate struct {
@@ -214,14 +227,15 @@ type MgoPaymentMethod struct {
 }
 
 type MgoNotification struct {
-	Id        bson.ObjectId `bson:"_id"`
-	Title     string        `bson:"title"`
-	Message   string        `bson:"message"`
-	From      bson.ObjectId `bson:"from"`
-	To        bson.ObjectId `bson:"to"`
-	IsRead    bool          `bson:"is_read"`
-	CreatedAt time.Time     `bson:"created_at"`
-	UpdatedAt time.Time     `bson:"updated_at"`
+	Id         bson.ObjectId `bson:"_id"`
+	Title      string        `bson:"title"`
+	Message    string        `bson:"message"`
+	MerchantId string        `bson:"merchant_id"`
+	UserId     string        `bson:"user_id"`
+	IsSystem   bool          `bson:"is_system"`
+	IsRead     bool          `bson:"is_read"`
+	CreatedAt  time.Time     `bson:"created_at"`
+	UpdatedAt  time.Time     `bson:"updated_at"`
 }
 
 func (m *Vat) GetBSON() (interface{}, error) {
@@ -1288,6 +1302,22 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		st.LastPayout.Date = t
 	}
 
+	if len(m.PaymentMethods) > 0 {
+		st.PaymentMethods = make(map[string]*MgoMerchantPaymentMethod, len(m.PaymentMethods))
+
+		for k, v := range m.PaymentMethods {
+			st.PaymentMethods[k] = &MgoMerchantPaymentMethod{
+				PaymentMethod: &MgoMerchantPaymentMethodIdentification{
+					Id: bson.ObjectIdHex(v.PaymentMethod.Id),
+					Name: v.PaymentMethod.Name,
+				},
+				Commission: v.Commission,
+				Integration: v.Integration,
+				IsActive: v.IsActive,
+			}
+		}
+	}
+
 	return st, nil
 }
 
@@ -1353,14 +1383,33 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 		}
 	}
 
+	if len(decoded.PaymentMethods) > 0 {
+		m.PaymentMethods = make(map[string]*MerchantPaymentMethod, len(decoded.PaymentMethods))
+
+		for k, v := range decoded.PaymentMethods {
+			m.PaymentMethods[k] = &MerchantPaymentMethod{
+				PaymentMethod: &MerchantPaymentMethodIdentification{
+					Id: v.PaymentMethod.Id.Hex(),
+					Name: v.PaymentMethod.Name,
+				},
+				Commission: v.Commission,
+				Integration: v.Integration,
+				IsActive: v.IsActive,
+			}
+		}
+	}
+
 	return nil
 }
 
 func (m *Notification) GetBSON() (interface{}, error) {
 	st := &MgoNotification{
-		Title:   m.Title,
-		Message: m.Message,
-		IsRead:  m.IsRead,
+		Title:      m.Title,
+		Message:    m.Message,
+		IsSystem:   m.IsSystem,
+		IsRead:     m.IsRead,
+		MerchantId: m.MerchantId,
+		UserId:     m.UserId,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1371,14 +1420,6 @@ func (m *Notification) GetBSON() (interface{}, error) {
 		}
 
 		st.Id = bson.ObjectIdHex(m.Id)
-	}
-
-	if m.From != "" && bson.IsObjectIdHex(m.From) {
-		st.From = bson.ObjectIdHex(m.From)
-	}
-
-	if m.To != "" && bson.IsObjectIdHex(m.To) {
-		st.To = bson.ObjectIdHex(m.To)
 	}
 
 	if m.CreatedAt != nil {
@@ -1419,15 +1460,10 @@ func (m *Notification) SetBSON(raw bson.Raw) error {
 	m.Id = decoded.Id.Hex()
 	m.Title = decoded.Title
 	m.Message = decoded.Message
+	m.IsSystem = decoded.IsSystem
 	m.IsRead = decoded.IsRead
-
-	if decoded.From != "" {
-		m.From = decoded.From.Hex()
-	}
-
-	if decoded.To != "" {
-		m.To = decoded.To.Hex()
-	}
+	m.MerchantId = decoded.MerchantId
+	m.UserId = decoded.UserId
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 
