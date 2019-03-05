@@ -59,7 +59,9 @@ const (
 	MerchantStatusAgreementSigning   = int32(5)
 	MerchantStatusAgreementSigned    = int32(6)
 
-	ResponseStatusOk       = 200
-	ResponseStatusBadData  = 400
-	ResponseStatusNotFound = 404
+	ResponseStatusOk       = int32(200)
+	ResponseStatusBadData  = int32(400)
+	ResponseStatusNotFound = int32(404)
+
+	SystemUserId = "000000000000000000000000"
 )

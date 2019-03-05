@@ -43,6 +43,7 @@ var (
 		pkg.CollectionVat:           newVatHandler,
 		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
 		pkg.CollectionCommission:    newCommissionHandler,
+		pkg.CollectionMerchant:      newMerchantHandler,
 	}
 
 	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
@@ -108,7 +109,6 @@ func (s *Service) Init() (err error) {
 	}
 
 	s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
-	s.merchantPaymentMethods = make(map[string]map[string]*billing.MerchantPaymentMethod)
 	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.cfg.AccountingCurrency)
 
 	if err != nil {

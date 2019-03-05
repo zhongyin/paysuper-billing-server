@@ -156,3 +156,43 @@ func (s *Service) GetCountryByCodeA2(id string) (*billing.Country, error) {
 
 	return rec, nil
 }
+
+func newMerchantHandler(svc *Service) Cacher {
+	c := &Merchant{svc: svc}
+
+	return c
+}
+
+func (h *Merchant) setCache(recs []interface{}) {
+	h.svc.merchantPaymentMethods = make(map[string]map[string]*billing.MerchantPaymentMethod)
+
+	for _, r := range recs {
+		m := r.(*billing.Merchant)
+
+		if _, ok := h.svc.merchantPaymentMethods[m.Id]; !ok {
+			h.svc.merchantPaymentMethods[m.Id] = make(map[string]*billing.MerchantPaymentMethod)
+		}
+
+		if len(m.PaymentMethods) <= 0 {
+			continue
+		}
+
+		for k, v := range m.PaymentMethods {
+			h.svc.merchantPaymentMethods[m.Id][k] = v
+		}
+	}
+}
+
+func (h *Merchant) getAll() (recs []interface{}, err error) {
+	var data []*billing.Merchant
+
+	err = h.svc.db.Collection(pkg.CollectionMerchant).Find(bson.M{}).All(&data)
+
+	if data != nil {
+		for _, v := range data {
+			recs = append(recs, v)
+		}
+	}
+
+	return
+}

@@ -241,7 +241,7 @@ func (s *Service) ChangeMerchantStatus(
 	}
 
 	if title, ok := NotificationStatusChangeTitles[req.Status]; ok {
-		err = s.addNotification(title, req.Message, merchant.Id, "")
+		_, err = s.addNotification(title, req.Message, merchant.Id, "")
 
 		if err != nil {
 			return err
@@ -273,11 +273,19 @@ func (s *Service) CreateNotification(
 		return errors.New(notificationErrorMessageIsEmpty)
 	}
 
-	err := s.addNotification(req.Title, req.Message, req.MerchantId, req.UserId)
+	n, err := s.addNotification(req.Title, req.Message, req.MerchantId, req.UserId)
 
 	if err != nil {
 		return err
 	}
+
+	rsp.Id = n.Id
+	rsp.MerchantId = n.MerchantId
+	rsp.UserId = n.UserId
+	rsp.Title = n.Title
+	rsp.Message = n.Message
+	rsp.IsRead = n.IsRead
+	rsp.IsSystem = n.IsSystem
 
 	return nil
 }
@@ -308,11 +316,11 @@ func (s *Service) ListNotifications(
 	query := make(bson.M)
 
 	if req.MerchantId != "" && bson.IsObjectIdHex(req.MerchantId) == true {
-		query["merchant_id"] = req.MerchantId
+		query["merchant_id"] = bson.ObjectIdHex(req.MerchantId)
 	}
 
 	if req.UserId != "" && bson.IsObjectIdHex(req.UserId) == true {
-		query["user_id"] = req.UserId
+		query["user_id"] = bson.ObjectIdHex(req.UserId)
 	}
 
 	err := s.db.Collection(pkg.CollectionNotification).Find(query).
@@ -378,16 +386,21 @@ func (s *Service) GetMerchantPaymentMethod(
 		}
 	}
 
-	var pm *billing.PaymentMethod
-	err := s.db.Collection(pkg.CollectionPaymentMethod).FindId(bson.ObjectIdHex(req.PaymentMethodId)).One(&pm)
+	pm, err := s.GetPaymentMethodById(req.PaymentMethodId)
 
 	if err != nil {
-		s.logError("Query to find payment method by id failed", []interface{}{"error", err.Error(), "id", req.PaymentMethodId})
+		s.logError(
+			"Payment method with specified id not found in cache",
+			[]interface{}{
+				"error", err.Error(),
+				"id", req.PaymentMethodId,
+			},
+		)
 		return errors.New(orderErrorPaymentMethodNotFound)
 	}
 
 	rsp.PaymentMethod = &billing.MerchantPaymentMethodIdentification{
-		Id: pm.Id,
+		Id:   pm.Id,
 		Name: pm.Name,
 	}
 	rsp.Commission = &billing.MerchantPaymentMethodCommissions{
@@ -419,6 +432,10 @@ func (s *Service) ListMerchantPaymentMethods(
 		return nil
 	}
 
+	if len(pms) <= 0 {
+		return nil
+	}
+
 	mPms, ok := s.merchantPaymentMethods[req.MerchantId]
 
 	for _, pm := range pms {
@@ -429,7 +446,7 @@ func (s *Service) ListMerchantPaymentMethods(
 				Id:   pm.Id,
 				Name: pm.Name,
 			},
-			Commission:  &billing.MerchantPaymentMethodCommissions{
+			Commission: &billing.MerchantPaymentMethodCommissions{
 				PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{},
 			},
 			Integration: &billing.MerchantPaymentMethodIntegration{},
@@ -482,11 +499,15 @@ func (s *Service) ChangeMerchantPaymentMethod(
 		}
 	}
 
+	if len(merchant.PaymentMethods) <= 0 {
+		merchant.PaymentMethods = make(map[string]*billing.MerchantPaymentMethod)
+	}
+
 	merchant.PaymentMethods[pm.Id] = &billing.MerchantPaymentMethod{
 		PaymentMethod: req.PaymentMethod,
-		Commission: req.Commission,
-		Integration: req.Integration,
-		IsActive: req.IsActive,
+		Commission:    req.Commission,
+		Integration:   req.Integration,
+		IsActive:      req.IsActive,
 	}
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
@@ -510,7 +531,7 @@ func (s *Service) ChangeMerchantPaymentMethod(
 	s.merchantPaymentMethods[merchant.Id][pm.Id] = merchant.PaymentMethods[pm.Id]
 
 	rsp.Status = pkg.ResponseStatusOk
-	rsp.Item = merchant.PaymentMethods[pm.Id]
+	rsp.Item = merchant
 
 	return
 }
@@ -557,12 +578,13 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.TaxInterview = merchant.TaxInterview
 }
 
-func (s *Service) addNotification(title, msg, merchantId, userId string) error {
+func (s *Service) addNotification(title, msg, merchantId, userId string) (*billing.Notification, error) {
 	if merchantId == "" || bson.IsObjectIdHex(merchantId) == false {
-		return errors.New(notificationErrorMerchantIdIncorrect)
+		return nil, errors.New(notificationErrorMerchantIdIncorrect)
 	}
 
 	notification := &billing.Notification{
+		Id:         bson.NewObjectId().Hex(),
 		Title:      title,
 		Message:    msg,
 		MerchantId: merchantId,
@@ -570,6 +592,7 @@ func (s *Service) addNotification(title, msg, merchantId, userId string) error {
 	}
 
 	if userId == "" || bson.IsObjectIdHex(userId) == false {
+		notification.UserId = pkg.SystemUserId
 		notification.IsSystem = true
 	} else {
 		notification.UserId = userId
@@ -579,10 +602,10 @@ func (s *Service) addNotification(title, msg, merchantId, userId string) error {
 
 	if err != nil {
 		s.logError("Query to insert notification failed", []interface{}{"err", err.Error(), "query", notification})
-		return errors.New(merchantErrorUnknown)
+		return nil, errors.New(merchantErrorUnknown)
 	}
 
-	return nil
+	return notification, nil
 }
 
 func (s *Service) getNotificationById(id string) (notification *billing.Notification, err error) {

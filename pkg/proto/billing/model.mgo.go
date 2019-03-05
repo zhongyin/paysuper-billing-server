@@ -230,8 +230,8 @@ type MgoNotification struct {
 	Id         bson.ObjectId `bson:"_id"`
 	Title      string        `bson:"title"`
 	Message    string        `bson:"message"`
-	MerchantId string        `bson:"merchant_id"`
-	UserId     string        `bson:"user_id"`
+	MerchantId bson.ObjectId `bson:"merchant_id"`
+	UserId     bson.ObjectId `bson:"user_id"`
 	IsSystem   bool          `bson:"is_system"`
 	IsRead     bool          `bson:"is_read"`
 	CreatedAt  time.Time     `bson:"created_at"`
@@ -1308,12 +1308,12 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		for k, v := range m.PaymentMethods {
 			st.PaymentMethods[k] = &MgoMerchantPaymentMethod{
 				PaymentMethod: &MgoMerchantPaymentMethodIdentification{
-					Id: bson.ObjectIdHex(v.PaymentMethod.Id),
+					Id:   bson.ObjectIdHex(v.PaymentMethod.Id),
 					Name: v.PaymentMethod.Name,
 				},
-				Commission: v.Commission,
+				Commission:  v.Commission,
 				Integration: v.Integration,
-				IsActive: v.IsActive,
+				IsActive:    v.IsActive,
 			}
 		}
 	}
@@ -1389,12 +1389,12 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 		for k, v := range decoded.PaymentMethods {
 			m.PaymentMethods[k] = &MerchantPaymentMethod{
 				PaymentMethod: &MerchantPaymentMethodIdentification{
-					Id: v.PaymentMethod.Id.Hex(),
+					Id:   v.PaymentMethod.Id.Hex(),
 					Name: v.PaymentMethod.Name,
 				},
-				Commission: v.Commission,
+				Commission:  v.Commission,
 				Integration: v.Integration,
-				IsActive: v.IsActive,
+				IsActive:    v.IsActive,
 			}
 		}
 	}
@@ -1408,8 +1408,8 @@ func (m *Notification) GetBSON() (interface{}, error) {
 		Message:    m.Message,
 		IsSystem:   m.IsSystem,
 		IsRead:     m.IsRead,
-		MerchantId: m.MerchantId,
-		UserId:     m.UserId,
+		MerchantId: bson.ObjectIdHex(m.MerchantId),
+		UserId:     bson.ObjectIdHex(m.UserId),
 	}
 
 	if len(m.Id) <= 0 {
@@ -1462,8 +1462,8 @@ func (m *Notification) SetBSON(raw bson.Raw) error {
 	m.Message = decoded.Message
 	m.IsSystem = decoded.IsSystem
 	m.IsRead = decoded.IsRead
-	m.MerchantId = decoded.MerchantId
-	m.UserId = decoded.UserId
+	m.MerchantId = decoded.MerchantId.Hex()
+	m.UserId = decoded.UserId.Hex()
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 

@@ -214,5 +214,5 @@ message MerchantPaymentMethodRequest {
 message MerchantPaymentMethodResponse {
     int32 status = 1;
     string message = 2;
-    billing.MerchantPaymentMethod item = 3;
+    billing.Merchant item = 3;
 }
