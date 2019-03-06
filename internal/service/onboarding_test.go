@@ -662,14 +662,15 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
 		Id: suite.merchant.Id,
 	}
 
-	rsp := &billing.Merchant{}
+	rsp := &grpc.MerchantPaymentMethodResponse{}
 	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(rsp.Id) > 0)
-	assert.Equal(suite.T(), suite.merchant.Id, rsp.Id)
-	assert.Equal(suite.T(), suite.merchant.ExternalId, rsp.ExternalId)
-	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.CompanyName)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.True(suite.T(), len(rsp.Item.Id) > 0)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp.Item.Id)
+	assert.Equal(suite.T(), suite.merchant.ExternalId, rsp.Item.ExternalId)
+	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.Item.CompanyName)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
@@ -677,12 +678,13 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
 		Id: bson.NewObjectId().Hex(),
 	}
 
-	rsp := &billing.Merchant{}
+	rsp := &grpc.MerchantPaymentMethodResponse{}
 	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
 
-	assert.Error(suite.T(), err)
-	assert.Len(suite.T(), rsp.Id, 0)
-	assert.Equal(suite.T(), ErrMerchantNotFound, err)
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp.Status)
+	assert.Equal(suite.T(), merchantErrorNotFound, rsp.Message)
+	assert.Nil(suite.T(), rsp.Item)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantByExternalId_Ok() {

@@ -44,14 +44,26 @@ var (
 	}
 )
 
-func (s *Service) GetMerchantById(ctx context.Context, req *grpc.FindByIdRequest, rsp *billing.Merchant) error {
+func (s *Service) GetMerchantById(
+	ctx context.Context,
+	req *grpc.FindByIdRequest,
+	rsp *grpc.MerchantPaymentMethodResponse,
+) error {
 	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
 
 	if err != nil {
-		return err
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = err.Error()
+
+		if err != ErrMerchantNotFound {
+			rsp.Status = pkg.ResponseStatusBadData
+		}
+
+		return nil
 	}
 
-	s.mapMerchantData(rsp, merchant)
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = merchant
 
 	return nil
 }
