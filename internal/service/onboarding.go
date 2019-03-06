@@ -107,8 +107,8 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 		query["last_payout.date"] = payoutDates
 	}
 
-	if req.IsAgreement > 0 {
-		if req.IsAgreement == 1 {
+	if req.IsSigned > 0 {
+		if req.IsSigned == 1 {
 			query["is_signed"] = false
 		} else {
 			query["is_signed"] = true

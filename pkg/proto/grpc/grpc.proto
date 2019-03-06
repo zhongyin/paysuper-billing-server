@@ -142,7 +142,7 @@ message FindByIdRequest {
 
 message MerchantListingRequest {
     string name = 1;
-    int32 is_agreement = 2;
+    int32 is_signed = 2;
     int64 last_payout_date_from = 3;
     int64 last_payout_date_to = 4;
     double last_payout_amount = 5;

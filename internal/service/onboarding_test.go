@@ -798,7 +798,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_PayoutAmountQuery
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_IsAgreementFalseQuery_Ok() {
 	req := &grpc.MerchantListingRequest{
-		IsAgreement: 1,
+		IsSigned: 1,
 	}
 	rsp := &grpc.Merchants{}
 
@@ -811,7 +811,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_IsAgreementFalseQ
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_IsAgreementTrueQuery_Ok() {
 	req := &grpc.MerchantListingRequest{
-		IsAgreement: 2,
+		IsSigned: 2,
 	}
 	rsp := &grpc.Merchants{}
 
