@@ -76,7 +76,6 @@ type BillingService interface {
 	UpdateMerchant(ctx context.Context, in *billing.Merchant, opts ...client.CallOption) (*EmptyResponse, error)
 	GetConvertRate(ctx context.Context, in *ConvertRateRequest, opts ...client.CallOption) (*ConvertRateResponse, error)
 	GetMerchantById(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error)
-	GetMerchantByExternalId(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*Merchants, error)
 	ChangeMerchant(ctx context.Context, in *OnboardingRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, opts ...client.CallOption) (*billing.Merchant, error)
@@ -197,16 +196,6 @@ func (c *billingService) GetMerchantById(ctx context.Context, in *FindByIdReques
 	return out, nil
 }
 
-func (c *billingService) GetMerchantByExternalId(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*billing.Merchant, error) {
-	req := c.c.NewRequest(c.name, "BillingService.GetMerchantByExternalId", in)
-	out := new(billing.Merchant)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *billingService) ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*Merchants, error) {
 	req := c.c.NewRequest(c.name, "BillingService.ListMerchants", in)
 	out := new(Merchants)
@@ -319,7 +308,6 @@ type BillingServiceHandler interface {
 	UpdateMerchant(context.Context, *billing.Merchant, *EmptyResponse) error
 	GetConvertRate(context.Context, *ConvertRateRequest, *ConvertRateResponse) error
 	GetMerchantById(context.Context, *FindByIdRequest, *MerchantPaymentMethodResponse) error
-	GetMerchantByExternalId(context.Context, *FindByIdRequest, *billing.Merchant) error
 	ListMerchants(context.Context, *MerchantListingRequest, *Merchants) error
 	ChangeMerchant(context.Context, *OnboardingRequest, *billing.Merchant) error
 	ChangeMerchantStatus(context.Context, *MerchantChangeStatusRequest, *billing.Merchant) error
@@ -343,7 +331,6 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error
 		GetConvertRate(ctx context.Context, in *ConvertRateRequest, out *ConvertRateResponse) error
 		GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantPaymentMethodResponse) error
-		GetMerchantByExternalId(ctx context.Context, in *FindByIdRequest, out *billing.Merchant) error
 		ListMerchants(ctx context.Context, in *MerchantListingRequest, out *Merchants) error
 		ChangeMerchant(ctx context.Context, in *OnboardingRequest, out *billing.Merchant) error
 		ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, out *billing.Merchant) error
@@ -400,10 +387,6 @@ func (h *billingServiceHandler) GetConvertRate(ctx context.Context, in *ConvertR
 
 func (h *billingServiceHandler) GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantPaymentMethodResponse) error {
 	return h.BillingServiceHandler.GetMerchantById(ctx, in, out)
-}
-
-func (h *billingServiceHandler) GetMerchantByExternalId(ctx context.Context, in *FindByIdRequest, out *billing.Merchant) error {
-	return h.BillingServiceHandler.GetMerchantByExternalId(ctx, in, out)
 }
 
 func (h *billingServiceHandler) ListMerchants(ctx context.Context, in *MerchantListingRequest, out *Merchants) error {

@@ -70,8 +70,6 @@ type MgoMerchantPaymentMethod struct {
 
 type MgoMerchant struct {
 	Id                        bson.ObjectId                        `bson:"_id"`
-	ExternalId                string                               `bson:"external_id"`
-	AccountEmail              string                               `bson:"account_email"`
 	CompanyName               string                               `bson:"name"`
 	AlternativeName           string                               `bson:"alternative_name"`
 	Website                   string                               `bson:"website"`
@@ -95,7 +93,6 @@ type MgoMerchant struct {
 	HasPspSignature           bool                                 `bson:"has_psp_signature"`
 	LastPayout                *MgoMerchantLastPayout               `bson:"last_payout"`
 	IsSigned                  bool                                 `bson:"is_signed"`
-	TaxInterview              bool                                 `bson:"tax_interview"`
 	PaymentMethods            map[string]*MgoMerchantPaymentMethod `bson:"payment_methods"`
 }
 
@@ -385,8 +382,6 @@ func (m *Project) GetBSON() (interface{}, error) {
 	if m.Merchant != nil {
 		st.Merchant = &MgoMerchant{
 			Id:                        bson.ObjectIdHex(m.Merchant.Id),
-			ExternalId:                m.Merchant.ExternalId,
-			AccountEmail:              m.Merchant.AccountEmail,
 			CompanyName:               m.Merchant.CompanyName,
 			AlternativeName:           m.Merchant.AlternativeName,
 			Website:                   m.Merchant.Website,
@@ -461,8 +456,6 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	if decoded.Merchant != nil {
 		m.Merchant = &Merchant{
 			Id:                        decoded.Merchant.Id.Hex(),
-			ExternalId:                decoded.Merchant.ExternalId,
-			AccountEmail:              decoded.Merchant.AccountEmail,
 			CompanyName:               decoded.Merchant.CompanyName,
 			AlternativeName:           decoded.Merchant.AlternativeName,
 			Website:                   decoded.Merchant.Website,
@@ -713,8 +706,6 @@ func (m *Order) GetBSON() (interface{}, error) {
 			CallbackProtocol:  m.Project.CallbackProtocol,
 			Merchant: &MgoMerchant{
 				Id:                        bson.ObjectIdHex(m.Project.Merchant.Id),
-				ExternalId:                m.Project.Merchant.ExternalId,
-				AccountEmail:              m.Project.Merchant.AccountEmail,
 				CompanyName:               m.Project.Merchant.CompanyName,
 				AlternativeName:           m.Project.Merchant.AlternativeName,
 				Website:                   m.Project.Merchant.Website,
@@ -889,8 +880,6 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 		CallbackProtocol:  decoded.Project.CallbackProtocol,
 		Merchant: &Merchant{
 			Id:                        decoded.Project.Merchant.Id.Hex(),
-			ExternalId:                decoded.Project.Merchant.ExternalId,
-			AccountEmail:              decoded.Project.Merchant.AccountEmail,
 			CompanyName:               decoded.Project.Merchant.CompanyName,
 			AlternativeName:           decoded.Project.Merchant.AlternativeName,
 			Website:                   decoded.Project.Merchant.Website,
@@ -1220,8 +1209,6 @@ func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
 
 func (m *Merchant) GetBSON() (interface{}, error) {
 	st := &MgoMerchant{
-		ExternalId:                m.ExternalId,
-		AccountEmail:              m.AccountEmail,
 		CompanyName:               m.CompanyName,
 		AlternativeName:           m.AlternativeName,
 		Website:                   m.Website,
@@ -1241,7 +1228,6 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		HasMerchantSignature:      m.HasMerchantSignature,
 		HasPspSignature:           m.HasPspSignature,
 		IsSigned:                  m.IsSigned,
-		TaxInterview:              m.TaxInterview,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1330,8 +1316,6 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Id = decoded.Id.Hex()
-	m.ExternalId = decoded.ExternalId
-	m.AccountEmail = decoded.AccountEmail
 	m.CompanyName = decoded.CompanyName
 	m.AlternativeName = decoded.AlternativeName
 	m.Website = decoded.Website
@@ -1351,7 +1335,6 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	m.HasMerchantSignature = decoded.HasMerchantSignature
 	m.HasPspSignature = decoded.HasPspSignature
 	m.IsSigned = decoded.IsSigned
-	m.TaxInterview = decoded.TaxInterview
 
 	m.FirstPaymentAt, err = ptypes.TimestampProto(decoded.FirstPaymentAt)
 

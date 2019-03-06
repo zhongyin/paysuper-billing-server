@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"gopkg.in/mgo.v2"
 	"testing"
 	"time"
 )
@@ -39,9 +38,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	cfg.AccountingCurrency = "RUB"
 	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
-	if err != nil {
-		suite.FailNow("Config load failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Config load failed")
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -51,10 +48,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	db, err := database.NewDatabase(settings)
-
-	if err != nil {
-		suite.FailNow("Database connection failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Database connection failed")
 
 	vat := &billing.Vat{
 		Country: &billing.Country{
@@ -70,10 +64,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionVat).Insert(vat)
-
-	if err != nil {
-		suite.FailNow("Insert VAT test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert VAT test data failed")
 
 	rub := &billing.Currency{
 		CodeInt:  643,
@@ -83,10 +74,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionCurrency).Insert(rub)
-
-	if err != nil {
-		suite.FailNow("Insert currency test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert currency test data failed")
 
 	rate := &billing.CurrencyRate{
 		CurrencyFrom: 643,
@@ -97,10 +85,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionCurrencyRate).Insert(rate)
-
-	if err != nil {
-		suite.FailNow("Insert rates test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert rates test data failed")
 
 	country := &billing.Country{
 		CodeInt:  643,
@@ -111,10 +96,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionCountry).Insert(country)
-
-	if err != nil {
-		suite.FailNow("Insert country test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert country test data failed")
 
 	pmBankCard := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
@@ -171,15 +153,10 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -480))
-
-	if err != nil {
-		suite.FailNow("Generate merchant date failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Generate merchant date failed")
 
 	merchant := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
-		ExternalId:   bson.NewObjectId().Hex(),
-		AccountEmail: "test@unit.test",
 		CompanyName:  "Unit test",
 		Country:      country,
 		Zip:          "190000",
@@ -233,15 +210,10 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	date, err = ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
-
-	if err != nil {
-		suite.FailNow("Generate merchant date failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Generate merchant date failed")
 
 	merchantAgreement := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
-		ExternalId:   bson.NewObjectId().Hex(),
-		AccountEmail: "test@unit.test",
 		CompanyName:  "Unit test status Agreement",
 		Country:      country,
 		Zip:          "190000",
@@ -274,8 +246,6 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 	merchant1 := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
-		ExternalId:   bson.NewObjectId().Hex(),
-		AccountEmail: "test@unit.test",
 		CompanyName:  "merchant1",
 		Country:      country,
 		Zip:          "190000",
@@ -308,10 +278,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement, merchant1}...)
-
-	if err != nil {
-		suite.FailNow("Insert merchant test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert merchant test data failed")
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
@@ -337,22 +304,13 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
-
-	if err != nil {
-		suite.FailNow("Insert project test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert project test data failed")
 
 	err = db.Collection(pkg.CollectionPaymentMethod).Insert([]interface{}{pmBankCard, pmQiwi}...)
-
-	if err != nil {
-		suite.FailNow("Insert payment methods test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert payment methods test data failed")
 
 	commissionStartDate, err := ptypes.TimestampProto(time.Now().Add(time.Minute * -10))
-
-	if err != nil {
-		suite.FailNow("Commission start date conversion failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Commission start date conversion failed")
 
 	commission := &billing.Commission{
 		PaymentMethodId:         pmBankCard.Id,
@@ -364,23 +322,14 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	}
 
 	err = db.Collection(pkg.CollectionCommission).Insert(commission)
-
-	if err != nil {
-		suite.FailNow("Insert commission test data failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Insert commission test data failed")
 
 	suite.log, err = zap.NewProduction()
-
-	if err != nil {
-		suite.FailNow("Logger initialization failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Logger initialization failed")
 
 	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
 	err = suite.service.Init()
-
-	if err != nil {
-		suite.FailNow("Billing service initialization failed", "%v", err)
-	}
+	assert.NoError(suite.T(), err, "Billing service initialization failed")
 
 	suite.merchant = merchant
 	suite.merchantAgreement = merchantAgreement
@@ -401,16 +350,7 @@ func (suite *OnboardingTestSuite) TearDownTest() {
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_NewMerchant_Ok() {
 	var merchant *billing.Merchant
 
-	id := bson.NewObjectId().Hex()
-	err := suite.service.db.Collection(pkg.CollectionMerchant).Find(bson.M{"external_id": id}).One(&merchant)
-
-	assert.Equal(suite.T(), mgo.ErrNotFound, err)
-	assert.Nil(suite.T(), merchant)
-
 	req := &grpc.OnboardingRequest{
-		ExternalId:         id,
-		AccountingEmail:    "test@unit.test",
-		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
 		Country:            "RU",
@@ -445,16 +385,16 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_NewMerchant_Ok()
 	}
 
 	rsp := &billing.Merchant{}
-	err = suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
-	assert.Equal(suite.T(), req.ExternalId, rsp.ExternalId)
+	assert.Equal(suite.T(), req.Website, rsp.Website)
 	assert.Equal(suite.T(), req.Contacts.Authorized.Position, rsp.Contacts.Authorized.Position)
 	assert.Equal(suite.T(), req.Banking.Name, rsp.Banking.Name)
 
-	err = suite.service.db.Collection(pkg.CollectionMerchant).Find(bson.M{"external_id": id}).One(&merchant)
+	err = suite.service.db.Collection(pkg.CollectionMerchant).Find(bson.M{"_id": bson.ObjectIdHex(rsp.Id)}).One(&merchant)
 
 	assert.NotNil(suite.T(), merchant)
 	assert.Equal(suite.T(), rsp.Status, merchant.Status)
@@ -464,8 +404,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_NewMerchant_Ok()
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchant_Ok() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         suite.merchant.ExternalId,
-		AccountingEmail:    "test@unit.test",
 		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -506,12 +444,12 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchant_O
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
-	assert.Equal(suite.T(), req.ExternalId, rsp.ExternalId)
+	assert.Equal(suite.T(), req.Website, rsp.Website)
 	assert.Equal(suite.T(), req.Contacts.Authorized.Phone, rsp.Contacts.Authorized.Phone)
 	assert.Equal(suite.T(), req.Banking.AccountNumber, rsp.Banking.AccountNumber)
 
 	var merchant *billing.Merchant
-	err = suite.service.db.Collection(pkg.CollectionMerchant).Find(bson.M{"external_id": req.ExternalId}).One(&merchant)
+	err = suite.service.db.Collection(pkg.CollectionMerchant).Find(bson.M{"_id": bson.ObjectIdHex(rsp.Id)}).One(&merchant)
 
 	assert.NotNil(suite.T(), merchant)
 	assert.Equal(suite.T(), rsp.Status, merchant.Status)
@@ -521,8 +459,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchant_O
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchantNotAllowed_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         suite.merchantAgreement.ExternalId,
-		AccountingEmail:    "test@unit.test",
+		Id:         suite.merchantAgreement.Id,
 		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -567,8 +504,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchantNo
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_CreateMerchant_CountryNotFound_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -613,8 +548,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_CreateMerchant_C
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_CreateMerchant_CurrencyNotFound_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -669,7 +602,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.True(suite.T(), len(rsp.Item.Id) > 0)
 	assert.Equal(suite.T(), suite.merchant.Id, rsp.Item.Id)
-	assert.Equal(suite.T(), suite.merchant.ExternalId, rsp.Item.ExternalId)
+	assert.Equal(suite.T(), suite.merchant.Website, rsp.Item.Website)
 	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.Item.CompanyName)
 }
 
@@ -685,34 +618,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
 	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp.Status)
 	assert.Equal(suite.T(), merchantErrorNotFound, rsp.Message)
 	assert.Nil(suite.T(), rsp.Item)
-}
-
-func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantByExternalId_Ok() {
-	req := &grpc.FindByIdRequest{
-		Id: suite.merchant.ExternalId,
-	}
-
-	rsp := &billing.Merchant{}
-	err := suite.service.GetMerchantByExternalId(context.TODO(), req, rsp)
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(rsp.Id) > 0)
-	assert.Equal(suite.T(), suite.merchant.Id, rsp.Id)
-	assert.Equal(suite.T(), suite.merchant.ExternalId, rsp.ExternalId)
-	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.CompanyName)
-}
-
-func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantByExternalId_Error() {
-	req := &grpc.FindByIdRequest{
-		Id: bson.NewObjectId().Hex(),
-	}
-
-	rsp := &billing.Merchant{}
-	err := suite.service.GetMerchantByExternalId(context.TODO(), req, rsp)
-
-	assert.Error(suite.T(), err)
-	assert.Len(suite.T(), rsp.Id, 0)
-	assert.Equal(suite.T(), ErrMerchantNotFound, err)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_EmptyQuery_Ok() {
@@ -876,8 +781,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_EmptyResult_Ok() 
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Ok() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -932,8 +835,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Ok() {
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_DraftToDraft_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -988,8 +889,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_DraftToDra
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementRequested_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1047,8 +946,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementR
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_OnReview_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1106,8 +1003,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_OnReview_E
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Approved_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1162,8 +1057,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Approved_E
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Rejected_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1218,8 +1111,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Rejected_E
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigning_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1277,8 +1168,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigned_IncorrectBeforeStatus_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1336,8 +1225,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigned_NotHaveTwoSignature_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1395,8 +1282,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigned_NotHaveMerchantSignature_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1456,8 +1341,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigned_NotHavePspSignature_Error() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1517,8 +1400,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigned_Ok() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "test@unit.test",
 		Name:               "Change status test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -1641,8 +1522,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_Exis
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_NewMerchant_Ok() {
 	req := &grpc.OnboardingRequest{
-		ExternalId:         bson.NewObjectId().Hex(),
-		AccountingEmail:    "new_merchant_test@unit.test",
 		Name:               "New merchant unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",

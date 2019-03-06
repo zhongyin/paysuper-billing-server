@@ -235,8 +235,6 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	merchant := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
-		ExternalId:   bson.NewObjectId().Hex(),
-		AccountEmail: "test@unit.test",
 		CompanyName:  "Unit test",
 		Country:      country,
 		Zip:          "190000",
@@ -291,8 +289,6 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	merchantAgreement := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
-		ExternalId:   bson.NewObjectId().Hex(),
-		AccountEmail: "test@unit.test",
 		CompanyName:  "Unit test status Agreement",
 		Country:      country,
 		Zip:          "190000",
@@ -325,8 +321,6 @@ func (suite *ProjectTestSuite) SetupTest() {
 	}
 	merchant1 := &billing.Merchant{
 		Id:           bson.NewObjectId().Hex(),
-		ExternalId:   bson.NewObjectId().Hex(),
-		AccountEmail: "test@unit.test",
 		CompanyName:  "merchant1",
 		Country:      country,
 		Zip:          "190000",

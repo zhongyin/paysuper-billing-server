@@ -68,22 +68,6 @@ func (s *Service) GetMerchantById(
 	return nil
 }
 
-func (s *Service) GetMerchantByExternalId(
-	ctx context.Context,
-	req *grpc.FindByIdRequest,
-	rsp *billing.Merchant,
-) error {
-	merchant, err := s.getMerchantBy(bson.M{"external_id": req.Id})
-
-	if err != nil {
-		return err
-	}
-
-	s.mapMerchantData(rsp, merchant)
-
-	return nil
-}
-
 func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRequest, rsp *grpc.Merchants) error {
 	var merchants []*billing.Merchant
 
@@ -134,17 +118,29 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 	return nil
 }
 
-func (s *Service) ChangeMerchant(ctx context.Context, req *grpc.OnboardingRequest, rsp *billing.Merchant) (err error) {
-	isNew := false
-	merchant, err := s.getMerchantBy(bson.M{"external_id": req.ExternalId})
+func (s *Service) ChangeMerchant(
+	ctx context.Context,
+	req *grpc.OnboardingRequest,
+	rsp *billing.Merchant,
+) (err error) {
+	var merchant *billing.Merchant
+	var isNew bool
 
-	if err != nil {
-		if err != ErrMerchantNotFound {
-			return err
-		}
-
+	if req.Id == "" || bson.IsObjectIdHex(req.Id) == false {
 		isNew = true
+	} else {
+		merchant, err = s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
 
+		if err != nil {
+			if err != ErrMerchantNotFound {
+				return err
+			}
+
+			isNew = true
+		}
+	}
+
+	if isNew {
 		merchant = &billing.Merchant{
 			Id:     bson.NewObjectId().Hex(),
 			Status: pkg.MerchantStatusDraft,
@@ -169,8 +165,6 @@ func (s *Service) ChangeMerchant(ctx context.Context, req *grpc.OnboardingReques
 		return errors.New(merchantErrorCurrencyNotFound)
 	}
 
-	merchant.ExternalId = req.ExternalId
-	merchant.AccountEmail = req.AccountingEmail
 	merchant.CompanyName = req.Name
 	merchant.AlternativeName = req.AlternativeName
 	merchant.Website = req.Website
@@ -568,8 +562,6 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.Id = merchant.Id
 	rsp.Status = merchant.Status
 	rsp.CreatedAt = merchant.CreatedAt
-	rsp.ExternalId = merchant.ExternalId
-	rsp.AccountEmail = merchant.AccountEmail
 	rsp.CompanyName = merchant.CompanyName
 	rsp.AlternativeName = merchant.AlternativeName
 	rsp.Website = merchant.Website
@@ -587,7 +579,6 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.HasPspSignature = merchant.HasPspSignature
 	rsp.LastPayout = merchant.LastPayout
 	rsp.IsSigned = merchant.IsSigned
-	rsp.TaxInterview = merchant.TaxInterview
 }
 
 func (s *Service) addNotification(title, msg, merchantId, userId string) (*billing.Notification, error) {

@@ -17,7 +17,6 @@ service BillingService {
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
     rpc GetMerchantById(FindByIdRequest) returns (MerchantPaymentMethodResponse) {}
-    rpc GetMerchantByExternalId(FindByIdRequest) returns (billing.Merchant) {}
     rpc ListMerchants(MerchantListingRequest) returns (Merchants) {}
     rpc ChangeMerchant(OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
@@ -106,10 +105,7 @@ message OnboardingBanking {
 }
 
 message OnboardingRequest {
-    //@inject_tag: validate:"required,hexadecimal,len=24"
-    string external_id = 1;
-    //@inject_tag: validate:"required,email"
-    string accounting_email = 2;
+    string id = 1;
     //@inject_tag: validate:"required"
     string name = 3;
     string alternative_name = 4;
