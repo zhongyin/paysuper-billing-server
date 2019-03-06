@@ -1388,13 +1388,15 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 
 		for k, v := range decoded.PaymentMethods {
 			m.PaymentMethods[k] = &MerchantPaymentMethod{
-				PaymentMethod: &MerchantPaymentMethodIdentification{
-					Id:   v.PaymentMethod.Id.Hex(),
-					Name: v.PaymentMethod.Name,
-				},
+				PaymentMethod: &MerchantPaymentMethodIdentification{},
 				Commission:  v.Commission,
 				Integration: v.Integration,
 				IsActive:    v.IsActive,
+			}
+
+			if v.PaymentMethod != nil {
+				m.PaymentMethods[k].PaymentMethod.Id = v.PaymentMethod.Id.Hex()
+				m.PaymentMethods[k].PaymentMethod.Name = v.PaymentMethod.Name
 			}
 		}
 	}
