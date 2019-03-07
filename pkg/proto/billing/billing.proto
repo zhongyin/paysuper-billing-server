@@ -132,27 +132,29 @@ message ProjectOrder {
 }
 
 message MerchantContact {
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required,dive" json:"authorized"
     MerchantContactAuthorized authorized = 1;
+    // @inject_tag: validate:"required,dive" json:"technical"
     MerchantContactTechnical technical = 2;
 }
 
 message MerchantContactTechnical {
+    // @inject_tag: validate:"required" json:"name"
     string name = 1;
-    // @inject_tag: validate:"omitempty,email"
+    // @inject_tag: validate:"omitempty,email" json:"email"
     string email = 2;
-    // @inject_tag: validate:"omitempty,phone"
+    // @inject_tag: validate:"omitempty,phone" json:"phone"
     string phone = 3;
 }
 
 message MerchantContactAuthorized {
-    // @inject_tag: validate:"required"
+    // @inject_tag: validate:"required" json:"name"
     string name = 1;
-    // @inject_tag: validate:"required,email"
+    // @inject_tag: validate:"required,email" json:"email"
     string email = 2;
-    // @inject_tag: validate:"required,phone"
+    // @inject_tag: validate:"required,phone" json:"phone"
     string phone = 3;
-    // @inject_tag: validate:"required"
+    // @inject_tag: validate:"required" json:"position"
     string position = 4;
 }
 

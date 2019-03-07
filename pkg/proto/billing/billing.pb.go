@@ -33,7 +33,7 @@ func (m *Name) Reset()         { *m = Name{} }
 func (m *Name) String() string { return proto.CompactTextString(m) }
 func (*Name) ProtoMessage()    {}
 func (*Name) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{0}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{0}
 }
 func (m *Name) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Name.Unmarshal(m, b)
@@ -115,7 +115,7 @@ func (m *OrderCreateRequest) Reset()         { *m = OrderCreateRequest{} }
 func (m *OrderCreateRequest) String() string { return proto.CompactTextString(m) }
 func (*OrderCreateRequest) ProtoMessage()    {}
 func (*OrderCreateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{1}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{1}
 }
 func (m *OrderCreateRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderCreateRequest.Unmarshal(m, b)
@@ -335,7 +335,7 @@ func (m *Project) Reset()         { *m = Project{} }
 func (m *Project) String() string { return proto.CompactTextString(m) }
 func (*Project) ProtoMessage()    {}
 func (*Project) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{2}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{2}
 }
 func (m *Project) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Project.Unmarshal(m, b)
@@ -562,7 +562,7 @@ func (m *ProjectOrder) Reset()         { *m = ProjectOrder{} }
 func (m *ProjectOrder) String() string { return proto.CompactTextString(m) }
 func (*ProjectOrder) ProtoMessage()    {}
 func (*ProjectOrder) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{3}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{3}
 }
 func (m *ProjectOrder) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProjectOrder.Unmarshal(m, b)
@@ -660,19 +660,20 @@ func (m *ProjectOrder) GetMerchant() *Merchant {
 }
 
 type MerchantContact struct {
-	// @inject_tag: validate:"required,dive"
-	Authorized           *MerchantContactAuthorized `protobuf:"bytes,1,opt,name=authorized,proto3" json:"authorized,omitempty" validate:"required,dive"`
-	Technical            *MerchantContactTechnical  `protobuf:"bytes,2,opt,name=technical,proto3" json:"technical,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                   `json:"-" bson:"-" structure:"-" validate:"-"`
-	XXX_unrecognized     []byte                     `json:"-" bson:"-" structure:"-" validate:"-"`
-	XXX_sizecache        int32                      `json:"-" bson:"-" structure:"-" validate:"-"`
+	// @inject_tag: validate:"required,dive" json:"authorized"
+	Authorized *MerchantContactAuthorized `protobuf:"bytes,1,opt,name=authorized,proto3" json:"authorized" validate:"required,dive"`
+	// @inject_tag: validate:"required,dive" json:"technical"
+	Technical            *MerchantContactTechnical `protobuf:"bytes,2,opt,name=technical,proto3" json:"technical" validate:"required,dive"`
+	XXX_NoUnkeyedLiteral struct{}                  `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte                    `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32                     `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *MerchantContact) Reset()         { *m = MerchantContact{} }
 func (m *MerchantContact) String() string { return proto.CompactTextString(m) }
 func (*MerchantContact) ProtoMessage()    {}
 func (*MerchantContact) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{4}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{4}
 }
 func (m *MerchantContact) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantContact.Unmarshal(m, b)
@@ -707,11 +708,12 @@ func (m *MerchantContact) GetTechnical() *MerchantContactTechnical {
 }
 
 type MerchantContactTechnical struct {
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// @inject_tag: validate:"omitempty,email"
-	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty" validate:"omitempty,email"`
-	// @inject_tag: validate:"omitempty,phone"
-	Phone                string   `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty" validate:"omitempty,phone"`
+	// @inject_tag: validate:"required" json:"name"
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name" validate:"required"`
+	// @inject_tag: validate:"omitempty,email" json:"email"
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email" validate:"omitempty,email"`
+	// @inject_tag: validate:"omitempty,phone" json:"phone"
+	Phone                string   `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone" validate:"omitempty,phone"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
 	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
 	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
@@ -721,7 +723,7 @@ func (m *MerchantContactTechnical) Reset()         { *m = MerchantContactTechnic
 func (m *MerchantContactTechnical) String() string { return proto.CompactTextString(m) }
 func (*MerchantContactTechnical) ProtoMessage()    {}
 func (*MerchantContactTechnical) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{5}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{5}
 }
 func (m *MerchantContactTechnical) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantContactTechnical.Unmarshal(m, b)
@@ -763,14 +765,14 @@ func (m *MerchantContactTechnical) GetPhone() string {
 }
 
 type MerchantContactAuthorized struct {
-	// @inject_tag: validate:"required"
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" validate:"required"`
-	// @inject_tag: validate:"required,email"
-	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty" validate:"required,email"`
-	// @inject_tag: validate:"required,phone"
-	Phone string `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty" validate:"required,phone"`
-	// @inject_tag: validate:"required"
-	Position             string   `protobuf:"bytes,4,opt,name=position,proto3" json:"position,omitempty" validate:"required"`
+	// @inject_tag: validate:"required" json:"name"
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name" validate:"required"`
+	// @inject_tag: validate:"required,email" json:"email"
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email" validate:"required,email"`
+	// @inject_tag: validate:"required,phone" json:"phone"
+	Phone string `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone" validate:"required,phone"`
+	// @inject_tag: validate:"required" json:"position"
+	Position             string   `protobuf:"bytes,4,opt,name=position,proto3" json:"position" validate:"required"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
 	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
 	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
@@ -780,7 +782,7 @@ func (m *MerchantContactAuthorized) Reset()         { *m = MerchantContactAuthor
 func (m *MerchantContactAuthorized) String() string { return proto.CompactTextString(m) }
 func (*MerchantContactAuthorized) ProtoMessage()    {}
 func (*MerchantContactAuthorized) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{6}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{6}
 }
 func (m *MerchantContactAuthorized) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantContactAuthorized.Unmarshal(m, b)
@@ -844,7 +846,7 @@ func (m *MerchantBanking) Reset()         { *m = MerchantBanking{} }
 func (m *MerchantBanking) String() string { return proto.CompactTextString(m) }
 func (*MerchantBanking) ProtoMessage()    {}
 func (*MerchantBanking) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{7}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{7}
 }
 func (m *MerchantBanking) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantBanking.Unmarshal(m, b)
@@ -918,7 +920,7 @@ func (m *MerchantLastPayout) Reset()         { *m = MerchantLastPayout{} }
 func (m *MerchantLastPayout) String() string { return proto.CompactTextString(m) }
 func (*MerchantLastPayout) ProtoMessage()    {}
 func (*MerchantLastPayout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{8}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{8}
 }
 func (m *MerchantLastPayout) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantLastPayout.Unmarshal(m, b)
@@ -996,7 +998,7 @@ func (m *Merchant) Reset()         { *m = Merchant{} }
 func (m *Merchant) String() string { return proto.CompactTextString(m) }
 func (*Merchant) ProtoMessage()    {}
 func (*Merchant) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{9}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{9}
 }
 func (m *Merchant) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Merchant.Unmarshal(m, b)
@@ -1210,7 +1212,7 @@ func (m *Notification) Reset()         { *m = Notification{} }
 func (m *Notification) String() string { return proto.CompactTextString(m) }
 func (*Notification) ProtoMessage()    {}
 func (*Notification) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{10}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{10}
 }
 func (m *Notification) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Notification.Unmarshal(m, b)
@@ -1375,7 +1377,7 @@ func (m *Order) Reset()         { *m = Order{} }
 func (m *Order) String() string { return proto.CompactTextString(m) }
 func (*Order) ProtoMessage()    {}
 func (*Order) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{11}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{11}
 }
 func (m *Order) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order.Unmarshal(m, b)
@@ -1669,7 +1671,7 @@ func (m *Currency) Reset()         { *m = Currency{} }
 func (m *Currency) String() string { return proto.CompactTextString(m) }
 func (*Currency) ProtoMessage()    {}
 func (*Currency) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{12}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{12}
 }
 func (m *Currency) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Currency.Unmarshal(m, b)
@@ -1757,7 +1759,7 @@ func (m *PayerData) Reset()         { *m = PayerData{} }
 func (m *PayerData) String() string { return proto.CompactTextString(m) }
 func (*PayerData) ProtoMessage()    {}
 func (*PayerData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{13}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{13}
 }
 func (m *PayerData) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PayerData.Unmarshal(m, b)
@@ -1853,7 +1855,7 @@ func (m *PaymentMethodOrder) Reset()         { *m = PaymentMethodOrder{} }
 func (m *PaymentMethodOrder) String() string { return proto.CompactTextString(m) }
 func (*PaymentMethodOrder) ProtoMessage()    {}
 func (*PaymentMethodOrder) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{14}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{14}
 }
 func (m *PaymentMethodOrder) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PaymentMethodOrder.Unmarshal(m, b)
@@ -1930,7 +1932,7 @@ func (m *PaymentMethodParams) Reset()         { *m = PaymentMethodParams{} }
 func (m *PaymentMethodParams) String() string { return proto.CompactTextString(m) }
 func (*PaymentMethodParams) ProtoMessage()    {}
 func (*PaymentMethodParams) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{15}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{15}
 }
 func (m *PaymentMethodParams) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PaymentMethodParams.Unmarshal(m, b)
@@ -2017,7 +2019,7 @@ func (m *PaymentSystem) Reset()         { *m = PaymentSystem{} }
 func (m *PaymentSystem) String() string { return proto.CompactTextString(m) }
 func (*PaymentSystem) ProtoMessage()    {}
 func (*PaymentSystem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{16}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{16}
 }
 func (m *PaymentSystem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PaymentSystem.Unmarshal(m, b)
@@ -2113,7 +2115,7 @@ func (m *FixedPackage) Reset()         { *m = FixedPackage{} }
 func (m *FixedPackage) String() string { return proto.CompactTextString(m) }
 func (*FixedPackage) ProtoMessage()    {}
 func (*FixedPackage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{17}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{17}
 }
 func (m *FixedPackage) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FixedPackage.Unmarshal(m, b)
@@ -2179,7 +2181,7 @@ func (m *FixedPackages) Reset()         { *m = FixedPackages{} }
 func (m *FixedPackages) String() string { return proto.CompactTextString(m) }
 func (*FixedPackages) ProtoMessage()    {}
 func (*FixedPackages) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{18}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{18}
 }
 func (m *FixedPackages) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FixedPackages.Unmarshal(m, b)
@@ -2220,7 +2222,7 @@ func (m *OrderFee) Reset()         { *m = OrderFee{} }
 func (m *OrderFee) String() string { return proto.CompactTextString(m) }
 func (*OrderFee) ProtoMessage()    {}
 func (*OrderFee) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{19}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{19}
 }
 func (m *OrderFee) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFee.Unmarshal(m, b)
@@ -2270,7 +2272,7 @@ func (m *OrderFeePsp) Reset()         { *m = OrderFeePsp{} }
 func (m *OrderFeePsp) String() string { return proto.CompactTextString(m) }
 func (*OrderFeePsp) ProtoMessage()    {}
 func (*OrderFeePsp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{20}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{20}
 }
 func (m *OrderFeePsp) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFeePsp.Unmarshal(m, b)
@@ -2328,7 +2330,7 @@ func (m *OrderFeePaymentSystem) Reset()         { *m = OrderFeePaymentSystem{} }
 func (m *OrderFeePaymentSystem) String() string { return proto.CompactTextString(m) }
 func (*OrderFeePaymentSystem) ProtoMessage()    {}
 func (*OrderFeePaymentSystem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{21}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{21}
 }
 func (m *OrderFeePaymentSystem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFeePaymentSystem.Unmarshal(m, b)
@@ -2389,7 +2391,7 @@ func (m *ProjectPaymentMethod) Reset()         { *m = ProjectPaymentMethod{} }
 func (m *ProjectPaymentMethod) String() string { return proto.CompactTextString(m) }
 func (*ProjectPaymentMethod) ProtoMessage()    {}
 func (*ProjectPaymentMethod) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{22}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{22}
 }
 func (m *ProjectPaymentMethod) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProjectPaymentMethod.Unmarshal(m, b)
@@ -2468,7 +2470,7 @@ func (m *CurrencyRate) Reset()         { *m = CurrencyRate{} }
 func (m *CurrencyRate) String() string { return proto.CompactTextString(m) }
 func (*CurrencyRate) ProtoMessage()    {}
 func (*CurrencyRate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{23}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{23}
 }
 func (m *CurrencyRate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CurrencyRate.Unmarshal(m, b)
@@ -2577,7 +2579,7 @@ func (m *PaymentMethod) Reset()         { *m = PaymentMethod{} }
 func (m *PaymentMethod) String() string { return proto.CompactTextString(m) }
 func (*PaymentMethod) ProtoMessage()    {}
 func (*PaymentMethod) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{24}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{24}
 }
 func (m *PaymentMethod) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PaymentMethod.Unmarshal(m, b)
@@ -2726,7 +2728,7 @@ func (m *Country) Reset()         { *m = Country{} }
 func (m *Country) String() string { return proto.CompactTextString(m) }
 func (*Country) ProtoMessage()    {}
 func (*Country) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{25}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{25}
 }
 func (m *Country) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Country.Unmarshal(m, b)
@@ -2819,7 +2821,7 @@ func (m *Vat) Reset()         { *m = Vat{} }
 func (m *Vat) String() string { return proto.CompactTextString(m) }
 func (*Vat) ProtoMessage()    {}
 func (*Vat) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{26}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{26}
 }
 func (m *Vat) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Vat.Unmarshal(m, b)
@@ -2916,7 +2918,7 @@ func (m *Commission) Reset()         { *m = Commission{} }
 func (m *Commission) String() string { return proto.CompactTextString(m) }
 func (*Commission) ProtoMessage()    {}
 func (*Commission) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{27}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{27}
 }
 func (m *Commission) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Commission.Unmarshal(m, b)
@@ -3013,7 +3015,7 @@ func (m *CardExpire) Reset()         { *m = CardExpire{} }
 func (m *CardExpire) String() string { return proto.CompactTextString(m) }
 func (*CardExpire) ProtoMessage()    {}
 func (*CardExpire) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{28}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{28}
 }
 func (m *CardExpire) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CardExpire.Unmarshal(m, b)
@@ -3060,7 +3062,7 @@ func (m *SavedCard) Reset()         { *m = SavedCard{} }
 func (m *SavedCard) String() string { return proto.CompactTextString(m) }
 func (*SavedCard) ProtoMessage()    {}
 func (*SavedCard) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{29}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{29}
 }
 func (m *SavedCard) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SavedCard.Unmarshal(m, b)
@@ -3127,7 +3129,7 @@ func (m *PaymentFormPaymentMethod) Reset()         { *m = PaymentFormPaymentMeth
 func (m *PaymentFormPaymentMethod) String() string { return proto.CompactTextString(m) }
 func (*PaymentFormPaymentMethod) ProtoMessage()    {}
 func (*PaymentFormPaymentMethod) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{30}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{30}
 }
 func (m *PaymentFormPaymentMethod) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PaymentFormPaymentMethod.Unmarshal(m, b)
@@ -3256,7 +3258,7 @@ func (m *MerchantPaymentMethodPerTransactionCommission) String() string {
 }
 func (*MerchantPaymentMethodPerTransactionCommission) ProtoMessage() {}
 func (*MerchantPaymentMethodPerTransactionCommission) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{31}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{31}
 }
 func (m *MerchantPaymentMethodPerTransactionCommission) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantPaymentMethodPerTransactionCommission.Unmarshal(m, b)
@@ -3304,7 +3306,7 @@ func (m *MerchantPaymentMethodCommissions) Reset()         { *m = MerchantPaymen
 func (m *MerchantPaymentMethodCommissions) String() string { return proto.CompactTextString(m) }
 func (*MerchantPaymentMethodCommissions) ProtoMessage()    {}
 func (*MerchantPaymentMethodCommissions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{32}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{32}
 }
 func (m *MerchantPaymentMethodCommissions) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantPaymentMethodCommissions.Unmarshal(m, b)
@@ -3354,7 +3356,7 @@ func (m *MerchantPaymentMethodIntegration) Reset()         { *m = MerchantPaymen
 func (m *MerchantPaymentMethodIntegration) String() string { return proto.CompactTextString(m) }
 func (*MerchantPaymentMethodIntegration) ProtoMessage()    {}
 func (*MerchantPaymentMethodIntegration) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{33}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{33}
 }
 func (m *MerchantPaymentMethodIntegration) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantPaymentMethodIntegration.Unmarshal(m, b)
@@ -3409,7 +3411,7 @@ func (m *MerchantPaymentMethodIdentification) Reset()         { *m = MerchantPay
 func (m *MerchantPaymentMethodIdentification) String() string { return proto.CompactTextString(m) }
 func (*MerchantPaymentMethodIdentification) ProtoMessage()    {}
 func (*MerchantPaymentMethodIdentification) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{34}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{34}
 }
 func (m *MerchantPaymentMethodIdentification) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantPaymentMethodIdentification.Unmarshal(m, b)
@@ -3457,7 +3459,7 @@ func (m *MerchantPaymentMethod) Reset()         { *m = MerchantPaymentMethod{} }
 func (m *MerchantPaymentMethod) String() string { return proto.CompactTextString(m) }
 func (*MerchantPaymentMethod) ProtoMessage()    {}
 func (*MerchantPaymentMethod) Descriptor() ([]byte, []int) {
-	return fileDescriptor_billing_041ea7c2cdedb3ff, []int{35}
+	return fileDescriptor_billing_ee3aaf9555bcb1ba, []int{35}
 }
 func (m *MerchantPaymentMethod) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerchantPaymentMethod.Unmarshal(m, b)
@@ -3553,9 +3555,9 @@ func init() {
 	proto.RegisterType((*MerchantPaymentMethod)(nil), "billing.MerchantPaymentMethod")
 }
 
-func init() { proto.RegisterFile("billing/billing.proto", fileDescriptor_billing_041ea7c2cdedb3ff) }
+func init() { proto.RegisterFile("billing/billing.proto", fileDescriptor_billing_ee3aaf9555bcb1ba) }
 
-var fileDescriptor_billing_041ea7c2cdedb3ff = []byte{
+var fileDescriptor_billing_ee3aaf9555bcb1ba = []byte{
 	// 3737 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x5b, 0x4b, 0x93, 0x1c, 0x49,
 	0x52, 0xb6, 0xea, 0x7a, 0x7b, 0x75, 0xf5, 0x23, 0xfa, 0xa1, 0xec, 0xd6, 0xab, 0x55, 0x9a, 0xd1,
