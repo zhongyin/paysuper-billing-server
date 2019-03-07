@@ -91,47 +91,33 @@ message ConvertRateResponse {
 }
 
 message OnboardingBanking {
-    //@inject_tag: validate:"required,len=3" json:"currency"
+    //@inject_tag: validate:"omitempty,len=3"
     string currency = 1;
-    //@inject_tag: validate:"required" json:"name"
     string name = 2;
-    //@inject_tag: validate:"required" json:"address"
     string address = 3;
-    //@inject_tag: validate:"required" json:"account_number"
     string account_number = 4;
-    //@inject_tag: validate:"required" json:"swift"
     string swift = 5;
-    //@inject_tag: validate:"required" json:"details"
     string details = 6;
 }
 
 message OnboardingRequest {
     string id = 1;
-    //@inject_tag: validate:"required" json:"name"
+    //@inject_tag: validate:"required"
     string name = 3;
-    //@inject_tag: validate:"required" json:"alternative_name"
     string alternative_name = 4;
-    //@inject_tag: validate:"required" json:"website"
     string website = 5;
-    //@inject_tag: validate:"required,len=2" json:"country"
+    //@inject_tag: validate:"omitempty,len=2"
     string country = 6;
-    //@inject_tag: validate:"required" json:"state"
     string state = 7;
-    //@inject_tag: validate:"required" json:"zip"
     string zip = 8;
-    //@inject_tag: validate:"required" json:"city"
     string city = 9;
-    //@inject_tag: validate:"required" json:"address"
     string address = 10;
-    //@inject_tag: validate:"required" json:"address_additional"
     string address_additional = 11;
-    //@inject_tag: validate:"required" json:"registration_number"
     string registration_number = 12;
-    //@inject_tag: validate:"required" json:"tax_id"
     string tax_id = 13;
-    // @inject_tag: validate:"required,dive" json:"contacts"
+    // @inject_tag: validate:"required,dive"
     billing.MerchantContact contacts = 14;
-    // @inject_tag: validate:"required,dive" json:"banking"
+    // @inject_tag: validate:"required,dive"
     OnboardingBanking banking = 15;
 }
 
