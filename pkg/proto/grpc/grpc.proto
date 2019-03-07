@@ -199,7 +199,7 @@ message ListMerchantPaymentMethodsRequest {
 }
 
 message MerchantPaymentMethodRequest {
-    // @inject_tag: validate:"required,hexadecimal"
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string merchant_id = 2;
     // @inject_tag: validate:"required,dive"
     billing.MerchantPaymentMethodIdentification payment_method = 3;
