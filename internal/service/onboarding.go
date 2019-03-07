@@ -165,7 +165,7 @@ func (s *Service) ChangeMerchant(
 		return errors.New(merchantErrorCurrencyNotFound)
 	}
 
-	merchant.CompanyName = req.Name
+	merchant.Name = req.Name
 	merchant.AlternativeName = req.AlternativeName
 	merchant.Website = req.Website
 	merchant.Country = country
@@ -562,7 +562,7 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.Id = merchant.Id
 	rsp.Status = merchant.Status
 	rsp.CreatedAt = merchant.CreatedAt
-	rsp.CompanyName = merchant.CompanyName
+	rsp.Name = merchant.Name
 	rsp.AlternativeName = merchant.AlternativeName
 	rsp.Website = merchant.Website
 	rsp.Country = merchant.Country

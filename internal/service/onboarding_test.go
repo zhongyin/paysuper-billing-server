@@ -156,11 +156,11 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Generate merchant date failed")
 
 	merchant := &billing.Merchant{
-		Id:           bson.NewObjectId().Hex(),
-		CompanyName:  "Unit test",
-		Country:      country,
-		Zip:          "190000",
-		City:         "St.Petersburg",
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
 		Contacts: &billing.MerchantContact{
 			Authorized: &billing.MerchantContactAuthorized{
 				Name:     "Unit Test",
@@ -213,11 +213,11 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Generate merchant date failed")
 
 	merchantAgreement := &billing.Merchant{
-		Id:           bson.NewObjectId().Hex(),
-		CompanyName:  "Unit test status Agreement",
-		Country:      country,
-		Zip:          "190000",
-		City:         "St.Petersburg",
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test status Agreement",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
 		Contacts: &billing.MerchantContact{
 			Authorized: &billing.MerchantContactAuthorized{
 				Name:     "Unit Test",
@@ -245,11 +245,11 @@ func (suite *OnboardingTestSuite) SetupTest() {
 		IsSigned: true,
 	}
 	merchant1 := &billing.Merchant{
-		Id:           bson.NewObjectId().Hex(),
-		CompanyName:  "merchant1",
-		Country:      country,
-		Zip:          "190000",
-		City:         "St.Petersburg",
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "merchant1",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
 		Contacts: &billing.MerchantContact{
 			Authorized: &billing.MerchantContactAuthorized{
 				Name:     "Unit Test",
@@ -459,7 +459,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchant_O
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchantNotAllowed_Error() {
 	req := &grpc.OnboardingRequest{
-		Id:         suite.merchantAgreement.Id,
+		Id:                 suite.merchantAgreement.Id,
 		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
@@ -603,7 +603,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
 	assert.True(suite.T(), len(rsp.Item.Id) > 0)
 	assert.Equal(suite.T(), suite.merchant.Id, rsp.Item.Id)
 	assert.Equal(suite.T(), suite.merchant.Website, rsp.Item.Website)
-	assert.Equal(suite.T(), suite.merchant.CompanyName, rsp.Item.CompanyName)
+	assert.Equal(suite.T(), suite.merchant.Name, rsp.Item.Name)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
@@ -1968,8 +1968,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Merchant_Ok()
 
 	req3 := &grpc.ListingNotificationRequest{
 		MerchantId: suite.merchant.Id,
-		Limit: 10,
-		Offset: 0,
+		Limit:      10,
+		Offset:     0,
 	}
 	rsp3 := &grpc.Notifications{}
 	err = suite.service.ListNotifications(context.TODO(), req3, rsp3)
@@ -2020,7 +2020,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 
 	req4 := &grpc.ListingNotificationRequest{
 		UserId: userId,
-		Limit: 10,
+		Limit:  10,
 		Offset: 0,
 	}
 	rsp4 := &grpc.Notifications{}

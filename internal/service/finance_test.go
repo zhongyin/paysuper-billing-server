@@ -246,11 +246,11 @@ func (suite *FinanceTestSuite) SetupTest() {
 	}
 
 	merchant := &billing.Merchant{
-		Id:           bson.NewObjectId().Hex(),
-		CompanyName:  "Unit test",
-		Country:      country,
-		Zip:          "190000",
-		City:         "St.Petersburg",
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
 		Contacts: &billing.MerchantContact{
 			Authorized: &billing.MerchantContactAuthorized{
 				Name:     "Unit Test",
@@ -300,11 +300,11 @@ func (suite *FinanceTestSuite) SetupTest() {
 	}
 
 	merchantAgreement := &billing.Merchant{
-		Id:           bson.NewObjectId().Hex(),
-		CompanyName:  "Unit test status Agreement",
-		Country:      country,
-		Zip:          "190000",
-		City:         "St.Petersburg",
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test status Agreement",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
 		Contacts: &billing.MerchantContact{
 			Authorized: &billing.MerchantContactAuthorized{
 				Name:     "Unit Test",
@@ -332,11 +332,11 @@ func (suite *FinanceTestSuite) SetupTest() {
 		IsSigned: true,
 	}
 	merchant1 := &billing.Merchant{
-		Id:           bson.NewObjectId().Hex(),
-		CompanyName:  "merchant1",
-		Country:      country,
-		Zip:          "190000",
-		City:         "St.Petersburg",
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "merchant1",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
 		Contacts: &billing.MerchantContact{
 			Authorized: &billing.MerchantContactAuthorized{
 				Name:     "Unit Test",

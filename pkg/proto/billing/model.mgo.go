@@ -70,7 +70,7 @@ type MgoMerchantPaymentMethod struct {
 
 type MgoMerchant struct {
 	Id                        bson.ObjectId                        `bson:"_id"`
-	CompanyName               string                               `bson:"name"`
+	Name                      string                               `bson:"name"`
 	AlternativeName           string                               `bson:"alternative_name"`
 	Website                   string                               `bson:"website"`
 	Country                   *Country                             `bson:"country"`
@@ -382,7 +382,7 @@ func (m *Project) GetBSON() (interface{}, error) {
 	if m.Merchant != nil {
 		st.Merchant = &MgoMerchant{
 			Id:                        bson.ObjectIdHex(m.Merchant.Id),
-			CompanyName:               m.Merchant.CompanyName,
+			Name:                      m.Merchant.Name,
 			AlternativeName:           m.Merchant.AlternativeName,
 			Website:                   m.Merchant.Website,
 			Country:                   m.Merchant.Country,
@@ -456,7 +456,7 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	if decoded.Merchant != nil {
 		m.Merchant = &Merchant{
 			Id:                        decoded.Merchant.Id.Hex(),
-			CompanyName:               decoded.Merchant.CompanyName,
+			Name:                      decoded.Merchant.Name,
 			AlternativeName:           decoded.Merchant.AlternativeName,
 			Website:                   decoded.Merchant.Website,
 			Country:                   decoded.Merchant.Country,
@@ -706,7 +706,7 @@ func (m *Order) GetBSON() (interface{}, error) {
 			CallbackProtocol:  m.Project.CallbackProtocol,
 			Merchant: &MgoMerchant{
 				Id:                        bson.ObjectIdHex(m.Project.Merchant.Id),
-				CompanyName:               m.Project.Merchant.CompanyName,
+				Name:                      m.Project.Merchant.Name,
 				AlternativeName:           m.Project.Merchant.AlternativeName,
 				Website:                   m.Project.Merchant.Website,
 				Country:                   m.Project.Merchant.Country,
@@ -880,7 +880,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 		CallbackProtocol:  decoded.Project.CallbackProtocol,
 		Merchant: &Merchant{
 			Id:                        decoded.Project.Merchant.Id.Hex(),
-			CompanyName:               decoded.Project.Merchant.CompanyName,
+			Name:                      decoded.Project.Merchant.Name,
 			AlternativeName:           decoded.Project.Merchant.AlternativeName,
 			Website:                   decoded.Project.Merchant.Website,
 			Country:                   decoded.Project.Merchant.Country,
@@ -1209,7 +1209,7 @@ func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
 
 func (m *Merchant) GetBSON() (interface{}, error) {
 	st := &MgoMerchant{
-		CompanyName:               m.CompanyName,
+		Name:                      m.Name,
 		AlternativeName:           m.AlternativeName,
 		Website:                   m.Website,
 		Country:                   m.Country,
@@ -1316,7 +1316,7 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Id = decoded.Id.Hex()
-	m.CompanyName = decoded.CompanyName
+	m.Name = decoded.Name
 	m.AlternativeName = decoded.AlternativeName
 	m.Website = decoded.Website
 	m.Country = decoded.Country
@@ -1372,9 +1372,9 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 		for k, v := range decoded.PaymentMethods {
 			m.PaymentMethods[k] = &MerchantPaymentMethod{
 				PaymentMethod: &MerchantPaymentMethodIdentification{},
-				Commission:  v.Commission,
-				Integration: v.Integration,
-				IsActive:    v.IsActive,
+				Commission:    v.Commission,
+				Integration:   v.Integration,
+				IsActive:      v.IsActive,
 			}
 
 			if v.PaymentMethod != nil {

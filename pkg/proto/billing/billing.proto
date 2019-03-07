@@ -173,7 +173,7 @@ message MerchantLastPayout {
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
-    string company_name = 4;
+    string name = 4;
     string alternative_name = 5;
     string website = 6;
     Country country = 7;
