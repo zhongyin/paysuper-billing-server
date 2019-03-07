@@ -185,14 +185,16 @@ message ListingMerchantPaymentMethod {
 }
 
 message GetMerchantPaymentMethodRequest {
-    // @inject_tag: query:"merchant_id", validate:"required,hexadecimal"
+    // @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
-    // @inject_tag: query:"payment_method_id", validate:"required,hexadecimal"
+    // @inject_tag: query:"payment_method_id", validate:"required,hexadecimal,len=24"
     string payment_method_id = 2;
 }
 
 message ListMerchantPaymentMethodsRequest {
+    // @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
+    // @inject_tag: query:"payment_method_id"
     string payment_method_name = 2;
 }
 
