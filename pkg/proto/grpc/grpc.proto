@@ -185,7 +185,9 @@ message ListingMerchantPaymentMethod {
 }
 
 message GetMerchantPaymentMethodRequest {
+    // @inject_tag: query:"merchant_id", validate:"required,hexadecimal"
     string merchant_id = 1;
+    // @inject_tag: query:"payment_method_id", validate:"required,hexadecimal"
     string payment_method_id = 2;
 }
 
