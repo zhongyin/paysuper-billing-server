@@ -33,6 +33,7 @@ It has these top-level messages:
 	ListMerchantPaymentMethodsRequest
 	MerchantPaymentMethodRequest
 	MerchantPaymentMethodResponse
+	MerchantGetMerchantResponse
 */
 package grpc
 
@@ -75,7 +76,7 @@ type BillingService interface {
 	UpdateOrder(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*EmptyResponse, error)
 	UpdateMerchant(ctx context.Context, in *billing.Merchant, opts ...client.CallOption) (*EmptyResponse, error)
 	GetConvertRate(ctx context.Context, in *ConvertRateRequest, opts ...client.CallOption) (*ConvertRateResponse, error)
-	GetMerchantById(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error)
+	GetMerchantById(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*MerchantGetMerchantResponse, error)
 	ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*Merchants, error)
 	ChangeMerchant(ctx context.Context, in *OnboardingRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, opts ...client.CallOption) (*billing.Merchant, error)
@@ -186,9 +187,9 @@ func (c *billingService) GetConvertRate(ctx context.Context, in *ConvertRateRequ
 	return out, nil
 }
 
-func (c *billingService) GetMerchantById(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error) {
+func (c *billingService) GetMerchantById(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*MerchantGetMerchantResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.GetMerchantById", in)
-	out := new(MerchantPaymentMethodResponse)
+	out := new(MerchantGetMerchantResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -307,7 +308,7 @@ type BillingServiceHandler interface {
 	UpdateOrder(context.Context, *billing.Order, *EmptyResponse) error
 	UpdateMerchant(context.Context, *billing.Merchant, *EmptyResponse) error
 	GetConvertRate(context.Context, *ConvertRateRequest, *ConvertRateResponse) error
-	GetMerchantById(context.Context, *FindByIdRequest, *MerchantPaymentMethodResponse) error
+	GetMerchantById(context.Context, *FindByIdRequest, *MerchantGetMerchantResponse) error
 	ListMerchants(context.Context, *MerchantListingRequest, *Merchants) error
 	ChangeMerchant(context.Context, *OnboardingRequest, *billing.Merchant) error
 	ChangeMerchantStatus(context.Context, *MerchantChangeStatusRequest, *billing.Merchant) error
@@ -330,7 +331,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		UpdateOrder(ctx context.Context, in *billing.Order, out *EmptyResponse) error
 		UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error
 		GetConvertRate(ctx context.Context, in *ConvertRateRequest, out *ConvertRateResponse) error
-		GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantPaymentMethodResponse) error
+		GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantGetMerchantResponse) error
 		ListMerchants(ctx context.Context, in *MerchantListingRequest, out *Merchants) error
 		ChangeMerchant(ctx context.Context, in *OnboardingRequest, out *billing.Merchant) error
 		ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, out *billing.Merchant) error
@@ -385,7 +386,7 @@ func (h *billingServiceHandler) GetConvertRate(ctx context.Context, in *ConvertR
 	return h.BillingServiceHandler.GetConvertRate(ctx, in, out)
 }
 
-func (h *billingServiceHandler) GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantPaymentMethodResponse) error {
+func (h *billingServiceHandler) GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantGetMerchantResponse) error {
 	return h.BillingServiceHandler.GetMerchantById(ctx, in, out)
 }
 

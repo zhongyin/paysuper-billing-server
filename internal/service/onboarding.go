@@ -47,7 +47,7 @@ var (
 func (s *Service) GetMerchantById(
 	ctx context.Context,
 	req *grpc.FindByIdRequest,
-	rsp *grpc.MerchantPaymentMethodResponse,
+	rsp *grpc.MerchantGetMerchantResponse,
 ) error {
 	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
 
@@ -537,7 +537,7 @@ func (s *Service) ChangeMerchantPaymentMethod(
 	s.merchantPaymentMethods[merchant.Id][pm.Id] = merchant.PaymentMethods[pm.Id]
 
 	rsp.Status = pkg.ResponseStatusOk
-	rsp.Item = merchant
+	rsp.Item = merchant.PaymentMethods[pm.Id]
 
 	return
 }

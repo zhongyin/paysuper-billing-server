@@ -595,7 +595,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
 		Id: suite.merchant.Id,
 	}
 
-	rsp := &grpc.MerchantPaymentMethodResponse{}
+	rsp := &grpc.MerchantGetMerchantResponse{}
 	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
@@ -611,7 +611,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
 		Id: bson.NewObjectId().Hex(),
 	}
 
-	rsp := &grpc.MerchantPaymentMethodResponse{}
+	rsp := &grpc.MerchantGetMerchantResponse{}
 	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
@@ -1613,8 +1613,8 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_NewM
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rspMerchantPaymentMethodAdd.Status)
-	assert.NotNil(suite.T(), rspMerchantPaymentMethodAdd.Item.PaymentMethods)
-	assert.True(suite.T(), len(rspMerchantPaymentMethodAdd.Item.PaymentMethods) > 0)
+	assert.NotNil(suite.T(), rspMerchantPaymentMethodAdd.Item)
+	assert.True(suite.T(), len(rspMerchantPaymentMethodAdd.Item.PaymentMethod.Id) > 0)
 
 	_, ok = suite.service.merchantPaymentMethods[rsp.Id]
 	assert.True(suite.T(), ok)
