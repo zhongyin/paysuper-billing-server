@@ -1916,8 +1916,9 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetNotification_Ok() {
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
-	reqGetNotification := &grpc.FindByIdRequest{
-		Id: rsp.Id,
+	reqGetNotification := &grpc.GetNotificationRequest{
+		MerchantId:     suite.merchant.Id,
+		NotificationId: rsp.Id,
 	}
 	rspGetNotification := &billing.Notification{}
 	err = suite.service.GetNotification(context.TODO(), reqGetNotification, rspGetNotification)
@@ -1932,8 +1933,9 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetNotification_Ok() {
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_NotFound_Error() {
-	reqGetNotification := &grpc.FindByIdRequest{
-		Id: bson.NewObjectId().Hex(),
+	reqGetNotification := &grpc.GetNotificationRequest{
+		MerchantId:     bson.NewObjectId().Hex(),
+		NotificationId: bson.NewObjectId().Hex(),
 	}
 	rspGetNotification := &billing.Notification{}
 	err := suite.service.GetNotification(context.TODO(), reqGetNotification, rspGetNotification)
@@ -2046,8 +2048,9 @@ func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_Ok() {
 	assert.True(suite.T(), len(rsp1.Id) > 0)
 	assert.False(suite.T(), rsp1.IsRead)
 
-	req2 := &grpc.FindByIdRequest{
-		Id: rsp1.Id,
+	req2 := &grpc.GetNotificationRequest{
+		MerchantId:     req1.MerchantId,
+		NotificationId: rsp1.Id,
 	}
 	rsp2 := &billing.Notification{}
 	err = suite.service.MarkNotificationAsRead(context.TODO(), req2, rsp2)
@@ -2077,8 +2080,9 @@ func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_NotFound
 	assert.True(suite.T(), len(rsp1.Id) > 0)
 	assert.False(suite.T(), rsp1.IsRead)
 
-	req2 := &grpc.FindByIdRequest{
-		Id: bson.NewObjectId().Hex(),
+	req2 := &grpc.GetNotificationRequest{
+		MerchantId:     bson.NewObjectId().Hex(),
+		NotificationId: bson.NewObjectId().Hex(),
 	}
 	rsp2 := &billing.Notification{}
 	err = suite.service.MarkNotificationAsRead(context.TODO(), req2, rsp2)

@@ -298,10 +298,10 @@ func (s *Service) CreateNotification(
 
 func (s *Service) GetNotification(
 	ctx context.Context,
-	req *grpc.FindByIdRequest,
+	req *grpc.GetNotificationRequest,
 	rsp *billing.Notification,
 ) error {
-	notification, err := s.getNotificationById(req.Id)
+	notification, err := s.getNotificationById(req.MerchantId, req.NotificationId)
 
 	if err != nil {
 		return err
@@ -349,10 +349,10 @@ func (s *Service) ListNotifications(
 
 func (s *Service) MarkNotificationAsRead(
 	ctx context.Context,
-	req *grpc.FindByIdRequest,
+	req *grpc.GetNotificationRequest,
 	rsp *billing.Notification,
 ) error {
-	notification, err := s.getNotificationById(req.Id)
+	notification, err := s.getNotificationById(req.MerchantId, req.NotificationId)
 
 	if err != nil {
 		return err
@@ -611,17 +611,18 @@ func (s *Service) addNotification(title, msg, merchantId, userId string) (*billi
 	return notification, nil
 }
 
-func (s *Service) getNotificationById(id string) (notification *billing.Notification, err error) {
-	if id == "" || bson.IsObjectIdHex(id) == false {
-		s.logError("Received incorrect notification identifier", []interface{}{"id", id})
-		return notification, errors.New(notificationErrorIdIncorrect)
+func (s *Service) getNotificationById(
+	merchantId, notificationId string,
+) (notification *billing.Notification, err error) {
+	query := bson.M{
+		"merchant_id": bson.ObjectIdHex(merchantId),
+		"_id":         bson.ObjectIdHex(notificationId),
 	}
-
-	err = s.db.Collection(pkg.CollectionNotification).FindId(bson.ObjectIdHex(id)).One(&notification)
+	err = s.db.Collection(pkg.CollectionNotification).Find(query).One(&notification)
 
 	if err != nil {
 		if err != mgo.ErrNotFound {
-			s.logError("Query to find notification by id failed", []interface{}{"err", err.Error(), "id", id})
+			s.logError("Query to find notification by id failed", []interface{}{"err", err.Error(), "query", query})
 		}
 
 		return notification, errors.New(notificationErrorNotFound)

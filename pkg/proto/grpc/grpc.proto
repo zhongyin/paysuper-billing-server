@@ -22,9 +22,9 @@ service BillingService {
     rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
 
     rpc CreateNotification(NotificationRequest) returns (billing.Notification) {}
-    rpc GetNotification(FindByIdRequest) returns (billing.Notification) {}
+    rpc GetNotification(GetNotificationRequest) returns (billing.Notification) {}
     rpc ListNotifications(ListingNotificationRequest) returns (Notifications) {}
-    rpc MarkNotificationAsRead(FindByIdRequest) returns (billing.Notification) {}
+    rpc MarkNotificationAsRead(GetNotificationRequest) returns (billing.Notification) {}
 
     rpc ListMerchantPaymentMethods(ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
     rpc GetMerchantPaymentMethod(GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
@@ -211,4 +211,9 @@ message MerchantGetMerchantResponse {
     int32 status = 1;
     string message = 2;
     billing.Merchant item = 3;
+}
+
+message GetNotificationRequest {
+    string merchant_id = 1;
+    string notification_id = 2;
 }

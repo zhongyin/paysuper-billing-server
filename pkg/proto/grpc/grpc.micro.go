@@ -34,6 +34,7 @@ It has these top-level messages:
 	MerchantPaymentMethodRequest
 	MerchantPaymentMethodResponse
 	MerchantGetMerchantResponse
+	GetNotificationRequest
 */
 package grpc
 
@@ -81,9 +82,9 @@ type BillingService interface {
 	ChangeMerchant(ctx context.Context, in *OnboardingRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	CreateNotification(ctx context.Context, in *NotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
-	GetNotification(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*billing.Notification, error)
+	GetNotification(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	ListNotifications(ctx context.Context, in *ListingNotificationRequest, opts ...client.CallOption) (*Notifications, error)
-	MarkNotificationAsRead(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*billing.Notification, error)
+	MarkNotificationAsRead(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, opts ...client.CallOption) (*ListingMerchantPaymentMethod, error)
 	GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*billing.MerchantPaymentMethod, error)
 	ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error)
@@ -237,7 +238,7 @@ func (c *billingService) CreateNotification(ctx context.Context, in *Notificatio
 	return out, nil
 }
 
-func (c *billingService) GetNotification(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*billing.Notification, error) {
+func (c *billingService) GetNotification(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error) {
 	req := c.c.NewRequest(c.name, "BillingService.GetNotification", in)
 	out := new(billing.Notification)
 	err := c.c.Call(ctx, req, out, opts...)
@@ -257,7 +258,7 @@ func (c *billingService) ListNotifications(ctx context.Context, in *ListingNotif
 	return out, nil
 }
 
-func (c *billingService) MarkNotificationAsRead(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*billing.Notification, error) {
+func (c *billingService) MarkNotificationAsRead(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error) {
 	req := c.c.NewRequest(c.name, "BillingService.MarkNotificationAsRead", in)
 	out := new(billing.Notification)
 	err := c.c.Call(ctx, req, out, opts...)
@@ -313,9 +314,9 @@ type BillingServiceHandler interface {
 	ChangeMerchant(context.Context, *OnboardingRequest, *billing.Merchant) error
 	ChangeMerchantStatus(context.Context, *MerchantChangeStatusRequest, *billing.Merchant) error
 	CreateNotification(context.Context, *NotificationRequest, *billing.Notification) error
-	GetNotification(context.Context, *FindByIdRequest, *billing.Notification) error
+	GetNotification(context.Context, *GetNotificationRequest, *billing.Notification) error
 	ListNotifications(context.Context, *ListingNotificationRequest, *Notifications) error
-	MarkNotificationAsRead(context.Context, *FindByIdRequest, *billing.Notification) error
+	MarkNotificationAsRead(context.Context, *GetNotificationRequest, *billing.Notification) error
 	ListMerchantPaymentMethods(context.Context, *ListMerchantPaymentMethodsRequest, *ListingMerchantPaymentMethod) error
 	GetMerchantPaymentMethod(context.Context, *GetMerchantPaymentMethodRequest, *billing.MerchantPaymentMethod) error
 	ChangeMerchantPaymentMethod(context.Context, *MerchantPaymentMethodRequest, *MerchantPaymentMethodResponse) error
@@ -336,9 +337,9 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ChangeMerchant(ctx context.Context, in *OnboardingRequest, out *billing.Merchant) error
 		ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, out *billing.Merchant) error
 		CreateNotification(ctx context.Context, in *NotificationRequest, out *billing.Notification) error
-		GetNotification(ctx context.Context, in *FindByIdRequest, out *billing.Notification) error
+		GetNotification(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error
 		ListNotifications(ctx context.Context, in *ListingNotificationRequest, out *Notifications) error
-		MarkNotificationAsRead(ctx context.Context, in *FindByIdRequest, out *billing.Notification) error
+		MarkNotificationAsRead(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error
 		ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, out *ListingMerchantPaymentMethod) error
 		GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *billing.MerchantPaymentMethod) error
 		ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, out *MerchantPaymentMethodResponse) error
@@ -406,7 +407,7 @@ func (h *billingServiceHandler) CreateNotification(ctx context.Context, in *Noti
 	return h.BillingServiceHandler.CreateNotification(ctx, in, out)
 }
 
-func (h *billingServiceHandler) GetNotification(ctx context.Context, in *FindByIdRequest, out *billing.Notification) error {
+func (h *billingServiceHandler) GetNotification(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error {
 	return h.BillingServiceHandler.GetNotification(ctx, in, out)
 }
 
@@ -414,7 +415,7 @@ func (h *billingServiceHandler) ListNotifications(ctx context.Context, in *Listi
 	return h.BillingServiceHandler.ListNotifications(ctx, in, out)
 }
 
-func (h *billingServiceHandler) MarkNotificationAsRead(ctx context.Context, in *FindByIdRequest, out *billing.Notification) error {
+func (h *billingServiceHandler) MarkNotificationAsRead(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error {
 	return h.BillingServiceHandler.MarkNotificationAsRead(ctx, in, out)
 }
 
