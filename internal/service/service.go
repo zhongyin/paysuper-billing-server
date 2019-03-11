@@ -43,6 +43,7 @@ var (
 		pkg.CollectionVat:           newVatHandler,
 		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
 		pkg.CollectionCommission:    newCommissionHandler,
+		pkg.CollectionMerchant:      newMerchantHandler,
 	}
 
 	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
@@ -67,8 +68,10 @@ type Service struct {
 	vatCache             map[string]map[string]*billing.Vat
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
-	commissionCache      map[string]map[string]*billing.MgoCommission
 
+	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
+
+	commissionCache           map[string]map[string]*billing.MgoCommission
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
 
 	rebuild      bool

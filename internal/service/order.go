@@ -59,7 +59,6 @@ const (
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
 	orderGetSavedCardError                             = "saved card data with specified identifier not found"
 	paymentRequestIncorrect                            = "payment request has incorrect format"
-	paymentDuplicateError                              = "duplicate of payment create request. payment by order created early"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"

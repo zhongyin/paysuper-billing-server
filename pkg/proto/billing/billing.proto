@@ -134,6 +134,7 @@ message ProjectOrder {
 message MerchantContact {
     // @inject_tag: validate:"required,dive"
     MerchantContactAuthorized authorized = 1;
+    // @inject_tag: validate:"required,dive"
     MerchantContactTechnical technical = 2;
 }
 
@@ -146,13 +147,11 @@ message MerchantContactTechnical {
 }
 
 message MerchantContactAuthorized {
-    // @inject_tag: validate:"required"
     string name = 1;
-    // @inject_tag: validate:"required,email"
+    // @inject_tag: validate:"omitempty,email"
     string email = 2;
-    // @inject_tag: validate:"required,phone"
+    // @inject_tag: validate:"omitempty,phone"
     string phone = 3;
-    // @inject_tag: validate:"required"
     string position = 4;
 }
 
@@ -173,11 +172,7 @@ message MerchantLastPayout {
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
-    // @inject_tag: bson:"external_id"
-    string external_id = 2;
-    // @inject_tag: bson:"account_email"
-    string account_email = 3;
-    string company_name = 4;
+    string name = 4;
     string alternative_name = 5;
     string website = 6;
     Country country = 7;
@@ -208,18 +203,19 @@ message Merchant {
     bool has_psp_signature = 24;
     MerchantLastPayout last_payout = 25;
     bool is_signed = 26;
-    bool tax_interview = 27;
+    map<string, MerchantPaymentMethod> payment_methods = 28;
 }
 
 message Notification {
     string id = 1;
     string title = 2;
     string message = 3;
-    string from = 4;
-    string to = 5;
-    bool is_read = 6;
-    google.protobuf.Timestamp created_at = 7;
-    google.protobuf.Timestamp updated_at = 8;
+    string merchant_id = 4;
+    string user_id = 5;
+    bool is_system = 6;
+    bool is_read = 7;
+    google.protobuf.Timestamp created_at = 8;
+    google.protobuf.Timestamp updated_at = 9;
 }
 
 message Order {
@@ -568,4 +564,37 @@ message PaymentFormPaymentMethod {
     bool has_saved_cards = 12;
     // @inject_tag: json:"saved_cards,omitempty"
     repeated SavedCard saved_cards = 13;
+}
+
+message MerchantPaymentMethodPerTransactionCommission {
+    // @inject_tag: validate:"omitempty,numeric,gte=0"
+    double fee = 1;
+    string currency = 2;
+}
+
+message MerchantPaymentMethodCommissions {
+    // @inject_tag: validate:"omitempty,numeric,gte=0,lte=100"
+    double fee = 1;
+    // @inject_tag: validate:"required,dive"
+    MerchantPaymentMethodPerTransactionCommission per_transaction = 2;
+}
+
+message MerchantPaymentMethodIntegration {
+    string terminal_id = 1;
+    string terminal_password = 2;
+    bool integrated = 3;
+}
+
+message MerchantPaymentMethodIdentification {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string id = 1;
+    // @inject_tag: validate:"required"
+    string name = 2;
+}
+
+message MerchantPaymentMethod {
+    MerchantPaymentMethodIdentification payment_method = 3;
+    MerchantPaymentMethodCommissions commission = 4;
+    MerchantPaymentMethodIntegration integration = 5;
+    bool is_active = 6;
 }

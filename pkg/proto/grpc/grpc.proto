@@ -16,11 +16,19 @@ service BillingService {
     rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {}
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
-    rpc GetMerchantById(FindByIdRequest) returns (billing.Merchant) {}
-    rpc GetMerchantByExternalId(FindByIdRequest) returns (billing.Merchant) {}
+    rpc GetMerchantById(FindByIdRequest) returns (MerchantGetMerchantResponse) {}
     rpc ListMerchants(MerchantListingRequest) returns (Merchants) {}
     rpc ChangeMerchant(OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
+
+    rpc CreateNotification(NotificationRequest) returns (billing.Notification) {}
+    rpc GetNotification(GetNotificationRequest) returns (billing.Notification) {}
+    rpc ListNotifications(ListingNotificationRequest) returns (Notifications) {}
+    rpc MarkNotificationAsRead(GetNotificationRequest) returns (billing.Notification) {}
+
+    rpc ListMerchantPaymentMethods(ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
+    rpc GetMerchantPaymentMethod(GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
+    rpc ChangeMerchantPaymentMethod(MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
 }
 
 message EmptyRequest {}
@@ -83,43 +91,29 @@ message ConvertRateResponse {
 }
 
 message OnboardingBanking {
-    //@inject_tag: validate:"required,len=3"
+    //@inject_tag: validate:"omitempty,len=3"
     string currency = 1;
-    //@inject_tag: validate:"required"
     string name = 2;
-    //@inject_tag: validate:"required"
     string address = 3;
-    //@inject_tag: validate:"required"
     string account_number = 4;
-    //@inject_tag: validate:"required"
     string swift = 5;
     string details = 6;
 }
 
 message OnboardingRequest {
-    //@inject_tag: validate:"required,hexadecimal,len=24"
-    string external_id = 1;
-    //@inject_tag: validate:"required,email"
-    string accounting_email = 2;
+    string id = 1;
     //@inject_tag: validate:"required"
     string name = 3;
     string alternative_name = 4;
-    //@inject_tag: validate:"required"
     string website = 5;
-    //@inject_tag: validate:"required,len=2"
+    //@inject_tag: validate:"omitempty,len=2"
     string country = 6;
-    //@inject_tag: validate:"required"
     string state = 7;
-    //@inject_tag: validate:"required"
     string zip = 8;
-    //@inject_tag: validate:"required"
     string city = 9;
-    //@inject_tag: validate:"required"
     string address = 10;
     string address_additional = 11;
-    //@inject_tag: validate:"required"
     string registration_number = 12;
-    //@inject_tag: validate:"required"
     string tax_id = 13;
     // @inject_tag: validate:"required,dive"
     billing.MerchantContact contacts = 14;
@@ -133,7 +127,7 @@ message FindByIdRequest {
 
 message MerchantListingRequest {
     string name = 1;
-    int32 is_agreement = 2;
+    int32 is_signed = 2;
     int64 last_payout_date_from = 3;
     int64 last_payout_date_to = 4;
     double last_payout_amount = 5;
@@ -147,7 +141,79 @@ message Merchants {
 }
 
 message MerchantChangeStatusRequest {
-    string id = 1;
-    int32 status = 2;
-    string message = 3;
+    // @inject_tag: validate:"required,hexadecimal"
+    string merchant_id = 1;
+    string user_id = 2;
+    // @inject_tag: validate:"required,numeric"
+    int32 status = 3;
+    string message = 4;
+}
+
+message NotificationRequest {
+    // @inject_tag: validate:"required,hexadecimal"
+    string merchant_id = 1;
+    string user_id = 2;
+    // @inject_tag: validate:"required"
+    string title = 3;
+    // @inject_tag: validate:"required"
+    string message = 4;
+}
+
+message Notifications {
+    repeated billing.Notification notifications = 1;
+}
+
+message ListingNotificationRequest {
+    string merchant_id = 1;
+    string user_id = 2;
+    int32 limit = 7;
+    int32 offset = 8;
+}
+
+message ListingMerchantPaymentMethod {
+    repeated billing.MerchantPaymentMethod payment_methods = 1;
+}
+
+message GetMerchantPaymentMethodRequest {
+    // @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: query:"payment_method_id", validate:"required,hexadecimal,len=24"
+    string payment_method_id = 2;
+}
+
+message ListMerchantPaymentMethodsRequest {
+    // @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: query:"payment_method_name"
+    string payment_method_name = 2;
+}
+
+message MerchantPaymentMethodRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 2;
+    // @inject_tag: validate:"required,dive"
+    billing.MerchantPaymentMethodIdentification payment_method = 3;
+    // @inject_tag: validate:"required,dive"
+    billing.MerchantPaymentMethodCommissions commission = 4;
+    // @inject_tag: validate:"required,dive"
+    billing.MerchantPaymentMethodIntegration integration = 5;
+    // @inject_tag: validate:"required"
+    bool is_active = 6;
+}
+
+message MerchantPaymentMethodResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.MerchantPaymentMethod item = 3;
+}
+
+message MerchantGetMerchantResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Merchant item = 3;
+}
+
+message GetNotificationRequest {
+    string merchant_id = 1;
+    string notification_id = 2;
 }

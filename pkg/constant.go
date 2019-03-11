@@ -14,6 +14,7 @@ const (
 	CollectionCommission    = "commission"
 	CollectionBinData       = "bank_bin"
 	CollectionMerchant      = "merchant"
+	CollectionNotification  = "notification"
 
 	CardPayPaymentResponseStatusDeclined   = "DECLINED"
 	CardPayPaymentResponseStatusAuthorized = "AUTHORIZED"
@@ -57,4 +58,10 @@ const (
 	MerchantStatusRejected           = int32(4)
 	MerchantStatusAgreementSigning   = int32(5)
 	MerchantStatusAgreementSigned    = int32(6)
+
+	ResponseStatusOk       = int32(200)
+	ResponseStatusBadData  = int32(400)
+	ResponseStatusNotFound = int32(404)
+
+	SystemUserId = "000000000000000000000000"
 )
