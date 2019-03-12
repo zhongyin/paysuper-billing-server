@@ -631,9 +631,9 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 			cardPayOrder.RecurringData.Filing = &CardPayRecurringDataFiling{
 				Id: recurringId,
 			}
-		}
 
-		return cardPayOrder, nil
+			return cardPayOrder, nil
+		}
 	} else {
 		cardPayOrder.PaymentData = &CardPayPaymentData{
 			Currency: order.PaymentMethodOutcomeCurrency.CodeA3,

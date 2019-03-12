@@ -178,6 +178,20 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Insert rates test data failed", "%v", err)
 	}
 
+	country := &billing.Country{
+		CodeInt:  643,
+		CodeA2:   "RU",
+		CodeA3:   "RUS",
+		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+		IsActive: true,
+	}
+
+	err = db.Collection(pkg.CollectionCountry).Insert(country)
+
+	if err != nil {
+		suite.FailNow("Insert country test data failed", "%v", err)
+	}
+
 	pmBankCard := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
 		Name:             "Bank card",
@@ -203,6 +217,137 @@ func (suite *OrderTestSuite) SetupTest() {
 			Country:            &billing.Country{},
 			IsActive:           true,
 		},
+	}
+
+	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
+
+	if err != nil {
+		suite.FailNow("Generate merchant date failed", "%v", err)
+	}
+
+	merchant := &billing.Merchant{
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "123456789",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "123456789",
+			},
+		},
+		Banking: &billing.MerchantBanking{
+			Currency: rub,
+			Name:     "Bank name",
+		},
+		IsVatEnabled:              true,
+		IsCommissionToUserEnabled: true,
+		Status:                    pkg.MerchantStatusDraft,
+		LastPayout: &billing.MerchantLastPayout{
+			Date:   date,
+			Amount: 999999,
+		},
+		IsSigned: true,
+		PaymentMethods: map[string]*billing.MerchantPaymentMethod{
+			pmBankCard.Id: {
+				PaymentMethod: &billing.MerchantPaymentMethodIdentification{
+					Id:   pmBankCard.Id,
+					Name: pmBankCard.Name,
+				},
+				Commission: &billing.MerchantPaymentMethodCommissions{
+					Fee: 2.5,
+					PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+						Fee:      30,
+						Currency: rub.CodeA3,
+					},
+				},
+				Integration: &billing.MerchantPaymentMethodIntegration{
+					TerminalId:       "1234567890",
+					TerminalPassword: "0987654321",
+					Integrated:       true,
+				},
+				IsActive: true,
+			},
+		},
+	}
+
+	merchantAgreement := &billing.Merchant{
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test status Agreement",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "123456789",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "123456789",
+			},
+		},
+		Banking: &billing.MerchantBanking{
+			Currency: rub,
+			Name:     "Bank name",
+		},
+		IsVatEnabled:              true,
+		IsCommissionToUserEnabled: true,
+		Status:                    pkg.MerchantStatusAgreementRequested,
+		LastPayout: &billing.MerchantLastPayout{
+			Date:   date,
+			Amount: 10000,
+		},
+		IsSigned: true,
+	}
+	merchant1 := &billing.Merchant{
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "merchant1",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "123456789",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "123456789",
+			},
+		},
+		Banking: &billing.MerchantBanking{
+			Currency: rub,
+			Name:     "Bank name",
+		},
+		IsVatEnabled:              true,
+		IsCommissionToUserEnabled: true,
+		Status:                    pkg.MerchantStatusDraft,
+		LastPayout: &billing.MerchantLastPayout{
+			Date:   date,
+			Amount: 100000,
+		},
+		IsSigned: false,
+	}
+
+	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement, merchant1}...)
+
+	if err != nil {
+		suite.FailNow("Insert merchant test data failed", "%v", err)
 	}
 
 	project := &billing.Project{
@@ -268,9 +413,34 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		IsActive: true,
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  usd,
+			Id:   bson.NewObjectId().Hex(),
+			Name: "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: usd,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -331,9 +501,34 @@ func (suite *OrderTestSuite) SetupTest() {
 			"US": {FixedPackage: []*billing.FixedPackage{}},
 		},
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  amd,
+			Id:   bson.NewObjectId().Hex(),
+			Name: "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: amd,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -359,9 +554,34 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		IsActive: true,
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  uah,
+			Id:   bson.NewObjectId().Hex(),
+			Name: "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: uah,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              true,
 			IsCommissionToUserEnabled: true,
 			Status:                    1,
@@ -387,9 +607,34 @@ func (suite *OrderTestSuite) SetupTest() {
 		},
 		IsActive: true,
 		Merchant: &billing.Merchant{
-			Id:                        bson.NewObjectId().Hex(),
-			ExternalId:                bson.NewObjectId().Hex(),
-			Currency:                  uah,
+			Id:   bson.NewObjectId().Hex(),
+			Name: "Unit test",
+			Country: &billing.Country{
+				CodeInt:  643,
+				CodeA2:   "RU",
+				CodeA3:   "RUS",
+				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+				IsActive: true,
+			},
+			Zip:  "190000",
+			City: "St.Petersburg",
+			Contacts: &billing.MerchantContact{
+				Authorized: &billing.MerchantContactAuthorized{
+					Name:     "Unit Test",
+					Email:    "test@unit.test",
+					Phone:    "123456789",
+					Position: "Unit Test",
+				},
+				Technical: &billing.MerchantContactTechnical{
+					Name:  "Unit Test",
+					Email: "test@unit.test",
+					Phone: "123456789",
+				},
+			},
+			Banking: &billing.MerchantBanking{
+				Currency: uah,
+				Name:     "Bank name",
+			},
 			IsVatEnabled:              false,
 			IsCommissionToUserEnabled: false,
 			Status:                    1,
@@ -721,10 +966,6 @@ func (suite *OrderTestSuite) TearDownTest() {
 	}
 
 	suite.service.db.Close()
-
-	if err := suite.log.Sync(); err != nil {
-		suite.FailNow("Logger sync failed", "%v", err)
-	}
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessProject_Ok() {
@@ -1968,7 +2209,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
 	err = processor.processProjectOrderId()
 	assert.Nil(suite.T(), err)
 
-	processor.checked.project.Merchant.Currency = &billing.Currency{
+	processor.checked.project.Merchant.Banking.Currency = &billing.Currency{
 		CodeInt:  980,
 		CodeA3:   "UAH",
 		Name:     &billing.Name{Ru: "Украинская гривна", En: "Ukrainian Hryvnia"},
@@ -4226,7 +4467,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), vat)
 
-	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.Currency.CodeInt]
+	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.GetPayoutCurrency().CodeInt]
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), rate)
 

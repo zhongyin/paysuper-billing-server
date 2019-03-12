@@ -1,10 +1,11 @@
 package pkg
 
 const (
-	ServiceName    = "p1paymentbillingservice"
+	ServiceName    = "p1paybilling"
 	ServiceVersion = "latest"
 
 	CollectionCurrency      = "currency"
+	CollectionCountry       = "country"
 	CollectionProject       = "project"
 	CollectionCurrencyRate  = "currency_rate"
 	CollectionVat           = "vat"
@@ -13,6 +14,7 @@ const (
 	CollectionCommission    = "commission"
 	CollectionBinData       = "bank_bin"
 	CollectionMerchant      = "merchant"
+	CollectionNotification  = "notification"
 
 	CardPayPaymentResponseStatusDeclined   = "DECLINED"
 	CardPayPaymentResponseStatusAuthorized = "AUTHORIZED"
@@ -48,4 +50,18 @@ const (
 	StatusErrorSystem        = int32(2)
 	StatusErrorPaymentSystem = int32(3)
 	StatusTemporary          = int32(4)
+
+	MerchantStatusDraft              = int32(0)
+	MerchantStatusAgreementRequested = int32(1)
+	MerchantStatusOnReview           = int32(2)
+	MerchantStatusApproved           = int32(3)
+	MerchantStatusRejected           = int32(4)
+	MerchantStatusAgreementSigning   = int32(5)
+	MerchantStatusAgreementSigned    = int32(6)
+
+	ResponseStatusOk       = int32(200)
+	ResponseStatusBadData  = int32(400)
+	ResponseStatusNotFound = int32(404)
+
+	SystemUserId = "000000000000000000000000"
 )

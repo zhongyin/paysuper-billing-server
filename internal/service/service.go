@@ -37,11 +37,13 @@ const (
 var (
 	handlers = map[string]func(*Service) Cacher{
 		pkg.CollectionCurrency:      newCurrencyHandler,
+		pkg.CollectionCountry:       newCountryHandler,
 		pkg.CollectionProject:       newProjectHandler,
 		pkg.CollectionCurrencyRate:  newCurrencyRateHandler,
 		pkg.CollectionVat:           newVatHandler,
 		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
 		pkg.CollectionCommission:    newCommissionHandler,
+		pkg.CollectionMerchant:      newMerchantHandler,
 	}
 
 	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
@@ -60,13 +62,16 @@ type Service struct {
 	accountingCurrency *billing.Currency
 
 	currencyCache        map[string]*billing.Currency
+	countryCache         map[string]*billing.Country
 	projectCache         map[string]*billing.Project
 	currencyRateCache    map[int32]map[int32]*billing.CurrencyRate
 	vatCache             map[string]map[string]*billing.Vat
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
-	commissionCache      map[string]map[string]*billing.MgoCommission
 
+	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
+
+	commissionCache           map[string]map[string]*billing.MgoCommission
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
 
 	rebuild      bool
@@ -120,6 +125,7 @@ func (s *Service) reBuildCache() {
 	var key string
 
 	curTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyTimeout))
+	countryTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CountryTimeout))
 	projectTicker := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectTimeout))
 	currencyRateTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyRateTimeout))
 	vatTicker := time.NewTicker(time.Second * time.Duration(s.cfg.VatTimeout))
@@ -134,6 +140,9 @@ func (s *Service) reBuildCache() {
 		case <-curTicker.C:
 			err = s.cache(pkg.CollectionCurrency, handlers[pkg.CollectionCurrency](s))
 			key = pkg.CollectionCurrency
+		case <-countryTicker.C:
+			err = s.cache(pkg.CollectionCountry, handlers[pkg.CollectionCountry](s))
+			key = pkg.CollectionCountry
 		case <-projectTicker.C:
 			err = s.cache(pkg.CollectionProject, handlers[pkg.CollectionProject](s))
 			key = pkg.CollectionProject
