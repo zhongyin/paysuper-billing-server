@@ -22,6 +22,8 @@ const (
 	paymentSystemErrorRequestPaymentMethodIsInvalid    = "payment method from request not match with value in order"
 	paymentSystemErrorRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in order"
 	paymentSystemErrorRequestTemporarySkipped          = "notification skipped with temporary status"
+	paymentSystemErrorCreateRefundFailed               = "refund can't be create. try request later"
+	paymentSystemErrorCreateRefundRejected             = "refund create request rejected"
 
 	defaultHttpClientTimeout = 10
 	defaultResponseBodyLimit = 512
@@ -46,11 +48,13 @@ type PaymentSystem interface {
 	ProcessPayment(request proto.Message, rawRequest string, signature string) error
 	IsRecurringCallback(request proto.Message) bool
 	GetRecurringId(request proto.Message) string
+	Refund(refund *billing.Refund) error
 }
 
 type paymentProcessor struct {
-	cfg   *config.PaymentSystemConfig
-	order *billing.Order
+	cfg     *config.PaymentSystemConfig
+	order   *billing.Order
+	service *Service
 }
 
 func (s *Service) NewPaymentSystem(
@@ -63,7 +67,7 @@ func (s *Service) NewPaymentSystem(
 		return nil, errors.New(paymentSystemErrorHandlerNotFound)
 	}
 
-	processor := &paymentProcessor{cfg: cfg, order: order}
+	processor := &paymentProcessor{cfg: cfg, order: order, service: s}
 
 	return h(processor), nil
 }
