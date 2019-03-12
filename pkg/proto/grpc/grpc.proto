@@ -29,6 +29,8 @@ service BillingService {
     rpc ListMerchantPaymentMethods(ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
     rpc GetMerchantPaymentMethod(GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
     rpc ChangeMerchantPaymentMethod(MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
+
+    rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse) {}
 }
 
 message EmptyRequest {}
@@ -216,4 +218,19 @@ message MerchantGetMerchantResponse {
 message GetNotificationRequest {
     string merchant_id = 1;
     string notification_id = 2;
+}
+
+message CreateRefundRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string order_id = 1;
+    // @inject_tag: validate:"required,numeric,gt=0"
+    double amount = 2;
+    string creator_id = 3;
+    string reason = 4;
+}
+
+message CreateRefundResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Refund item = 3;
 }

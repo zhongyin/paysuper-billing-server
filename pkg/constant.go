@@ -15,7 +15,11 @@ const (
 	CollectionBinData       = "bank_bin"
 	CollectionMerchant      = "merchant"
 	CollectionNotification  = "notification"
+	CollectionRefund        = "refund"
 
+	CardPayPaymentResponseStatusInProgress = "IN_PROGRESS"
+	CardPayPaymentResponseStatusPending    = "PENDING"
+	CardPayPaymentResponseStatusRefunded   = "REFUNDED"
 	CardPayPaymentResponseStatusDeclined   = "DECLINED"
 	CardPayPaymentResponseStatusAuthorized = "AUTHORIZED"
 	CardPayPaymentResponseStatusCompleted  = "COMPLETED"
@@ -64,4 +68,9 @@ const (
 	ResponseStatusNotFound = int32(404)
 
 	SystemUserId = "000000000000000000000000"
+
+	RefundStatusCreated    = int32(0)
+	RefundStatusRejected   = int32(1)
+	RefundStatusInProgress = int32(2)
+	RefundStatusCompleted  = int32(3)
 )

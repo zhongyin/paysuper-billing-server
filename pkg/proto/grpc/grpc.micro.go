@@ -35,6 +35,8 @@ It has these top-level messages:
 	MerchantPaymentMethodResponse
 	MerchantGetMerchantResponse
 	GetNotificationRequest
+	CreateRefundRequest
+	CreateRefundResponse
 */
 package grpc
 
@@ -88,6 +90,7 @@ type BillingService interface {
 	ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, opts ...client.CallOption) (*ListingMerchantPaymentMethod, error)
 	GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*billing.MerchantPaymentMethod, error)
 	ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error)
+	CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
 }
 
 type billingService struct {
@@ -298,6 +301,16 @@ func (c *billingService) ChangeMerchantPaymentMethod(ctx context.Context, in *Me
 	return out, nil
 }
 
+func (c *billingService) CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.CreateRefund", in)
+	out := new(CreateRefundResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -320,6 +333,7 @@ type BillingServiceHandler interface {
 	ListMerchantPaymentMethods(context.Context, *ListMerchantPaymentMethodsRequest, *ListingMerchantPaymentMethod) error
 	GetMerchantPaymentMethod(context.Context, *GetMerchantPaymentMethodRequest, *billing.MerchantPaymentMethod) error
 	ChangeMerchantPaymentMethod(context.Context, *MerchantPaymentMethodRequest, *MerchantPaymentMethodResponse) error
+	CreateRefund(context.Context, *CreateRefundRequest, *CreateRefundResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -343,6 +357,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, out *ListingMerchantPaymentMethod) error
 		GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *billing.MerchantPaymentMethod) error
 		ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, out *MerchantPaymentMethodResponse) error
+		CreateRefund(ctx context.Context, in *CreateRefundRequest, out *CreateRefundResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -429,4 +444,8 @@ func (h *billingServiceHandler) GetMerchantPaymentMethod(ctx context.Context, in
 
 func (h *billingServiceHandler) ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, out *MerchantPaymentMethodResponse) error {
 	return h.BillingServiceHandler.ChangeMerchantPaymentMethod(ctx, in, out)
+}
+
+func (h *billingServiceHandler) CreateRefund(ctx context.Context, in *CreateRefundRequest, out *CreateRefundResponse) error {
+	return h.BillingServiceHandler.CreateRefund(ctx, in, out)
 }

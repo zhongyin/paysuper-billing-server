@@ -317,14 +317,16 @@ message PayerData {
     Name country_name = 3; // payer country names
     // @inject_tag: bson:"city" structure:"city"
     Name city = 4; // payer city names, get from ip geo location
+    string zip = 5;
+    string state = 6;
     // @inject_tag: bson:"subdivision" structure:"subdivision"
-    string subdivision = 5; // payer subdivision code by ISO-3166-2
+    string subdivision = 7; // payer subdivision code by ISO-3166-2
     // @inject_tag: bson:"timezone" structure:"timezone"
-    string timezone = 6; // payer timezone name, get from ip geo location
+    string timezone = 8; // payer timezone name, get from ip geo location
     // @inject_tag: bson:"phone" structure:"phone"
-    string phone = 7; // payer phone from create order request
+    string phone = 9; // payer phone from create order request
     // @inject_tag: bson:"email" structure:"email"
-    string email = 8; // payer email from create order request
+    string email = 10; // payer email from create order request
 }
 
 message PaymentMethodOrder {
@@ -597,4 +599,17 @@ message MerchantPaymentMethod {
     MerchantPaymentMethodCommissions commission = 4;
     MerchantPaymentMethodIntegration integration = 5;
     bool is_active = 6;
+}
+
+message Refund {
+    string id = 1;
+    string order_id = 2;
+    string external_id = 3;
+    double amount = 4;
+    string creatorId = 5;
+    string reason = 6;
+    Currency currency = 7;
+    int32 status = 8;
+    google.protobuf.Timestamp created_at = 9;
+    google.protobuf.Timestamp updated_at = 10;
 }

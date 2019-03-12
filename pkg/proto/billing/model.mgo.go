@@ -235,6 +235,18 @@ type MgoNotification struct {
 	UpdatedAt  time.Time     `bson:"updated_at"`
 }
 
+type MgoRefund struct {
+	Id         bson.ObjectId `bson:"_id"`
+	OrderId    bson.ObjectId `bson:"order_id"`
+	ExternalId string        `bson:"external_id"`
+	Amount     float64       `bson:"amount"`
+	CreatorId  bson.ObjectId `bson:"creator_id"`
+	Currency   *Currency     `bson:"currency"`
+	Status     int32         `bson:"status"`
+	CreatedAt  time.Time     `bson:"created_at"`
+	UpdatedAt  time.Time     `bson:"updated_at"`
+}
+
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
@@ -1465,6 +1477,84 @@ func (m *Notification) SetBSON(raw bson.Raw) error {
 	return nil
 }
 
+func (m *Refund) GetBSON() (interface{}, error) {
+	st := &MgoRefund{
+		OrderId:    bson.ObjectIdHex(m.OrderId),
+		ExternalId: m.ExternalId,
+		Amount:     m.Amount,
+		CreatorId:  bson.ObjectIdHex(m.CreatorId),
+		Currency:   m.Currency,
+		Status:     m.Status,
+	}
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *Refund) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoRefund)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.OrderId = decoded.OrderId.Hex()
+	m.ExternalId = decoded.ExternalId
+	m.Amount = decoded.Amount
+	m.CreatorId = decoded.CreatorId.Hex()
+	m.Currency = decoded.Currency
+	m.Status = decoded.Status
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *PaymentFormPaymentMethod) IsBankCard() bool {
 	return m.Group == constant.PaymentSystemGroupAliasBankCard
 }
@@ -1475,10 +1565,4 @@ func (m *PaymentMethod) IsBankCard() bool {
 
 func (m *PaymentMethodOrder) IsBankCard() bool {
 	return m.Group == constant.PaymentSystemGroupAliasBankCard
-}
-
-func (m *Order) HasEndedStatus() bool {
-	return m.Status == constant.OrderStatusPaymentSystemReject || m.Status == constant.OrderStatusProjectComplete ||
-		m.Status == constant.OrderStatusProjectReject || m.Status == constant.OrderStatusRefund ||
-		m.Status == constant.OrderStatusChargeback
 }

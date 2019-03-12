@@ -44,6 +44,7 @@ It has these top-level messages:
 	MerchantPaymentMethodIntegration
 	MerchantPaymentMethodIdentification
 	MerchantPaymentMethod
+	Refund
 */
 package billing
 
