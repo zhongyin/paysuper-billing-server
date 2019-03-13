@@ -33,6 +33,7 @@ service BillingService {
     rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse) {}
     rpc ListRefunds(ListRefundsRequest) returns(ListRefundsResponse) {}
     rpc GetRefund(GetRefundRequest) returns(CreateRefundResponse) {}
+    rpc ProcessRefundCallback(CallbackRequest) returns (PaymentNotifyResponse) {}
 }
 
 message EmptyRequest {}
@@ -251,4 +252,10 @@ message ListRefundsResponse {
 message GetRefundRequest {
     string order_id = 1;
     string refund_id = 2;
+}
+
+message CallbackRequest {
+    string handler = 1;
+    bytes body = 2;
+    string signature = 3;
 }

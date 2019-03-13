@@ -762,7 +762,7 @@ func (t *cardPayTransport) log(reqUrl string, reqHeader http.Header, reqBody []b
 	)
 }
 
-func (h *cardPay) Refund(refund *billing.Refund) error {
+func (h *cardPay) CreateRefund(refund *billing.Refund) error {
 	err := h.auth(h.processor.order.PaymentMethod.Params.ExternalId)
 
 	if err != nil {
@@ -770,7 +770,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			"Auth in api failed on refund action",
 			[]interface{}{
 				"error", err.Error(),
-				"handler", paymentSystemHandlerCardPay,
+				"handler", pkg.PaymentSystemHandlerCardPay,
 			},
 		)
 
@@ -808,7 +808,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			"Marshal refund request failed",
 			[]interface{}{
 				"error", err.Error(),
-				"handler", paymentSystemHandlerCardPay,
+				"handler", pkg.PaymentSystemHandlerCardPay,
 				"req", data,
 			},
 		)
@@ -823,7 +823,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			"Refund request building failed",
 			[]interface{}{
 				"error", err.Error(),
-				"handler", paymentSystemHandlerCardPay,
+				"handler", pkg.PaymentSystemHandlerCardPay,
 				"req", data,
 			},
 		)
@@ -845,7 +845,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 				"Refund request failed",
 				[]interface{}{
 					"error", err.Error(),
-					"handler", paymentSystemHandlerCardPay,
+					"handler", pkg.PaymentSystemHandlerCardPay,
 					"req", data,
 				},
 			)
@@ -861,7 +861,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			"Refund response can't be read",
 			[]interface{}{
 				"error", err.Error(),
-				"handler", paymentSystemHandlerCardPay,
+				"handler", pkg.PaymentSystemHandlerCardPay,
 				"req", data,
 			},
 		)
@@ -877,7 +877,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			"Refund response can't be unmarshal",
 			[]interface{}{
 				"error", err.Error(),
-				"handler", paymentSystemHandlerCardPay,
+				"handler", pkg.PaymentSystemHandlerCardPay,
 				"req", string(b),
 			},
 		)
@@ -893,4 +893,46 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 	refund.ExternalId = rsp.RefundData.Id
 
 	return nil
+}
+
+func (h *cardPay) ProcessRefund(refund *billing.Refund, message proto.Message, raw, signature string) (err error) {
+	req := message.(*billing.CardPayRefundCallback)
+	refund.Status = pkg.RefundStatusRejected
+
+	err = h.checkCallbackRequestSignature(raw, signature)
+
+	if err != nil {
+		return NewError(err.Error(), pkg.ResponseStatusBadData)
+	}
+
+	if !req.IsRefundAllowedStatus() {
+		return NewError(paymentSystemErrorRequestStatusIsInvalid, pkg.ResponseStatusBadData)
+	}
+
+	if req.PaymentMethod != h.processor.order.PaymentMethod.Params.ExternalId {
+		return NewError(paymentSystemErrorRequestPaymentMethodIsInvalid, pkg.ResponseStatusBadData)
+	}
+
+	if req.RefundData.Amount != refund.Amount || req.RefundData.Currency != refund.Currency.CodeA3 {
+		return NewError(paymentSystemErrorRefundRequestAmountOrCurrencyIsInvalid, pkg.ResponseStatusBadData)
+	}
+
+	switch req.RefundData.Status {
+	case pkg.CardPayPaymentResponseStatusDeclined:
+		refund.Status = pkg.RefundStatusPaymentSystemDeclined
+		break
+	case pkg.CardPayPaymentResponseStatusCancelled:
+		refund.Status = pkg.RefundStatusPaymentSystemCanceled
+		break
+	case pkg.CardPayPaymentResponseStatusCompleted:
+		refund.Status = pkg.RefundStatusCompleted
+		break
+	default:
+		return NewError(paymentSystemErrorRequestTemporarySkipped, pkg.ResponseStatusTemporary)
+	}
+
+	refund.ExternalId = req.RefundData.Id
+	refund.UpdatedAt = ptypes.TimestampNow()
+
+	return
 }

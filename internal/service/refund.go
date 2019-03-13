@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	protobuf "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
@@ -18,6 +20,7 @@ const (
 	refundErrorAlreadyRefunded   = "amount by order was fully refunded"
 	refundErrorPaymentAmountLess = "refund unavailable, because payment amount less than total refunds amount"
 	refundErrorNotFound          = "refund with specified data not found"
+	refundErrorOrderNotFound     = "information about payment for refund with specified data not found"
 
 	refundDefaultReasonMask = "Refund by order #%s"
 )
@@ -66,7 +69,7 @@ func (s *Service) CreateRefund(
 		return nil
 	}
 
-	err = h.Refund(refund)
+	err = h.CreateRefund(refund)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusBadData
@@ -152,6 +155,123 @@ func (s *Service) GetRefund(
 	return nil
 }
 
+func (s *Service) ProcessRefundCallback(
+	ctx context.Context,
+	req *grpc.CallbackRequest,
+	rsp *grpc.PaymentNotifyResponse,
+) error {
+	var data protobuf.Message
+	var refundId string
+	var refund *billing.Refund
+
+	switch req.Handler {
+	case pkg.PaymentSystemHandlerCardPay:
+		data = &billing.CardPayRefundCallback{}
+		err := json.Unmarshal(req.Body, &data)
+
+		if err != nil ||
+			data.(*billing.CardPayRefundCallback).RefundData == nil {
+			rsp.Status = pkg.ResponseStatusBadData
+			rsp.Error = callbackRequestIncorrect
+
+			return nil
+		}
+
+		refundId = data.(*billing.CardPayRefundCallback).MerchantOrder.Id
+		break
+	default:
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Error = callbackHandlerIncorrect
+
+		return nil
+	}
+
+	err := s.db.Collection(pkg.CollectionRefund).FindId(bson.ObjectIdHex(refundId)).One(&refund)
+
+	if err != nil || refund == nil {
+		if err != nil && err != mgo.ErrNotFound {
+			s.logError("Query to find refund by id failed", []interface{}{"err", err.Error(), "id", refundId})
+		}
+
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Error = refundErrorNotFound
+
+		return nil
+	}
+
+	order, err := s.getOrderById(refund.OrderId)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Error = refundErrorOrderNotFound
+
+		return nil
+	}
+
+	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, order)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Error = orderErrorUnknown
+
+		return nil
+	}
+
+	pErr := h.ProcessRefund(refund, data, string(req.Body), req.Signature)
+
+	if pErr != nil {
+		s.logError(
+			"Refund callback processing failed",
+			[]interface{}{
+				"err", pErr.Error(),
+				"refund_id", refundId,
+				"request", string(req.Body),
+				"signature", req.Signature,
+			},
+		)
+
+		rsp.Error = pErr.Error()
+		rsp.Status = pErr.(*Error).Status()
+
+		if rsp.Status == pkg.ResponseStatusTemporary {
+			rsp.Status = pkg.ResponseStatusOk
+
+			return nil
+		}
+	}
+
+	err = s.db.Collection(pkg.CollectionRefund).UpdateId(bson.ObjectIdHex(refundId), refund)
+
+	if err != nil {
+		s.logError("Update refund data failed", []interface{}{"err", err.Error(), "refund", refund})
+
+		rsp.Error = orderErrorUnknown
+		rsp.Status = pkg.ResponseStatusSystemError
+
+		return nil
+	}
+
+	if pErr == nil {
+		processor := &createRefundProcessor{service: s}
+		refundedAmount, _ := processor.getRefundedAmount(order)
+
+		if refundedAmount == order.PaymentMethodIncomeAmount {
+			order.Status = constant.OrderStatusRefund
+			order.UpdatedAt = ptypes.TimestampNow()
+
+			err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+			if err != nil {
+				s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
+			}
+		}
+
+		rsp.Status = pkg.ResponseStatusOk
+	}
+
+	return nil
+}
+
 func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 	err := p.processOrder()
 
@@ -165,9 +285,11 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 		return nil, err
 	}
 
+	order := p.checked.order
+
 	refund := &billing.Refund{
 		Id:        bson.NewObjectId().Hex(),
-		OrderId:   p.checked.order.Id,
+		OrderId:   order.Id,
 		Amount:    p.request.Amount,
 		CreatorId: p.request.CreatorId,
 		Reason:    fmt.Sprintf(refundDefaultReasonMask, p.checked.order.Id),
@@ -175,6 +297,15 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 		Status:    pkg.RefundStatusCreated,
 		CreatedAt: ptypes.TimestampNow(),
 		UpdatedAt: ptypes.TimestampNow(),
+		PayerData: &billing.RefundPayerData{
+			Country: order.PayerData.CountryCodeA2,
+			Zip:     order.PayerData.Zip,
+			State:   order.PayerData.State,
+		},
+	}
+
+	if order.VatAmount != nil {
+		refund.SalesTax = order.VatAmount.AmountMerchantCurrency
 	}
 
 	if p.request.Reason != "" {

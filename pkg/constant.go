@@ -63,17 +63,23 @@ const (
 	MerchantStatusAgreementSigning   = int32(5)
 	MerchantStatusAgreementSigned    = int32(6)
 
-	ResponseStatusOk       = int32(200)
-	ResponseStatusBadData  = int32(400)
-	ResponseStatusNotFound = int32(404)
+	ResponseStatusOk          = int32(200)
+	ResponseStatusBadData     = int32(400)
+	ResponseStatusNotFound    = int32(404)
+	ResponseStatusSystemError = int32(500)
+	ResponseStatusTemporary   = int32(410)
 
 	SystemUserId = "000000000000000000000000"
 
-	RefundStatusCreated    = int32(0)
-	RefundStatusRejected   = int32(1)
-	RefundStatusInProgress = int32(2)
-	RefundStatusCompleted  = int32(3)
+	RefundStatusCreated               = int32(0)
+	RefundStatusRejected              = int32(1)
+	RefundStatusInProgress            = int32(2)
+	RefundStatusCompleted             = int32(3)
+	RefundStatusPaymentSystemDeclined = int32(4)
+	RefundStatusPaymentSystemCanceled = int32(5)
 
 	PaymentSystemErrorCreateRefundFailed   = "refund can't be create. try request later"
 	PaymentSystemErrorCreateRefundRejected = "refund create request rejected"
+
+	PaymentSystemHandlerCardPay = "cardpay"
 )

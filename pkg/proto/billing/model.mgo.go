@@ -236,15 +236,17 @@ type MgoNotification struct {
 }
 
 type MgoRefund struct {
-	Id         bson.ObjectId `bson:"_id"`
-	OrderId    bson.ObjectId `bson:"order_id"`
-	ExternalId string        `bson:"external_id"`
-	Amount     float64       `bson:"amount"`
-	CreatorId  bson.ObjectId `bson:"creator_id"`
-	Currency   *Currency     `bson:"currency"`
-	Status     int32         `bson:"status"`
-	CreatedAt  time.Time     `bson:"created_at"`
-	UpdatedAt  time.Time     `bson:"updated_at"`
+	Id         bson.ObjectId    `bson:"_id"`
+	OrderId    bson.ObjectId    `bson:"order_id"`
+	ExternalId string           `bson:"external_id"`
+	Amount     float64          `bson:"amount"`
+	CreatorId  bson.ObjectId    `bson:"creator_id"`
+	Currency   *Currency        `bson:"currency"`
+	Status     int32            `bson:"status"`
+	CreatedAt  time.Time        `bson:"created_at"`
+	UpdatedAt  time.Time        `bson:"updated_at"`
+	PayerData  *RefundPayerData `bson:"payer_data"`
+	SalesTax   float64          `bson:"sales_tax"`
 }
 
 func (m *Vat) GetBSON() (interface{}, error) {
@@ -1485,6 +1487,8 @@ func (m *Refund) GetBSON() (interface{}, error) {
 		CreatorId:  bson.ObjectIdHex(m.CreatorId),
 		Currency:   m.Currency,
 		Status:     m.Status,
+		PayerData:  m.PayerData,
+		SalesTax:   m.SalesTax,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1539,6 +1543,8 @@ func (m *Refund) SetBSON(raw bson.Raw) error {
 	m.CreatorId = decoded.CreatorId.Hex()
 	m.Currency = decoded.Currency
 	m.Status = decoded.Status
+	m.PayerData = decoded.PayerData
+	m.SalesTax = decoded.SalesTax
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 

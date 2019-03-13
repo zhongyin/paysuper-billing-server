@@ -118,17 +118,26 @@ message CardPayRefundCallbackRefundData {
     string rrn = 10;
 }
 
+message CardPayRefundCallbackPaymentData {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string id = 1;
+    // @inject_tag: validate:"required"
+    double remaining_amount = 2;
+}
+
 message CardPayRefundCallback {
     // @inject_tag: validate:"required,dive"
     CardPayMerchantOrder merchant_order = 1;
     // @inject_tag: validate:"required,dive"
     string payment_method = 2;
     // @inject_tag: validate:"required,dive"
-    CallbackCardPayPaymentData payment_data = 3;
+    CardPayRefundCallbackPaymentData payment_data = 3;
     // @inject_tag: validate:"required,dive"
     CardPayRefundCallbackRefundData refund_data = 4;
     string callback_time = 5;
+    // @inject_tag: json:"-"
     CallbackCardPayBankCardAccount card_account = 6;
     CardPayCustomer customer = 7;
+    // @inject_tag: json:"-"
     CardPayEWalletAccount ewallet_account = 8;
 }

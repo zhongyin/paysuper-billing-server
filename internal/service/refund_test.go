@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"crypto/sha512"
+	"encoding/hex"
+	"encoding/json"
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
@@ -448,6 +451,10 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_Ok() {
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
@@ -1035,4 +1042,951 @@ func (suite *RefundTestSuite) TestRefund_GetRefund_NotFound_Error() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp3.Status)
 	assert.Equal(suite.T(), refundErrorNotFound, rsp3.Message)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp3.Status)
+	assert.Empty(suite.T(), rsp3.Error)
+
+	var refund *billing.Refund
+	err = suite.service.db.Collection(pkg.CollectionRefund).FindId(bson.ObjectIdHex(rsp2.Item.Id)).One(&refund)
+	assert.NotNil(suite.T(), refund)
+	assert.Equal(suite.T(), pkg.RefundStatusCompleted, refund.Status)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnmarshalError() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := `{"some_field": "some_value"}`
+
+	hash := sha512.New()
+	hash.Write([]byte(refundReq + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      []byte(refundReq),
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp3.Status)
+	assert.Equal(suite.T(), callbackRequestIncorrect, rsp3.Error)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownHandler_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   "fake_payment_system_handler",
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp3.Status)
+	assert.Equal(suite.T(), callbackHandlerIncorrect, rsp3.Error)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_RefundNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: bson.NewObjectId().Hex(),
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              bson.NewObjectId().Hex(),
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp3.Status)
+	assert.Equal(suite.T(), refundErrorNotFound, rsp3.Error)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	var refund *billing.Refund
+	err = suite.service.db.Collection(pkg.CollectionRefund).FindId(bson.ObjectIdHex(rsp2.Item.Id)).One(&refund)
+	assert.NotNil(suite.T(), refund)
+
+	refund.OrderId = bson.NewObjectId().Hex()
+	err = suite.service.db.Collection(pkg.CollectionRefund).UpdateId(bson.ObjectIdHex(refund.Id), refund)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp3.Status)
+	assert.Equal(suite.T(), refundErrorOrderNotFound, rsp3.Error)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownPaymentSystemHandler_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = "fake_payment_system_handler"
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusSystemError, rsp3.Status)
+	assert.Equal(suite.T(), orderErrorUnknown, rsp3.Error)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_ProcessRefundError() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10000,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp3.Status)
+	assert.Equal(suite.T(), paymentSystemErrorRefundRequestAmountOrCurrencyIsInvalid, rsp3.Error)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_TemporaryStatus_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    10,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 90,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   10,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusAuthorized,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp3.Status)
+	assert.Equal(suite.T(), paymentSystemErrorRequestTemporarySkipped, rsp3.Error)
+
+	var refund *billing.Refund
+	err = suite.service.db.Collection(pkg.CollectionRefund).FindId(bson.ObjectIdHex(rsp2.Item.Id)).One(&refund)
+	assert.NotNil(suite.T(), refund)
+	assert.Equal(suite.T(), pkg.RefundStatusInProgress, refund.Status)
+}
+
+func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderFullyRefunded_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	createPaymentRequest := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp1 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.Status = constant.OrderStatusPaymentSystemComplete
+	order.PaymentMethod.Params.Handler = "mock_ok"
+	order.VatAmount = &billing.OrderFee{
+		AmountPaymentMethodCurrency: 10,
+		AmountMerchantCurrency:      10,
+	}
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	req2 := &grpc.CreateRefundRequest{
+		OrderId:   rsp.Id,
+		Amount:    100,
+		CreatorId: bson.NewObjectId().Hex(),
+		Reason:    "unit test",
+	}
+	rsp2 := &grpc.CreateRefundResponse{}
+	err = suite.service.CreateRefund(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp2.Status)
+	assert.Empty(suite.T(), rsp2.Message)
+
+	order.PaymentMethod.Params.Handler = pkg.PaymentSystemHandlerCardPay
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	refundReq := &billing.CardPayRefundCallback{
+		MerchantOrder: &billing.CardPayMerchantOrder{
+			Id: rsp2.Item.Id,
+		},
+		PaymentMethod: order.PaymentMethod.Group,
+		PaymentData: &billing.CardPayRefundCallbackPaymentData{
+			Id:              rsp2.Item.Id,
+			RemainingAmount: 0,
+		},
+		RefundData: &billing.CardPayRefundCallbackRefundData{
+			Amount:   100,
+			Created:  time.Now().Format(cardPayDateFormat),
+			Id:       bson.NewObjectId().Hex(),
+			Currency: rsp2.Item.Currency.CodeA3,
+			Status:   pkg.CardPayPaymentResponseStatusCompleted,
+			AuthCode: bson.NewObjectId().Hex(),
+			Is_3D:    true,
+			Rrn:      bson.NewObjectId().Hex(),
+		},
+		CallbackTime: time.Now().Format(cardPayDateFormat),
+		Customer: &billing.CardPayCustomer{
+			Email: order.PayerData.Email,
+			Id:    order.PayerData.Email,
+		},
+	}
+
+	b, err := json.Marshal(refundReq)
+	assert.NoError(suite.T(), err)
+
+	hash := sha512.New()
+	hash.Write([]byte(string(b) + order.PaymentMethod.Params.CallbackPassword))
+
+	req3 := &grpc.CallbackRequest{
+		Handler:   pkg.PaymentSystemHandlerCardPay,
+		Body:      b,
+		Signature: hex.EncodeToString(hash.Sum(nil)),
+	}
+	rsp3 := &grpc.PaymentNotifyResponse{}
+	err = suite.service.ProcessRefundCallback(context.TODO(), req3, rsp3)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp3.Status)
+	assert.Empty(suite.T(), rsp3.Error)
+
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp.Id)).One(&order)
+	assert.Equal(suite.T(), int32(constant.OrderStatusRefund), order.Status)
 }

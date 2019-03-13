@@ -40,6 +40,7 @@ It has these top-level messages:
 	ListRefundsRequest
 	ListRefundsResponse
 	GetRefundRequest
+	CallbackRequest
 */
 package grpc
 
@@ -96,6 +97,7 @@ type BillingService interface {
 	CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
 	ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...client.CallOption) (*ListRefundsResponse, error)
 	GetRefund(ctx context.Context, in *GetRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
+	ProcessRefundCallback(ctx context.Context, in *CallbackRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
 }
 
 type billingService struct {
@@ -336,6 +338,16 @@ func (c *billingService) GetRefund(ctx context.Context, in *GetRefundRequest, op
 	return out, nil
 }
 
+func (c *billingService) ProcessRefundCallback(ctx context.Context, in *CallbackRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ProcessRefundCallback", in)
+	out := new(PaymentNotifyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -361,6 +373,7 @@ type BillingServiceHandler interface {
 	CreateRefund(context.Context, *CreateRefundRequest, *CreateRefundResponse) error
 	ListRefunds(context.Context, *ListRefundsRequest, *ListRefundsResponse) error
 	GetRefund(context.Context, *GetRefundRequest, *CreateRefundResponse) error
+	ProcessRefundCallback(context.Context, *CallbackRequest, *PaymentNotifyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -387,6 +400,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		CreateRefund(ctx context.Context, in *CreateRefundRequest, out *CreateRefundResponse) error
 		ListRefunds(ctx context.Context, in *ListRefundsRequest, out *ListRefundsResponse) error
 		GetRefund(ctx context.Context, in *GetRefundRequest, out *CreateRefundResponse) error
+		ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -485,4 +499,8 @@ func (h *billingServiceHandler) ListRefunds(ctx context.Context, in *ListRefunds
 
 func (h *billingServiceHandler) GetRefund(ctx context.Context, in *GetRefundRequest, out *CreateRefundResponse) error {
 	return h.BillingServiceHandler.GetRefund(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error {
+	return h.BillingServiceHandler.ProcessRefundCallback(ctx, in, out)
 }

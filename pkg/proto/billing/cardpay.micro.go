@@ -20,6 +20,7 @@ It has these top-level messages:
 	CardPayCallbackRecurringData
 	CardPayPaymentCallback
 	CardPayRefundCallbackRefundData
+	CardPayRefundCallbackPaymentData
 	CardPayRefundCallback
 */
 package billing

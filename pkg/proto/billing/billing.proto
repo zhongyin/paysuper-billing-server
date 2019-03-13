@@ -601,6 +601,12 @@ message MerchantPaymentMethod {
     bool is_active = 6;
 }
 
+message RefundPayerData {
+    string country = 1;
+    string zip = 2;
+    string state = 3;
+}
+
 message Refund {
     string id = 1;
     string order_id = 2;
@@ -612,4 +618,6 @@ message Refund {
     int32 status = 8;
     google.protobuf.Timestamp created_at = 9;
     google.protobuf.Timestamp updated_at = 10;
+    RefundPayerData payer_data = 11;
+    double sales_tax = 12;
 }

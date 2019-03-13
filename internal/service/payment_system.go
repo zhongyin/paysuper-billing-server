@@ -4,35 +4,36 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
+	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 )
 
 const (
-	paymentSystemHandlerCardPay   = "cardpay"
 	paymentSystemHandlerMockOk    = "mock_ok"
 	paymentSystemHandlerMockError = "mock_error"
 
-	paymentSystemErrorHandlerNotFound                  = "handler for specified payment system not found"
-	paymentSystemErrorAuthenticateFailed               = "authentication failed"
-	paymentSystemErrorUnknownPaymentMethod             = "unknown payment method"
-	paymentSystemErrorCreateRequestFailed              = "order can't be create. try request later"
-	paymentSystemErrorEWalletIdentifierIsInvalid       = "wallet identifier is invalid"
-	paymentSystemErrorRequestSignatureIsInvalid        = "request signature is invalid"
-	paymentSystemErrorRequestTimeFieldIsInvalid        = "time field in request is invalid"
-	paymentSystemErrorRequestRecurringIdFieldIsInvalid = "recurring id field in request is invalid"
-	paymentSystemErrorRequestStatusIsInvalid           = "status is invalid"
-	paymentSystemErrorRequestPaymentMethodIsInvalid    = "payment method from request not match with value in order"
-	paymentSystemErrorRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in order"
-	paymentSystemErrorRequestTemporarySkipped          = "notification skipped with temporary status"
+	paymentSystemErrorHandlerNotFound                        = "handler for specified payment system not found"
+	paymentSystemErrorAuthenticateFailed                     = "authentication failed"
+	paymentSystemErrorUnknownPaymentMethod                   = "unknown payment method"
+	paymentSystemErrorCreateRequestFailed                    = "order can't be create. try request later"
+	paymentSystemErrorEWalletIdentifierIsInvalid             = "wallet identifier is invalid"
+	paymentSystemErrorRequestSignatureIsInvalid              = "request signature is invalid"
+	paymentSystemErrorRequestTimeFieldIsInvalid              = "time field in request is invalid"
+	paymentSystemErrorRequestRecurringIdFieldIsInvalid       = "recurring id field in request is invalid"
+	paymentSystemErrorRequestStatusIsInvalid                 = "status is invalid"
+	paymentSystemErrorRequestPaymentMethodIsInvalid          = "payment method from request not match with value in order"
+	paymentSystemErrorRequestAmountOrCurrencyIsInvalid       = "amount or currency from request not match with value in order"
+	paymentSystemErrorRefundRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in refund"
+	paymentSystemErrorRequestTemporarySkipped                = "notification skipped with temporary status"
 
 	defaultHttpClientTimeout = 10
 	defaultResponseBodyLimit = 512
 )
 
 var paymentSystemHandlers = map[string]func(*paymentProcessor) PaymentSystem{
-	paymentSystemHandlerCardPay:   newCardPayHandler,
-	paymentSystemHandlerMockOk:    NewPaymentSystemMockOk,
-	paymentSystemHandlerMockError: NewPaymentSystemMockError,
+	pkg.PaymentSystemHandlerCardPay: newCardPayHandler,
+	paymentSystemHandlerMockOk:      NewPaymentSystemMockOk,
+	paymentSystemHandlerMockError:   NewPaymentSystemMockError,
 }
 
 type Error struct {
@@ -50,7 +51,8 @@ type PaymentSystem interface {
 	ProcessPayment(request proto.Message, rawRequest string, signature string) error
 	IsRecurringCallback(request proto.Message) bool
 	GetRecurringId(request proto.Message) string
-	Refund(refund *billing.Refund) error
+	CreateRefund(refund *billing.Refund) error
+	ProcessRefund(refund *billing.Refund, message proto.Message, raw, signature string) (err error)
 }
 
 type paymentProcessor struct {

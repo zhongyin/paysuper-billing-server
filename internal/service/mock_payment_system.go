@@ -39,11 +39,23 @@ func (m *PaymentSystemMockOk) GetRecurringId(request proto.Message) string {
 	return ""
 }
 
-func (m *PaymentSystemMockOk) Refund(refund *billing.Refund) error {
+func (m *PaymentSystemMockOk) CreateRefund(refund *billing.Refund) error {
 	refund.Status = pkg.RefundStatusInProgress
 	refund.ExternalId = bson.NewObjectId().Hex()
 
 	return nil
+}
+
+func (m *PaymentSystemMockOk) ProcessRefund(
+	refund *billing.Refund,
+	message proto.Message,
+	raw,
+	signature string,
+) (err error) {
+	refund.Status = pkg.RefundStatusCompleted
+	refund.ExternalId = bson.NewObjectId().Hex()
+
+	return
 }
 
 func (m *PaymentSystemMockError) CreatePayment(map[string]string) (string, error) {
@@ -62,7 +74,16 @@ func (m *PaymentSystemMockError) GetRecurringId(request proto.Message) string {
 	return ""
 }
 
-func (m *PaymentSystemMockError) Refund(refund *billing.Refund) error {
+func (m *PaymentSystemMockError) CreateRefund(refund *billing.Refund) error {
 	refund.Status = pkg.RefundStatusRejected
 	return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+}
+
+func (m *PaymentSystemMockError) ProcessRefund(
+	refund *billing.Refund,
+	message proto.Message,
+	raw,
+	signature string,
+) (err error) {
+	return NewError(paymentSystemErrorRefundRequestAmountOrCurrencyIsInvalid, pkg.ResponseStatusBadData)
 }
