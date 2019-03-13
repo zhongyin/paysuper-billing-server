@@ -121,7 +121,7 @@ message CardPayRefundCallbackRefundData {
 message CardPayRefundCallbackPaymentData {
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string id = 1;
-    // @inject_tag: validate:"numeric,gt=0"
+    // @inject_tag: validate:"numeric,gte=0"
     double remaining_amount = 2;
 }
 
