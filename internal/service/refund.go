@@ -136,12 +136,12 @@ func (p *createRefundProcessor) processOrder() error {
 		return p.service.NewRefundError(err.Error(), pkg.ResponseStatusNotFound)
 	}
 
-	if order.RefundAllowed() == false {
-		return p.service.NewRefundError(refundErrorNotAllowed, pkg.ResponseStatusBadData)
-	}
-
 	if order.Status == constant.OrderStatusRefund {
 		return p.service.NewRefundError(refundErrorAlreadyRefunded, pkg.ResponseStatusBadData)
+	}
+
+	if order.RefundAllowed() == false {
+		return p.service.NewRefundError(refundErrorNotAllowed, pkg.ResponseStatusBadData)
 	}
 
 	p.checked.order = order
