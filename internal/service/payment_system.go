@@ -8,7 +8,9 @@ import (
 )
 
 const (
-	paymentSystemHandlerCardPay = "cardpay"
+	paymentSystemHandlerCardPay   = "cardpay"
+	paymentSystemHandlerMockOk    = "mock_ok"
+	paymentSystemHandlerMockError = "mock_error"
 
 	paymentSystemErrorHandlerNotFound                  = "handler for specified payment system not found"
 	paymentSystemErrorAuthenticateFailed               = "authentication failed"
@@ -22,15 +24,15 @@ const (
 	paymentSystemErrorRequestPaymentMethodIsInvalid    = "payment method from request not match with value in order"
 	paymentSystemErrorRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in order"
 	paymentSystemErrorRequestTemporarySkipped          = "notification skipped with temporary status"
-	paymentSystemErrorCreateRefundFailed               = "refund can't be create. try request later"
-	paymentSystemErrorCreateRefundRejected             = "refund create request rejected"
 
 	defaultHttpClientTimeout = 10
 	defaultResponseBodyLimit = 512
 )
 
 var paymentSystemHandlers = map[string]func(*paymentProcessor) PaymentSystem{
-	paymentSystemHandlerCardPay: newCardPayHandler,
+	paymentSystemHandlerCardPay:   newCardPayHandler,
+	paymentSystemHandlerMockOk:    NewPaymentSystemMockOk,
+	paymentSystemHandlerMockError: NewPaymentSystemMockError,
 }
 
 type Error struct {

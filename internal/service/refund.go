@@ -40,7 +40,12 @@ func (s *Service) CreateRefund(
 	req *grpc.CreateRefundRequest,
 	rsp *grpc.CreateRefundResponse,
 ) error {
-	processor := &createRefundProcessor{service: s, request: req}
+	processor := &createRefundProcessor{
+		service: s,
+		request: req,
+		checked: &createRefundChecked{},
+	}
+
 	refund, err := processor.processCreateRefund()
 
 	if err != nil {
@@ -159,7 +164,10 @@ func (p *createRefundProcessor) processRefundsByOrder() error {
 }
 
 func (p *createRefundProcessor) getRefundedAmount(order *billing.Order) (float64, error) {
-	var res interface{}
+	var res struct {
+		Id     bson.ObjectId `bson:"_id"`
+		Amount float64       `bson:"amount"`
+	}
 
 	query := []bson.M{
 		{
@@ -173,12 +181,12 @@ func (p *createRefundProcessor) getRefundedAmount(order *billing.Order) (float64
 
 	err := p.service.db.Collection(pkg.CollectionRefund).Pipe(query).One(&res)
 
-	if err != nil {
+	if err != nil && !p.service.IsDbNotFoundError(err) {
 		p.service.logError("Query to calculate refunded amount by order failed", []interface{}{"err", err.Error(), "query", query})
 		return 0, errors.New(orderErrorUnknown)
 	}
 
-	return 0, nil
+	return res.Amount, nil
 }
 
 func (s *Service) NewRefundError(text string, status int32) error {

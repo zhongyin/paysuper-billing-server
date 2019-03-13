@@ -763,6 +763,20 @@ func (t *cardPayTransport) log(reqUrl string, reqHeader http.Header, reqBody []b
 }
 
 func (h *cardPay) Refund(refund *billing.Refund) error {
+	err := h.auth(h.processor.order.PaymentMethod.Params.ExternalId)
+
+	if err != nil {
+		h.processor.service.logError(
+			"Auth in api failed on refund action",
+			[]interface{}{
+				"error", err.Error(),
+				"handler", paymentSystemHandlerCardPay,
+			},
+		)
+
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
 	qUrl, err := h.getUrl(cardPayActionRefund)
 
 	if err != nil {
@@ -798,7 +812,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 				"req", data,
 			},
 		)
-		return errors.New(paymentSystemErrorCreateRefundFailed)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
 	}
 
 	client := tools.NewLoggedHttpClient(zap.S())
@@ -813,7 +827,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 				"req", data,
 			},
 		)
-		return errors.New(paymentSystemErrorCreateRefundFailed)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
 	}
 
 	token := h.getToken(h.processor.order.PaymentMethod.Params.ExternalId)
@@ -837,7 +851,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			)
 		}
 
-		return errors.New(paymentSystemErrorCreateRefundFailed)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
 	}
 
 	b, err = ioutil.ReadAll(resp.Body)
@@ -852,7 +866,7 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			},
 		)
 
-		return errors.New(paymentSystemErrorCreateRefundFailed)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
 	}
 
 	rsp := &CardPayRefundResponse{}
@@ -868,11 +882,11 @@ func (h *cardPay) Refund(refund *billing.Refund) error {
 			},
 		)
 
-		return errors.New(paymentSystemErrorCreateRefundFailed)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
 	}
 
 	if rsp.IsSuccessStatus() == false {
-		return errors.New(paymentSystemErrorCreateRefundRejected)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundRejected)
 	}
 
 	refund.Status = pkg.RefundStatusInProgress

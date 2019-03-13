@@ -73,4 +73,7 @@ const (
 	RefundStatusRejected   = int32(1)
 	RefundStatusInProgress = int32(2)
 	RefundStatusCompleted  = int32(3)
+
+	PaymentSystemErrorCreateRefundFailed   = "refund can't be create. try request later"
+	PaymentSystemErrorCreateRefundRejected = "refund create request rejected"
 )
