@@ -126,13 +126,13 @@ message CardPayRefundCallbackPaymentData {
 }
 
 message CardPayRefundCallback {
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required"
     CardPayMerchantOrder merchant_order = 1;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required"
     string payment_method = 2;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required"
     CardPayRefundCallbackPaymentData payment_data = 3;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required"
     CardPayRefundCallbackRefundData refund_data = 4;
     string callback_time = 5;
     // @inject_tag: json:"-"
