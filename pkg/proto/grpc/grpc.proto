@@ -31,6 +31,8 @@ service BillingService {
     rpc ChangeMerchantPaymentMethod(MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
 
     rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse) {}
+    rpc ListRefunds(ListRefundsRequest) returns(ListRefundsResponse) {}
+    rpc GetRefund(GetRefundRequest) returns(CreateRefundResponse) {}
 }
 
 message EmptyRequest {}
@@ -233,4 +235,20 @@ message CreateRefundResponse {
     int32 status = 1;
     string message = 2;
     billing.Refund item = 3;
+}
+
+message ListRefundsRequest {
+    string order_id = 1;
+    int32 limit = 7;
+    int32 offset = 8;
+}
+
+message ListRefundsResponse {
+    int32 count = 1;
+    repeated billing.Refund items = 2;
+}
+
+message GetRefundRequest {
+    string order_id = 1;
+    string refund_id = 2;
 }

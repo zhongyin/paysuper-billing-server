@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -16,6 +17,7 @@ const (
 	refundErrorNotAllowed        = "create refund for order not allowed"
 	refundErrorAlreadyRefunded   = "amount by order was fully refunded"
 	refundErrorPaymentAmountLess = "refund unavailable, because payment amount less than total refunds amount"
+	refundErrorNotFound          = "refund with specified data not found"
 
 	refundDefaultReasonMask = "Refund by order #%s"
 )
@@ -80,6 +82,66 @@ func (s *Service) CreateRefund(
 
 		rsp.Status = pkg.ResponseStatusBadData
 		rsp.Message = orderErrorUnknown
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = refund
+
+	return nil
+}
+
+func (s *Service) ListRefunds(
+	ctx context.Context,
+	req *grpc.ListRefundsRequest,
+	rsp *grpc.ListRefundsResponse,
+) error {
+	var refunds []*billing.Refund
+
+	query := bson.M{"order_id": bson.ObjectIdHex(req.OrderId)}
+	err := s.db.Collection(pkg.CollectionRefund).Find(query).Limit(int(req.Limit)).Skip(int(req.Offset)).All(&refunds)
+
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			s.logError("Query to find refunds by order failed", []interface{}{"err", err.Error(), "query", query})
+		}
+
+		return nil
+	}
+
+	count, err := s.db.Collection(pkg.CollectionRefund).Find(query).Count()
+
+	if err != nil {
+		s.logError("Query to count refunds by order failed", []interface{}{"err", err.Error(), "query", query})
+		return nil
+	}
+
+	if refunds != nil {
+		rsp.Count = int32(count)
+		rsp.Items = refunds
+	}
+
+	return nil
+}
+
+func (s *Service) GetRefund(
+	ctx context.Context,
+	req *grpc.GetRefundRequest,
+	rsp *grpc.CreateRefundResponse,
+) error {
+	var refund *billing.Refund
+
+	query := bson.M{"_id": bson.ObjectIdHex(req.RefundId), "order_id": bson.ObjectIdHex(req.OrderId)}
+	err := s.db.Collection(pkg.CollectionRefund).Find(query).One(&refund)
+
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			s.logError("Query to find refund by id failed", []interface{}{"err", err.Error(), "query", query})
+		}
+
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = refundErrorNotFound
 
 		return nil
 	}
