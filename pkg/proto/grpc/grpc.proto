@@ -29,6 +29,11 @@ service BillingService {
     rpc ListMerchantPaymentMethods(ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
     rpc GetMerchantPaymentMethod(GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
     rpc ChangeMerchantPaymentMethod(MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
+
+    rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse) {}
+    rpc ListRefunds(ListRefundsRequest) returns(ListRefundsResponse) {}
+    rpc GetRefund(GetRefundRequest) returns(CreateRefundResponse) {}
+    rpc ProcessRefundCallback(CallbackRequest) returns (PaymentNotifyResponse) {}
 }
 
 message EmptyRequest {}
@@ -216,4 +221,41 @@ message MerchantGetMerchantResponse {
 message GetNotificationRequest {
     string merchant_id = 1;
     string notification_id = 2;
+}
+
+message CreateRefundRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string order_id = 1;
+    // @inject_tag: validate:"required,numeric,gt=0"
+    double amount = 2;
+    string creator_id = 3;
+    string reason = 4;
+}
+
+message CreateRefundResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Refund item = 3;
+}
+
+message ListRefundsRequest {
+    string order_id = 1;
+    int32 limit = 7;
+    int32 offset = 8;
+}
+
+message ListRefundsResponse {
+    int32 count = 1;
+    repeated billing.Refund items = 2;
+}
+
+message GetRefundRequest {
+    string order_id = 1;
+    string refund_id = 2;
+}
+
+message CallbackRequest {
+    string handler = 1;
+    bytes body = 2;
+    string signature = 3;
 }

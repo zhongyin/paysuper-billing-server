@@ -37,6 +37,7 @@ const (
 	cardPayActionRefresh          = "refresh"
 	cardPayActionCreatePayment    = "create_payment"
 	cardPayActionRecurringPayment = "recurring_payment"
+	cardPayActionRefund           = "refund"
 
 	cardPayDateFormat          = "2006-01-02T15:04:05Z"
 	cardPayInitiatorCardholder = "cit"
@@ -61,6 +62,18 @@ var (
 			path:   "/api/recurrings",
 			method: http.MethodPost,
 		},
+		cardPayActionRefund: {
+			path:   "/api/refunds",
+			method: http.MethodPost,
+		},
+	}
+
+	successRefundResponseStatuses = map[string]bool{
+		pkg.CardPayPaymentResponseStatusAuthorized: true,
+		pkg.CardPayPaymentResponseStatusInProgress: true,
+		pkg.CardPayPaymentResponseStatusPending:    true,
+		pkg.CardPayPaymentResponseStatusRefunded:   true,
+		pkg.CardPayPaymentResponseStatusCompleted:  true,
 	}
 )
 
@@ -185,6 +198,53 @@ type CardPayOrder struct {
 
 type CardPayOrderResponse struct {
 	RedirectUrl string `json:"redirect_url"`
+}
+
+type CardPayRefundData struct {
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
+}
+
+type CardPayRefundRequest struct {
+	Request       *CardPayRequest             `json:"request"`
+	MerchantOrder *CardPayMerchantOrder       `json:"merchant_order"`
+	PaymentData   *CardPayRecurringDataFiling `json:"payment_data"`
+	RefundData    *CardPayRefundData          `json:"refund_data"`
+}
+
+type CardPayRefundResponseRefundData struct {
+	Id       string  `json:"id"`
+	Created  string  `json:"created"`
+	Status   string  `json:"status"`
+	AuthCode string  `json:"auth_code"`
+	Is3d     bool    `json:"is_3d"`
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
+}
+
+type CardPayRefundResponsePaymentData struct {
+	Id              string  `json:"id"`
+	RemainingAmount float64 `json:"remaining_amount"`
+}
+
+type CardPayRefundResponseCustomer struct {
+	Id    string `json:"id"`
+	Email string `json:"email"`
+}
+
+type CardPayRefundResponse struct {
+	PaymentMethod  string                            `json:"payment_method"`
+	MerchantOrder  *CardPayMerchantOrder             `json:"merchant_order"`
+	RefundData     *CardPayRefundResponseRefundData  `json:"refund_data"`
+	PaymentData    *CardPayRefundResponsePaymentData `json:"payment_data"`
+	Customer       *CardPayRefundResponseCustomer    `json:"customer"`
+	CardAccount    interface{}                       `json:"card_account,omitempty"`
+	EwalletAccount interface{}                       `json:"ewallet_account,omitempty"`
+}
+
+func (m *CardPayRefundResponse) IsSuccessStatus() bool {
+	v, ok := successRefundResponseStatuses[m.RefundData.Status]
+	return ok && v == true
 }
 
 func newCardPayHandler(processor *paymentProcessor) PaymentSystem {
@@ -700,4 +760,179 @@ func (t *cardPayTransport) log(reqUrl string, reqHeader http.Header, reqBody []b
 		zap.String("response_headers", t.processor.httpHeadersToString(resp.Header)),
 		zap.String("response_body", t.processor.cutBytes(resBody, defaultResponseBodyLimit)),
 	)
+}
+
+func (h *cardPay) CreateRefund(refund *billing.Refund) error {
+	err := h.auth(h.processor.order.PaymentMethod.Params.ExternalId)
+
+	if err != nil {
+		h.processor.service.logError(
+			"Auth in api failed on refund action",
+			[]interface{}{
+				"error", err.Error(),
+				"handler", pkg.PaymentSystemHandlerCardPay,
+			},
+		)
+
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
+	qUrl, err := h.getUrl(cardPayActionRefund)
+
+	if err != nil {
+		return err
+	}
+
+	data := &CardPayRefundRequest{
+		Request: &CardPayRequest{
+			Id:   refund.Id,
+			Time: time.Now().UTC().Format(cardPayDateFormat),
+		},
+		MerchantOrder: &CardPayMerchantOrder{
+			Id:          refund.Id,
+			Description: refund.Reason,
+		},
+		PaymentData: &CardPayRecurringDataFiling{
+			Id: h.processor.order.PaymentMethodOrderId,
+		},
+		RefundData: &CardPayRefundData{
+			Amount:   refund.Amount,
+			Currency: refund.Currency.CodeA3,
+		},
+	}
+
+	b, err := json.Marshal(data)
+
+	if err != nil {
+		h.processor.service.logError(
+			"Marshal refund request failed",
+			[]interface{}{
+				"error", err.Error(),
+				"handler", pkg.PaymentSystemHandlerCardPay,
+				"req", data,
+			},
+		)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
+	client := tools.NewLoggedHttpClient(zap.S())
+	req, err := http.NewRequest(cardPayPaths[cardPayActionRefund].method, qUrl, bytes.NewBuffer(b))
+
+	if err != nil {
+		h.processor.service.logError(
+			"Refund request building failed",
+			[]interface{}{
+				"error", err.Error(),
+				"handler", pkg.PaymentSystemHandlerCardPay,
+				"req", data,
+			},
+		)
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
+	token := h.getToken(h.processor.order.PaymentMethod.Params.ExternalId)
+	auth := strings.Title(token.TokenType) + " " + token.AccessToken
+
+	req.Header.Add(HeaderContentType, MIMEApplicationJSON)
+	req.Header.Add(HeaderAuthorization, auth)
+
+	refund.Status = pkg.RefundStatusRejected
+	resp, err := client.Do(req)
+
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		if err != nil {
+			h.processor.service.logError(
+				"Refund request failed",
+				[]interface{}{
+					"error", err.Error(),
+					"handler", pkg.PaymentSystemHandlerCardPay,
+					"req", data,
+				},
+			)
+		}
+
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
+	b, err = ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		h.processor.service.logError(
+			"Refund response can't be read",
+			[]interface{}{
+				"error", err.Error(),
+				"handler", pkg.PaymentSystemHandlerCardPay,
+				"req", data,
+			},
+		)
+
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
+	rsp := &CardPayRefundResponse{}
+	err = json.Unmarshal(b, &rsp)
+
+	if err != nil {
+		h.processor.service.logError(
+			"Refund response can't be unmarshal",
+			[]interface{}{
+				"error", err.Error(),
+				"handler", pkg.PaymentSystemHandlerCardPay,
+				"req", string(b),
+			},
+		)
+
+		return errors.New(pkg.PaymentSystemErrorCreateRefundFailed)
+	}
+
+	if rsp.IsSuccessStatus() == false {
+		return errors.New(pkg.PaymentSystemErrorCreateRefundRejected)
+	}
+
+	refund.Status = pkg.RefundStatusInProgress
+	refund.ExternalId = rsp.RefundData.Id
+
+	return nil
+}
+
+func (h *cardPay) ProcessRefund(refund *billing.Refund, message proto.Message, raw, signature string) (err error) {
+	req := message.(*billing.CardPayRefundCallback)
+	refund.Status = pkg.RefundStatusRejected
+
+	err = h.checkCallbackRequestSignature(raw, signature)
+
+	if err != nil {
+		return NewError(err.Error(), pkg.ResponseStatusBadData)
+	}
+
+	if !req.IsRefundAllowedStatus() {
+		return NewError(paymentSystemErrorRequestStatusIsInvalid, pkg.ResponseStatusBadData)
+	}
+
+	if req.PaymentMethod != h.processor.order.PaymentMethod.Params.ExternalId {
+		return NewError(paymentSystemErrorRequestPaymentMethodIsInvalid, pkg.ResponseStatusBadData)
+	}
+
+	if req.RefundData.Amount != refund.Amount || req.RefundData.Currency != refund.Currency.CodeA3 {
+		return NewError(paymentSystemErrorRefundRequestAmountOrCurrencyIsInvalid, pkg.ResponseStatusBadData)
+	}
+
+	switch req.RefundData.Status {
+	case pkg.CardPayPaymentResponseStatusDeclined:
+		refund.Status = pkg.RefundStatusPaymentSystemDeclined
+		break
+	case pkg.CardPayPaymentResponseStatusCancelled:
+		refund.Status = pkg.RefundStatusPaymentSystemCanceled
+		break
+	case pkg.CardPayPaymentResponseStatusCompleted:
+		refund.Status = pkg.RefundStatusCompleted
+		break
+	default:
+		return NewError(paymentSystemErrorRequestTemporarySkipped, pkg.ResponseStatusTemporary)
+	}
+
+	refund.ExternalId = req.RefundData.Id
+	refund.UpdatedAt = ptypes.TimestampNow()
+
+	return
 }

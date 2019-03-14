@@ -59,6 +59,8 @@ const (
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
 	orderGetSavedCardError                             = "saved card data with specified identifier not found"
 	paymentRequestIncorrect                            = "payment request has incorrect format"
+	callbackRequestIncorrect                           = "callback request has incorrect format"
+	callbackHandlerIncorrect                           = "unknown callback type"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
@@ -375,7 +377,7 @@ func (s *Service) PaymentCallbackProcess(
 	var data protobuf.Message
 
 	switch order.PaymentMethod.Params.Handler {
-	case paymentSystemHandlerCardPay:
+	case pkg.PaymentSystemHandlerCardPay:
 		data = &billing.CardPayPaymentCallback{}
 		err := json.Unmarshal(req.Request, data)
 

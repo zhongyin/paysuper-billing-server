@@ -99,3 +99,45 @@ message CardPayPaymentCallback {
     // @inject_tag: json:"recurring_data,omitempty"
     CardPayCallbackRecurringData recurring_data = 9;
 }
+
+message CardPayRefundCallbackRefundData {
+    // @inject_tag: validate:"required,numeric,gt=0"
+    double amount = 1;
+    // @inject_tag: validate:"required"
+    string created = 2;
+    // @inject_tag: validate:"required,alpha,len=3"
+    string currency	= 3;
+    // @inject_tag: validate:"required"
+    string id = 4;
+    // @inject_tag: validate:"required"
+    string status = 5;
+    string auth_code = 6;
+    string decline_code = 7;
+    string decline_reason = 8;
+    bool is_3d = 9;
+    string rrn = 10;
+}
+
+message CardPayRefundCallbackPaymentData {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string id = 1;
+    // @inject_tag: validate:"numeric,gte=0"
+    double remaining_amount = 2;
+}
+
+message CardPayRefundCallback {
+    // @inject_tag: validate:"required"
+    CardPayMerchantOrder merchant_order = 1;
+    // @inject_tag: validate:"required"
+    string payment_method = 2;
+    // @inject_tag: validate:"required"
+    CardPayRefundCallbackPaymentData payment_data = 3;
+    // @inject_tag: validate:"required"
+    CardPayRefundCallbackRefundData refund_data = 4;
+    string callback_time = 5;
+    // @inject_tag: json:"-"
+    CallbackCardPayBankCardAccount card_account = 6;
+    CardPayCustomer customer = 7;
+    // @inject_tag: json:"-"
+    CardPayEWalletAccount ewallet_account = 8;
+}

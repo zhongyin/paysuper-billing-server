@@ -24,6 +24,8 @@ const (
 	errorQueryMask                  = "[PAYONE_BILLING] Query from collection \"%s\" failed"
 	errorAccountingCurrencyNotFound = "[PAYONE_BILLING] Accounting currency not found"
 
+	errorBbNotFoundMessage = "not found"
+
 	environmentProd = "prod"
 
 	HeaderContentType   = "Content-Type"
@@ -249,4 +251,8 @@ func (s *Service) GetConvertRate(ctx context.Context, req *grpc.ConvertRateReque
 	}
 
 	return nil
+}
+
+func (s *Service) IsDbNotFoundError(err error) bool {
+	return err.Error() == errorBbNotFoundMessage
 }

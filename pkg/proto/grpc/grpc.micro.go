@@ -35,6 +35,12 @@ It has these top-level messages:
 	MerchantPaymentMethodResponse
 	MerchantGetMerchantResponse
 	GetNotificationRequest
+	CreateRefundRequest
+	CreateRefundResponse
+	ListRefundsRequest
+	ListRefundsResponse
+	GetRefundRequest
+	CallbackRequest
 */
 package grpc
 
@@ -88,6 +94,10 @@ type BillingService interface {
 	ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, opts ...client.CallOption) (*ListingMerchantPaymentMethod, error)
 	GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*billing.MerchantPaymentMethod, error)
 	ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error)
+	CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
+	ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...client.CallOption) (*ListRefundsResponse, error)
+	GetRefund(ctx context.Context, in *GetRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
+	ProcessRefundCallback(ctx context.Context, in *CallbackRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
 }
 
 type billingService struct {
@@ -298,6 +308,46 @@ func (c *billingService) ChangeMerchantPaymentMethod(ctx context.Context, in *Me
 	return out, nil
 }
 
+func (c *billingService) CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.CreateRefund", in)
+	out := new(CreateRefundResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...client.CallOption) (*ListRefundsResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ListRefunds", in)
+	out := new(ListRefundsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetRefund(ctx context.Context, in *GetRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetRefund", in)
+	out := new(CreateRefundResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ProcessRefundCallback(ctx context.Context, in *CallbackRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ProcessRefundCallback", in)
+	out := new(PaymentNotifyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -320,6 +370,10 @@ type BillingServiceHandler interface {
 	ListMerchantPaymentMethods(context.Context, *ListMerchantPaymentMethodsRequest, *ListingMerchantPaymentMethod) error
 	GetMerchantPaymentMethod(context.Context, *GetMerchantPaymentMethodRequest, *billing.MerchantPaymentMethod) error
 	ChangeMerchantPaymentMethod(context.Context, *MerchantPaymentMethodRequest, *MerchantPaymentMethodResponse) error
+	CreateRefund(context.Context, *CreateRefundRequest, *CreateRefundResponse) error
+	ListRefunds(context.Context, *ListRefundsRequest, *ListRefundsResponse) error
+	GetRefund(context.Context, *GetRefundRequest, *CreateRefundResponse) error
+	ProcessRefundCallback(context.Context, *CallbackRequest, *PaymentNotifyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -343,6 +397,10 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, out *ListingMerchantPaymentMethod) error
 		GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *billing.MerchantPaymentMethod) error
 		ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, out *MerchantPaymentMethodResponse) error
+		CreateRefund(ctx context.Context, in *CreateRefundRequest, out *CreateRefundResponse) error
+		ListRefunds(ctx context.Context, in *ListRefundsRequest, out *ListRefundsResponse) error
+		GetRefund(ctx context.Context, in *GetRefundRequest, out *CreateRefundResponse) error
+		ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -429,4 +487,20 @@ func (h *billingServiceHandler) GetMerchantPaymentMethod(ctx context.Context, in
 
 func (h *billingServiceHandler) ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, out *MerchantPaymentMethodResponse) error {
 	return h.BillingServiceHandler.ChangeMerchantPaymentMethod(ctx, in, out)
+}
+
+func (h *billingServiceHandler) CreateRefund(ctx context.Context, in *CreateRefundRequest, out *CreateRefundResponse) error {
+	return h.BillingServiceHandler.CreateRefund(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ListRefunds(ctx context.Context, in *ListRefundsRequest, out *ListRefundsResponse) error {
+	return h.BillingServiceHandler.ListRefunds(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetRefund(ctx context.Context, in *GetRefundRequest, out *CreateRefundResponse) error {
+	return h.BillingServiceHandler.GetRefund(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error {
+	return h.BillingServiceHandler.ProcessRefundCallback(ctx, in, out)
 }

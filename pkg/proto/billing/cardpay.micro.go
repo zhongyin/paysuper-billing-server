@@ -19,6 +19,9 @@ It has these top-level messages:
 	CardPayCallbackRecurringDataFilling
 	CardPayCallbackRecurringData
 	CardPayPaymentCallback
+	CardPayRefundCallbackRefundData
+	CardPayRefundCallbackPaymentData
+	CardPayRefundCallback
 */
 package billing
 

@@ -4,15 +4,21 @@ import "github.com/paysuper/paysuper-billing-server/pkg"
 
 var (
 	cardPayPaymentCallbackAllowedStatuses = map[string]bool{
-		pkg.CardPayPaymentResponseStatusCompleted: true,
-		pkg.CardPayPaymentResponseStatusDeclined:  true,
-		pkg.CardPayPaymentResponseStatusCancelled: true,
+		pkg.CardPayPaymentResponseStatusCompleted:  true,
+		pkg.CardPayPaymentResponseStatusDeclined:   true,
+		pkg.CardPayPaymentResponseStatusCancelled:  true,
 		pkg.CardPayPaymentResponseStatusAuthorized: true,
 	}
 )
 
 func (m *CardPayPaymentCallback) IsPaymentAllowedStatus() bool {
 	v, ok := cardPayPaymentCallbackAllowedStatuses[m.GetStatus()]
+
+	return ok && v == true
+}
+
+func (m *CardPayRefundCallback) IsRefundAllowedStatus() bool {
+	v, ok := cardPayPaymentCallbackAllowedStatuses[m.RefundData.Status]
 
 	return ok && v == true
 }
