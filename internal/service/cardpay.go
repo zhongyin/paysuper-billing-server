@@ -793,7 +793,7 @@ func (h *cardPay) CreateRefund(refund *billing.Refund) error {
 			Description: refund.Reason,
 		},
 		PaymentData: &CardPayRecurringDataFiling{
-			Id: h.processor.order.Id,
+			Id: h.processor.order.PaymentMethodOrderId,
 		},
 		RefundData: &CardPayRefundData{
 			Amount:   refund.Amount,
@@ -839,7 +839,7 @@ func (h *cardPay) CreateRefund(refund *billing.Refund) error {
 	refund.Status = pkg.RefundStatusRejected
 	resp, err := client.Do(req)
 
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil || resp.StatusCode != http.StatusCreated {
 		if err != nil {
 			h.processor.service.logError(
 				"Refund request failed",
