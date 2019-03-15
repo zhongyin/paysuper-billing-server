@@ -41,8 +41,6 @@ It has these top-level messages:
 	ListRefundsResponse
 	GetRefundRequest
 	CallbackRequest
-	GetOrderRequest
-	GetOrderResponse
 */
 package grpc
 
@@ -83,7 +81,6 @@ type BillingService interface {
 	PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
 	RebuildCache(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*EmptyResponse, error)
 	UpdateOrder(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*EmptyResponse, error)
-	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...client.CallOption) (*GetOrderResponse, error)
 	UpdateMerchant(ctx context.Context, in *billing.Merchant, opts ...client.CallOption) (*EmptyResponse, error)
 	GetConvertRate(ctx context.Context, in *ConvertRateRequest, opts ...client.CallOption) (*ConvertRateResponse, error)
 	GetMerchantById(ctx context.Context, in *FindByIdRequest, opts ...client.CallOption) (*MerchantGetMerchantResponse, error)
@@ -174,16 +171,6 @@ func (c *billingService) RebuildCache(ctx context.Context, in *EmptyRequest, opt
 func (c *billingService) UpdateOrder(ctx context.Context, in *billing.Order, opts ...client.CallOption) (*EmptyResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.UpdateOrder", in)
 	out := new(EmptyResponse)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *billingService) GetOrder(ctx context.Context, in *GetOrderRequest, opts ...client.CallOption) (*GetOrderResponse, error) {
-	req := c.c.NewRequest(c.name, "BillingService.GetOrder", in)
-	out := new(GetOrderResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -370,7 +357,6 @@ type BillingServiceHandler interface {
 	PaymentCallbackProcess(context.Context, *PaymentNotifyRequest, *PaymentNotifyResponse) error
 	RebuildCache(context.Context, *EmptyRequest, *EmptyResponse) error
 	UpdateOrder(context.Context, *billing.Order, *EmptyResponse) error
-	GetOrder(context.Context, *GetOrderRequest, *GetOrderResponse) error
 	UpdateMerchant(context.Context, *billing.Merchant, *EmptyResponse) error
 	GetConvertRate(context.Context, *ConvertRateRequest, *ConvertRateResponse) error
 	GetMerchantById(context.Context, *FindByIdRequest, *MerchantGetMerchantResponse) error
@@ -398,7 +384,6 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		PaymentCallbackProcess(ctx context.Context, in *PaymentNotifyRequest, out *PaymentNotifyResponse) error
 		RebuildCache(ctx context.Context, in *EmptyRequest, out *EmptyResponse) error
 		UpdateOrder(ctx context.Context, in *billing.Order, out *EmptyResponse) error
-		GetOrder(ctx context.Context, in *GetOrderRequest, out *GetOrderResponse) error
 		UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error
 		GetConvertRate(ctx context.Context, in *ConvertRateRequest, out *ConvertRateResponse) error
 		GetMerchantById(ctx context.Context, in *FindByIdRequest, out *MerchantGetMerchantResponse) error
@@ -450,10 +435,6 @@ func (h *billingServiceHandler) RebuildCache(ctx context.Context, in *EmptyReque
 
 func (h *billingServiceHandler) UpdateOrder(ctx context.Context, in *billing.Order, out *EmptyResponse) error {
 	return h.BillingServiceHandler.UpdateOrder(ctx, in, out)
-}
-
-func (h *billingServiceHandler) GetOrder(ctx context.Context, in *GetOrderRequest, out *GetOrderResponse) error {
-	return h.BillingServiceHandler.GetOrder(ctx, in, out)
 }
 
 func (h *billingServiceHandler) UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error {
