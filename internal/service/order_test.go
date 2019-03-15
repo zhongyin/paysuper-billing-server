@@ -926,6 +926,7 @@ func (suite *OrderTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
+	zap.ReplaceGlobals(suite.log)
 
 	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
 
@@ -4667,6 +4668,53 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemH
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
 	assert.True(suite.T(), len(rsp.Error) > 0)
 	assert.Equal(suite.T(), paymentSystemErrorHandlerNotFound, rsp.Error)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_FormInputTimeExpired_Error() {
+	req1 := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
+	}
+
+	rsp1 := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req1, rsp1)
+	assert.NoError(suite.T(), err)
+
+	var order *billing.Order
+	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(rsp1.Id)).One(&order)
+	assert.NotNil(suite.T(), order)
+
+	order.ExpireDateToFormInput, err = ptypes.TimestampProto(time.Now().Add(time.Minute * -40))
+	assert.NoError(suite.T(), err)
+
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	expireYear := time.Now().AddDate(1, 0, 0)
+
+	req2 := &grpc.PaymentCreateRequest{
+		Data: map[string]string{
+			pkg.PaymentCreateFieldOrderId:         rsp1.Id,
+			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
+			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
+			pkg.PaymentCreateFieldPan:             "4000000000000002",
+			pkg.PaymentCreateFieldCvv:             "123",
+			pkg.PaymentCreateFieldMonth:           "02",
+			pkg.PaymentCreateFieldYear:            expireYear.Format("2006"),
+			pkg.PaymentCreateFieldHolder:          "Mr. Card Holder",
+		},
+	}
+
+	rsp2 := &grpc.PaymentCreateResponse{}
+	err = suite.service.PaymentCreateProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp2.Status)
+	assert.Equal(suite.T(), orderErrorFornInputTimeExpired, rsp2.Error)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {

@@ -219,7 +219,6 @@ message Notification {
 }
 
 message Order {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
     string id = 1; // unique order identifier in Protocol One
     // @inject_tag: bson:"project" structure:"project"
     ProjectOrder project = 2; // object described main entities of project in Protocol One payment solution
@@ -293,6 +292,12 @@ message Order {
     OrderFeePaymentSystem payment_system_fee_amount = 36; // payment system fee for payment operation
 
     float SalesTax = 37;
+
+    // @inject_tag: json:"uuid"
+    string uuid = 38;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp expire_date_to_form_input = 39;
+
 }
 
 message Currency {

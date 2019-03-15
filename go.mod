@@ -8,6 +8,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/golang/protobuf v1.2.1-0.20181128192352-1d3f30b51784
+	github.com/google/uuid v1.1.0
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/micro/go-micro v0.26.1
 	github.com/micro/go-plugins v0.25.0

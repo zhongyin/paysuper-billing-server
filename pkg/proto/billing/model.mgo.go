@@ -192,7 +192,10 @@ type MgoOrder struct {
 	UrlFail                                 string                 `bson:"url_fail"`
 	CreatedAt                               time.Time              `bson:"created_at"`
 	UpdatedAt                               time.Time              `bson:"updated_at"`
-	SalesTax                                float32                `bson:"sales_tax"`
+
+	SalesTax              float32   `bson:"sales_tax"`
+	Uuid                  string    `bson:"uuid"`
+	ExpireDateToFormInput time.Time `bson:"expire_date_to_form_input"`
 }
 
 type MgoPaymentSystem struct {
@@ -769,6 +772,7 @@ func (m *Order) GetBSON() (interface{}, error) {
 		VatAmount:                               m.VatAmount,
 		PaymentSystemFeeAmount:                  m.PaymentSystemFeeAmount,
 		SalesTax:                                m.SalesTax,
+		Uuid:                                    m.Uuid,
 	}
 
 	if m.PaymentMethod != nil {
@@ -871,6 +875,18 @@ func (m *Order) GetBSON() (interface{}, error) {
 		st.Project.Merchant.FirstPaymentAt = t
 	}
 
+	if m.ExpireDateToFormInput != nil {
+		t, err := ptypes.Timestamp(m.ExpireDateToFormInput)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.ExpireDateToFormInput = t
+	} else {
+		st.ExpireDateToFormInput = time.Now()
+	}
+
 	return st, nil
 }
 
@@ -956,6 +972,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.VatAmount = decoded.VatAmount
 	m.PaymentSystemFeeAmount = decoded.PaymentSystemFeeAmount
 	m.SalesTax = decoded.SalesTax
+	m.Uuid = decoded.Uuid
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 
@@ -994,6 +1011,12 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Project.Merchant.FirstPaymentAt, err = ptypes.TimestampProto(decoded.Project.Merchant.FirstPaymentAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.ExpireDateToFormInput, err = ptypes.TimestampProto(decoded.ExpireDateToFormInput)
 
 	if err != nil {
 		return err

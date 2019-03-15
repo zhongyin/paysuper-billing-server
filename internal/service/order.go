@@ -13,6 +13,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	protobuf "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
@@ -54,6 +55,7 @@ const (
 	orderErrorSignatureInvalid                         = "order request signature is invalid"
 	orderErrorNotFound                                 = "order with specified identifier not found"
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
+	orderErrorFornInputTimeExpired                     = "time to enter date on payment form expired"
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
 	orderErrorUnknown                                  = "unknown error. try request later"
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
@@ -75,6 +77,8 @@ const (
 	orderDefaultDescription      = "Payment by order # %s"
 	orderInlineFormUrlMask       = "%s://%s/order/%s"
 	orderInlineFormImagesUrlMask = "//%s%s"
+
+	defaultExpireDateToFormInput = 30
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -217,6 +221,9 @@ func (s *Service) OrderCreateProcess(
 	rsp.PspFeeAmount = order.PspFeeAmount
 	rsp.PaymentSystemFeeAmount = order.PaymentSystemFeeAmount
 	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
+	rsp.SalesTax = order.SalesTax
+	rsp.Uuid = order.Uuid
+	rsp.ExpireDateToFormInput = order.ExpireDateToFormInput
 
 	return nil
 }
@@ -604,6 +611,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PaymentMethodOutcomeCurrency:       v.checked.currency,
 		PaymentMethodIncomeAmount:          amount,
 		PaymentMethodIncomeCurrency:        v.checked.currency,
+		Uuid:                               uuid.New().String(),
 	}
 
 	if v.request.Description != "" {
@@ -631,6 +639,8 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			return nil, err
 		}
 	}
+
+	order.ExpireDateToFormInput, _ = ptypes.TimestampProto(time.Now().Add(time.Minute * defaultExpireDateToFormInput))
 
 	return order, nil
 }
@@ -1145,6 +1155,12 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 
 	if order.HasEndedStatus() == true {
 		return errors.New(orderErrorOrderAlreadyComplete)
+	}
+
+	expireDateToFormInput, err := ptypes.Timestamp(order.ExpireDateToFormInput)
+
+	if err != nil || expireDateToFormInput.Before(time.Now()) {
+		return errors.New(orderErrorFornInputTimeExpired)
 	}
 
 	processor := &OrderCreateRequestProcessor{
