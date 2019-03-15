@@ -446,6 +446,41 @@ func (s *Service) PaymentCallbackProcess(
 	return nil
 }
 
+func (s *Service) GetOrder(
+	ctx context.Context,
+	req *grpc.GetOrderRequest,
+	rsp *grpc.GetOrderResponse,
+) error {
+	var order *billing.Order
+
+	query := bson.M{
+		"_id":                  bson.ObjectIdHex(req.OrderId),
+		"project.merchant._id": bson.ObjectIdHex(req.MerchantId),
+	}
+	err := s.db.Collection(pkg.CollectionOrder).Find(query).One(&order)
+
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Query to find order by id and merchant id failed", []interface{}{"err", err.Error(), "query", query})
+
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = orderErrorUnknown
+
+		return nil
+	}
+
+	if order == nil {
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = orderErrorNotFound
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = order
+
+	return nil
+}
+
 func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
 		Account:   order.ProjectAccount,

@@ -291,6 +291,8 @@ message Order {
     OrderFee vat_amount = 35; // vat amount
     // @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
     OrderFeePaymentSystem payment_system_fee_amount = 36; // payment system fee for payment operation
+
+    float SalesTax = 37;
 }
 
 message Currency {
@@ -319,14 +321,15 @@ message PayerData {
     Name city = 4; // payer city names, get from ip geo location
     string zip = 5;
     string state = 6;
+    string language = 7;
     // @inject_tag: bson:"subdivision" structure:"subdivision"
-    string subdivision = 7; // payer subdivision code by ISO-3166-2
+    string subdivision = 8; // payer subdivision code by ISO-3166-2
     // @inject_tag: bson:"timezone" structure:"timezone"
-    string timezone = 8; // payer timezone name, get from ip geo location
+    string timezone = 9; // payer timezone name, get from ip geo location
     // @inject_tag: bson:"phone" structure:"phone"
-    string phone = 9; // payer phone from create order request
+    string phone = 10; // payer phone from create order request
     // @inject_tag: bson:"email" structure:"email"
-    string email = 10; // payer email from create order request
+    string email = 11; // payer email from create order request
 }
 
 message PaymentMethodOrder {

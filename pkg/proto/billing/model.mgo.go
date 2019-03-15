@@ -192,6 +192,7 @@ type MgoOrder struct {
 	UrlFail                                 string                 `bson:"url_fail"`
 	CreatedAt                               time.Time              `bson:"created_at"`
 	UpdatedAt                               time.Time              `bson:"updated_at"`
+	SalesTax                                float32                `bson:"sales_tax"`
 }
 
 type MgoPaymentSystem struct {
@@ -767,6 +768,7 @@ func (m *Order) GetBSON() (interface{}, error) {
 		ToPayerFeeAmount:                        m.ToPayerFeeAmount,
 		VatAmount:                               m.VatAmount,
 		PaymentSystemFeeAmount:                  m.PaymentSystemFeeAmount,
+		SalesTax:                                m.SalesTax,
 	}
 
 	if m.PaymentMethod != nil {
@@ -953,6 +955,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.ToPayerFeeAmount = decoded.ToPayerFeeAmount
 	m.VatAmount = decoded.VatAmount
 	m.PaymentSystemFeeAmount = decoded.PaymentSystemFeeAmount
+	m.SalesTax = decoded.SalesTax
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 

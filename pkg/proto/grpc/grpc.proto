@@ -13,6 +13,7 @@ service BillingService {
 
     rpc RebuildCache (EmptyRequest) returns (EmptyResponse) {}
     rpc UpdateOrder (billing.Order) returns (EmptyResponse) {}
+    rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {}
     rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {}
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
@@ -258,4 +259,15 @@ message CallbackRequest {
     string handler = 1;
     bytes body = 2;
     string signature = 3;
+}
+
+message GetOrderRequest {
+    string merchant_id = 1;
+    string order_id = 2;
+}
+
+message GetOrderResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Order item = 3;
 }
