@@ -3820,7 +3820,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCard_Ok() {
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -3861,7 +3861,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Ewallet_Ok() {
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.pmWebMoney.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldEWallet:         "ewallet_account",
@@ -3893,7 +3893,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Bitcoin_Ok() {
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -3989,7 +3989,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_EmailEmpty_Error()
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
 	}
@@ -4057,7 +4057,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_OrderHasEndedStatu
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -4093,7 +4093,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ProjectProcess_Err
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -4126,7 +4126,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodNotFo
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: bson.NewObjectId().Hex(),
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -4159,7 +4159,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_PaymentMethodProce
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.inactivePaymentMethod.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -4195,7 +4195,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_AmountLimitProcess
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -4228,7 +4228,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCardNumberInva
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldPan:             "fake_bank_card_number",
@@ -4265,7 +4265,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_GetBinData_Error()
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldPan:             "5555555555554444",
@@ -4310,7 +4310,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_AccountEmpty_Error
 	assert.Nil(suite.T(), err)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldCrypto:          "",
@@ -4347,7 +4347,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4397,7 +4397,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangeProjectAccou
 	assert.Equal(suite.T(), "", rsp.ProjectAccount)
 
 	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Id,
+		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 		pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 		pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4437,7 +4437,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4527,7 +4527,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessValidation_Er
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4570,7 +4570,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessOrderCommissi
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4613,7 +4613,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_O
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4653,7 +4653,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemH
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBitcoin1.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldCrypto:          "bitcoin_address",
@@ -4699,7 +4699,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_FormInputTimeExpired
 
 	req2 := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp1.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp1.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4737,7 +4737,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -4844,7 +4844,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Recurring_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         order.Id,
+			pkg.PaymentCreateFieldOrderId:         order.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.paymentMethod.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",

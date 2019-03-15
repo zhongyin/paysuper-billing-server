@@ -430,7 +430,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -499,7 +499,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_AmountLess_Error() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -523,7 +523,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_AmountLess_Error() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   order.Id,
 		Amount:    50,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -567,7 +567,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_PaymentSystemNotExists_Err
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -624,7 +624,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_PaymentSystemReturnError_E
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -702,7 +702,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_RefundNotAllowed_Error() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -754,7 +754,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_WasRefunded_Error() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -809,7 +809,7 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -890,7 +890,7 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Limit_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -983,7 +983,7 @@ func (suite *RefundTestSuite) TestRefund_GetRefund_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1064,7 +1064,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_Ok() {
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1175,7 +1175,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnmarshalError() 
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1254,7 +1254,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownHandler_Er
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1360,7 +1360,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_RefundNotFound_Er
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1466,7 +1466,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Err
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1579,7 +1579,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownPaymentSys
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1685,7 +1685,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_ProcessRefundErro
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1791,7 +1791,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_TemporaryStatus_O
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",
@@ -1902,7 +1902,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderFullyRefunde
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
 		Data: map[string]string{
-			pkg.PaymentCreateFieldOrderId:         rsp.Id,
+			pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
 			pkg.PaymentCreateFieldPaymentMethodId: suite.pmBankCard.Id,
 			pkg.PaymentCreateFieldEmail:           "test@unit.unit",
 			pkg.PaymentCreateFieldPan:             "4000000000000002",

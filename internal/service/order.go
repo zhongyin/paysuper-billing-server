@@ -253,7 +253,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	expire := time.Now().Add(time.Minute * 30).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": order.Id, "exp": expire})
 
-	rsp.Id = order.Id
+	rsp.Id = order.Uuid
 	rsp.Account = order.ProjectAccount
 	rsp.HasVat = order.Project.Merchant.IsVatEnabled
 	rsp.HasUserCommission = order.Project.Merchant.IsCommissionToUserEnabled
@@ -264,7 +264,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 	rsp.PaymentMethods = pms
 	rsp.Token, _ = token.SignedString([]byte(s.cfg.CentrifugoSecret))
-	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, order.Id)
+	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
 
 	return nil
 }
@@ -518,6 +518,20 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 
 	if err != nil && err != mgo.ErrNotFound {
 		s.logError("Order not found in payment create process", []interface{}{"err", err.Error(), "order_id", id})
+	}
+
+	if order == nil {
+		return order, errors.New(orderErrorNotFound)
+	}
+
+	return
+}
+
+func (s *Service) getOrderByUuid(uuid string) (order *billing.Order, err error) {
+	err = s.db.Collection(pkg.CollectionOrder).Find(bson.M{"uuid": uuid}).One(&order)
+
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Order not found in payment create process", []interface{}{"err", err.Error(), "uuid", uuid})
 	}
 
 	if order == nil {
@@ -1147,7 +1161,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return errors.New(orderErrorCreatePaymentRequiredFieldEmailNotFound)
 	}
 
-	order, err := v.service.getOrderById(v.data[pkg.PaymentCreateFieldOrderId])
+	order, err := v.service.getOrderByUuid(v.data[pkg.PaymentCreateFieldOrderId])
 
 	if err != nil {
 		return errors.New(orderErrorNotFound)
