@@ -293,7 +293,7 @@ message Order {
 
     float SalesTax = 37;
 
-    // @inject_tag: json:"uuid"
+    // @inject_tag: json:"-"
     string uuid = 38;
     // @inject_tag: json:"-"
     google.protobuf.Timestamp expire_date_to_form_input = 39;
