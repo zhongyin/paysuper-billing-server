@@ -926,7 +926,6 @@ func (suite *OrderTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
-	zap.ReplaceGlobals(suite.log)
 
 	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
 
@@ -1074,7 +1073,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptyEmailAndPhone_Ok() 
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), processor.checked.payerData)
-	assert.NotEmpty(suite.T(), processor.checked.payerData.Subdivision)
+	assert.NotEmpty(suite.T(), processor.checked.payerData.State)
 	assert.Empty(suite.T(), processor.checked.payerData.Email)
 	assert.Empty(suite.T(), processor.checked.payerData.Phone)
 }
@@ -1096,7 +1095,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptySubdivision_Ok() {
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), processor.checked.payerData)
-	assert.Empty(suite.T(), processor.checked.payerData.Subdivision)
+	assert.Empty(suite.T(), processor.checked.payerData.State)
 
 	suite.service.geo = mock.NewGeoIpServiceTestOk()
 }
@@ -3179,7 +3178,7 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_DuplicateProjectOrderI
 			CountryCodeA2: "RU",
 			CountryName:   &billing.Name{En: "Russia", Ru: "Россия"},
 			City:          &billing.Name{En: "St.Petersburg", Ru: "Санкт-Петербург"},
-			Subdivision:   "",
+			State:         "",
 			Timezone:      "Europe/Moscow",
 		},
 		Status:        constant.OrderStatusNew,
@@ -4714,7 +4713,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_FormInputTimeExpired
 	err = suite.service.PaymentCreateProcess(context.TODO(), req2, rsp2)
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp2.Status)
-	assert.Equal(suite.T(), orderErrorFornInputTimeExpired, rsp2.Error)
+	assert.Equal(suite.T(), orderErrorFormInputTimeExpired, rsp2.Error)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {

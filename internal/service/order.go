@@ -55,7 +55,7 @@ const (
 	orderErrorSignatureInvalid                         = "order request signature is invalid"
 	orderErrorNotFound                                 = "order with specified identifier not found"
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
-	orderErrorFornInputTimeExpired                     = "time to enter date on payment form expired"
+	orderErrorFormInputTimeExpired                     = "time to enter date on payment form expired"
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
 	orderErrorUnknown                                  = "unknown error. try request later"
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
@@ -670,12 +670,15 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 		Timezone:      rsp.Location.TimeZone,
 		Email:         v.request.PayerEmail,
 		Phone:         v.request.PayerPhone,
-		Zip:           rsp.Postal.Code,
 		Language:      v.request.Language,
 	}
 
 	if len(rsp.Subdivisions) > 0 {
 		data.State = rsp.Subdivisions[0].IsoCode
+	}
+
+	if rsp.Postal != nil {
+		data.Zip = rsp.Postal.Code
 	}
 
 	v.checked.payerData = data
@@ -1141,7 +1144,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 	expireDateToFormInput, err := ptypes.Timestamp(order.ExpireDateToFormInput)
 
 	if err != nil || expireDateToFormInput.Before(time.Now()) {
-		return errors.New(orderErrorFornInputTimeExpired)
+		return errors.New(orderErrorFormInputTimeExpired)
 	}
 
 	processor := &OrderCreateRequestProcessor{
