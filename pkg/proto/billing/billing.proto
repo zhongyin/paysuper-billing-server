@@ -51,6 +51,8 @@ message OrderCreateRequest {
     string raw_body = 19; //`json:"-"`
     // @inject_tag: json:"-"
     bool is_json = 20;
+    // @inject_tag: json:"-"
+    string language = 21;
 }
 
 message Project {
@@ -327,8 +329,6 @@ message PayerData {
     string zip = 5;
     string state = 6;
     string language = 7;
-    // @inject_tag: bson:"subdivision" structure:"subdivision"
-    string subdivision = 8; // payer subdivision code by ISO-3166-2
     // @inject_tag: bson:"timezone" structure:"timezone"
     string timezone = 9; // payer timezone name, get from ip geo location
     // @inject_tag: bson:"phone" structure:"phone"

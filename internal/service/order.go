@@ -670,10 +670,12 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 		Timezone:      rsp.Location.TimeZone,
 		Email:         v.request.PayerEmail,
 		Phone:         v.request.PayerPhone,
+		Zip:           rsp.Postal.Code,
+		Language:      v.request.Language,
 	}
 
 	if len(rsp.Subdivisions) > 0 {
-		data.Subdivision = rsp.Subdivisions[0].IsoCode
+		data.State = rsp.Subdivisions[0].IsoCode
 	}
 
 	v.checked.payerData = data
@@ -865,7 +867,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 
 	// if merchant enable VAT calculation then we're need to calculate VAT for payer
 	if o.Project.Merchant.IsVatEnabled == true {
-		vat, err := v.Service.CalculateVat(o.PaymentMethodOutcomeAmount, o.PayerData.CountryCodeA2, o.PayerData.Subdivision)
+		vat, err := v.Service.CalculateVat(o.PaymentMethodOutcomeAmount, o.PayerData.CountryCodeA2, o.PayerData.State)
 
 		if err != nil {
 			return err
@@ -1063,7 +1065,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 		vat, err := v.service.CalculateVat(
 			v.order.ProjectIncomeAmount,
 			v.order.PayerData.CountryCodeA2,
-			v.order.PayerData.Subdivision,
+			v.order.PayerData.State,
 		)
 
 		if err != nil {
