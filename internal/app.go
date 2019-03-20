@@ -17,6 +17,8 @@ import (
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/constant"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
+	taxPkg "github.com/paysuper/paysuper-tax-service/pkg"
+	"github.com/paysuper/paysuper-tax-service/proto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"log"
@@ -81,6 +83,7 @@ func (app *Application) Init() {
 
 	geoService := proto.NewGeoIpService(geoip.ServiceName, app.service.Client())
 	repService := repository.NewRepositoryService(constant.PayOneRepositoryServiceName, app.service.Client())
+	taxService := tax_service.NewTaxService(taxPkg.ServiceName, app.service.Client())
 
 	svc := service.NewBillingService(
 		app.database,
@@ -88,6 +91,7 @@ func (app *Application) Init() {
 		app.cacheExit,
 		geoService,
 		repService,
+		taxService,
 		broker,
 	)
 

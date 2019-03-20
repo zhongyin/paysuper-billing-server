@@ -9,7 +9,6 @@ type CacheConfig struct {
 	CountryTimeout              int64 `envconfig:"CACHE_COUNTRY_TIMEOUT" default:"15552000"`
 	ProjectTimeout              int64 `envconfig:"CACHE_PROJECT_TIMEOUT" default:"10800"`
 	CurrencyRateTimeout         int64 `envconfig:"CACHE_CURRENCY_RATE_TIMEOUT" default:"86400"`
-	VatTimeout                  int64 `envconfig:"CACHE_VAT_TIMEOUT" default:"2592000"`
 	PaymentMethodTimeout        int64 `envconfig:"CACHE_PAYMENT_METHOD_TIMEOUT" default:"2592000"`
 	CommissionTimeout           int64 `envconfig:"CACHE_COMMISSION_TIMEOUT" default:"86400"`
 	ProjectPaymentMethodTimeout int64 `envconfig:"CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT" default:"86400"`

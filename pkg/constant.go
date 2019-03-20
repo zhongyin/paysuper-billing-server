@@ -8,7 +8,6 @@ const (
 	CollectionCountry       = "country"
 	CollectionProject       = "project"
 	CollectionCurrencyRate  = "currency_rate"
-	CollectionVat           = "vat"
 	CollectionOrder         = "order"
 	CollectionPaymentMethod = "payment_method"
 	CollectionCommission    = "commission"

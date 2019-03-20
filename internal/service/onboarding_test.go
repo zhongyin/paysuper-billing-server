@@ -50,22 +50,6 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	db, err := database.NewDatabase(settings)
 	assert.NoError(suite.T(), err, "Database connection failed")
 
-	vat := &billing.Vat{
-		Country: &billing.Country{
-			CodeInt:  643,
-			CodeA2:   "RU",
-			CodeA3:   "RUS",
-			Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-			IsActive: true,
-		},
-		Subdivision: "",
-		Vat:         20,
-		IsActive:    true,
-	}
-
-	err = db.Collection(pkg.CollectionVat).Insert(vat)
-	assert.NoError(suite.T(), err, "Insert VAT test data failed")
-
 	rub := &billing.Currency{
 		CodeInt:  643,
 		CodeA3:   "RUB",
@@ -327,7 +311,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	suite.log, err = zap.NewProduction()
 	assert.NoError(suite.T(), err, "Logger initialization failed")
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
 	err = suite.service.Init()
 	assert.NoError(suite.T(), err, "Billing service initialization failed")
 

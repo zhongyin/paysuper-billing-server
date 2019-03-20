@@ -13,6 +13,7 @@ import (
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
+	"github.com/paysuper/paysuper-tax-service/proto"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -34,6 +35,10 @@ const (
 
 	MIMEApplicationForm = "application/x-www-form-urlencoded"
 	MIMEApplicationJSON = "application/json"
+
+	DefaultPaymentMethodFee               = 3
+	DefaultPaymentMethodPerTransactionFee = 2
+	DefaultPaymentMethodCurrency          = "RUB"
 )
 
 var (
@@ -42,13 +47,10 @@ var (
 		pkg.CollectionCountry:       newCountryHandler,
 		pkg.CollectionProject:       newProjectHandler,
 		pkg.CollectionCurrencyRate:  newCurrencyRateHandler,
-		pkg.CollectionVat:           newVatHandler,
 		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
 		pkg.CollectionCommission:    newCommissionHandler,
 		pkg.CollectionMerchant:      newMerchantHandler,
 	}
-
-	vatBySubdivisionCountries = map[string]bool{"US": true, "CA": true}
 )
 
 type Service struct {
@@ -59,6 +61,7 @@ type Service struct {
 	ctx    context.Context
 	geo    proto.GeoIpService
 	rep    repository.RepositoryService
+	tax    tax_service.TaxService
 	broker *rabbitmq.Broker
 
 	accountingCurrency *billing.Currency
@@ -67,13 +70,12 @@ type Service struct {
 	countryCache         map[string]*billing.Country
 	projectCache         map[string]*billing.Project
 	currencyRateCache    map[int32]map[int32]*billing.CurrencyRate
-	vatCache             map[string]map[string]*billing.Vat
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
 
 	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
 
-	commissionCache           map[string]map[string]*billing.MgoCommission
+	commissionCache           map[string]map[string]*billing.MerchantPaymentMethodCommissions
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
 
 	rebuild      bool
@@ -91,6 +93,7 @@ func NewBillingService(
 	exitCh chan bool,
 	geo proto.GeoIpService,
 	rep repository.RepositoryService,
+	tax tax_service.TaxService,
 	broker *rabbitmq.Broker,
 ) *Service {
 	return &Service{
@@ -99,6 +102,7 @@ func NewBillingService(
 		exitCh: exitCh,
 		geo:    geo,
 		rep:    rep,
+		tax:    tax,
 		broker: broker,
 	}
 }
@@ -130,7 +134,6 @@ func (s *Service) reBuildCache() {
 	countryTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CountryTimeout))
 	projectTicker := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectTimeout))
 	currencyRateTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyRateTimeout))
-	vatTicker := time.NewTicker(time.Second * time.Duration(s.cfg.VatTimeout))
 	paymentMethodTicker := time.NewTicker(time.Second * time.Duration(s.cfg.PaymentMethodTimeout))
 	commissionTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CommissionTimeout))
 	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectPaymentMethodTimeout))
@@ -151,9 +154,6 @@ func (s *Service) reBuildCache() {
 		case <-currencyRateTicker.C:
 			err = s.cache(pkg.CollectionCurrencyRate, handlers[pkg.CollectionCurrencyRate](s))
 			key = pkg.CollectionCurrencyRate
-		case <-vatTicker.C:
-			err = s.cache(pkg.CollectionVat, handlers[pkg.CollectionVat](s))
-			key = pkg.CollectionVat
 		case <-paymentMethodTicker.C:
 			err = s.cache(pkg.CollectionPaymentMethod, handlers[pkg.CollectionPaymentMethod](s))
 			key = pkg.CollectionPaymentMethod
@@ -183,10 +183,6 @@ func (s *Service) cache(key string, handler Cacher) error {
 
 	if err != nil {
 		return err
-	}
-
-	if rec == nil || len(rec) <= 0 {
-		return fmt.Errorf(initCacheErrorNotFound, key)
 	}
 
 	s.mx.Lock()

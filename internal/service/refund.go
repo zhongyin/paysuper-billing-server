@@ -298,14 +298,14 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 		CreatedAt: ptypes.TimestampNow(),
 		UpdatedAt: ptypes.TimestampNow(),
 		PayerData: &billing.RefundPayerData{
-			Country: order.PayerData.CountryCodeA2,
+			Country: order.PayerData.Country,
 			Zip:     order.PayerData.Zip,
 			State:   order.PayerData.State,
 		},
 	}
 
-	if order.VatAmount != nil {
-		refund.SalesTax = order.VatAmount.AmountMerchantCurrency
+	if order.Tax != nil {
+		refund.SalesTax = order.Tax.Amount
 	}
 
 	if p.request.Reason != "" {

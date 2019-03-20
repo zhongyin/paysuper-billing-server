@@ -193,9 +193,10 @@ type MgoOrder struct {
 	CreatedAt                               time.Time              `bson:"created_at"`
 	UpdatedAt                               time.Time              `bson:"updated_at"`
 
-	SalesTax              float32   `bson:"sales_tax"`
 	Uuid                  string    `bson:"uuid"`
 	ExpireDateToFormInput time.Time `bson:"expire_date_to_form_input"`
+	Tax                   *OrderTax `bson:"tax"`
+	TotalPaymentAmount    float64   `bson:"total_payment_amount"`
 }
 
 type MgoPaymentSystem struct {
@@ -250,7 +251,7 @@ type MgoRefund struct {
 	CreatedAt  time.Time        `bson:"created_at"`
 	UpdatedAt  time.Time        `bson:"updated_at"`
 	PayerData  *RefundPayerData `bson:"payer_data"`
-	SalesTax   float64          `bson:"sales_tax"`
+	SalesTax   float32          `bson:"sales_tax"`
 }
 
 func (m *Vat) GetBSON() (interface{}, error) {
@@ -769,10 +770,11 @@ func (m *Order) GetBSON() (interface{}, error) {
 		PspFeeAmount:                            m.PspFeeAmount,
 		ProjectFeeAmount:                        m.ProjectFeeAmount,
 		ToPayerFeeAmount:                        m.ToPayerFeeAmount,
-		VatAmount:                               m.VatAmount,
 		PaymentSystemFeeAmount:                  m.PaymentSystemFeeAmount,
-		SalesTax:                                m.SalesTax,
-		Uuid:                                    m.Uuid,
+
+		Uuid:               m.Uuid,
+		Tax:                m.Tax,
+		TotalPaymentAmount: m.TotalPaymentAmount,
 	}
 
 	if m.PaymentMethod != nil {
@@ -969,10 +971,11 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.PspFeeAmount = decoded.PspFeeAmount
 	m.ProjectFeeAmount = decoded.ProjectFeeAmount
 	m.ToPayerFeeAmount = decoded.ToPayerFeeAmount
-	m.VatAmount = decoded.VatAmount
 	m.PaymentSystemFeeAmount = decoded.PaymentSystemFeeAmount
-	m.SalesTax = decoded.SalesTax
+
 	m.Uuid = decoded.Uuid
+	m.Tax = decoded.Tax
+	m.TotalPaymentAmount = decoded.TotalPaymentAmount
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 

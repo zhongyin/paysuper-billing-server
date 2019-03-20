@@ -358,7 +358,7 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 
 	reqAmount := req.GetAmount()
 
-	if reqAmount != order.PaymentMethodOutcomeAmount ||
+	if reqAmount != order.TotalPaymentAmount ||
 		req.GetCurrency() != order.PaymentMethodOutcomeCurrency.CodeA3 {
 		return NewError(paymentSystemErrorRequestAmountOrCurrencyIsInvalid, pkg.StatusErrorValidation)
 	}
@@ -623,7 +623,7 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 		(okRecurringId && recurringId != "") {
 		cardPayOrder.RecurringData = &CardPayRecurringData{
 			Currency:  order.PaymentMethodOutcomeCurrency.CodeA3,
-			Amount:    order.PaymentMethodOutcomeAmount,
+			Amount:    order.TotalPaymentAmount,
 			Initiator: cardPayInitiatorCardholder,
 		}
 
@@ -637,7 +637,7 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 	} else {
 		cardPayOrder.PaymentData = &CardPayPaymentData{
 			Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
-			Amount:   order.PaymentMethodOutcomeAmount,
+			Amount:   order.TotalPaymentAmount,
 		}
 	}
 

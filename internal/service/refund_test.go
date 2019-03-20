@@ -54,22 +54,6 @@ func (suite *RefundTestSuite) SetupTest() {
 	suite.log, err = zap.NewProduction()
 	assert.NoError(suite.T(), err, "Logger initialization failed")
 
-	vat := &billing.Vat{
-		Country: &billing.Country{
-			CodeInt:  840,
-			CodeA2:   "US",
-			CodeA3:   "USA",
-			Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-			IsActive: true,
-		},
-		Subdivision: "CA",
-		Vat:         10.25,
-		IsActive:    true,
-	}
-
-	err = db.Collection(pkg.CollectionVat).Insert(vat)
-	assert.NoError(suite.T(), err, "Insert VAT test data failed")
-
 	rub := &billing.Currency{
 		CodeInt:  643,
 		CodeA3:   "RUB",
@@ -394,7 +378,15 @@ func (suite *RefundTestSuite) SetupTest() {
 	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
 	assert.NoError(suite.T(), err, "Creating RabbitMQ publisher failed")
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), mock.NewGeoIpServiceTestOk(), mock.NewRepositoryServiceOk(), broker)
+	suite.service = NewBillingService(
+		db,
+		cfg,
+		make(chan bool, 1),
+		mock.NewGeoIpServiceTestOk(),
+		mock.NewRepositoryServiceOk(),
+		mock.NewTaxServiceOkMock(),
+		broker,
+	)
 	err = suite.service.Init()
 	assert.NoError(suite.T(), err, "Billing service initialization failed")
 
@@ -451,9 +443,11 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_Ok() {
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1085,9 +1079,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_Ok() {
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1196,9 +1192,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnmarshalError() 
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1275,9 +1273,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownHandler_Er
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1381,9 +1381,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_RefundNotFound_Er
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1487,9 +1489,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Err
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1600,9 +1604,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownPaymentSys
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1706,9 +1712,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_ProcessRefundErro
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1812,9 +1820,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_TemporaryStatus_O
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
@@ -1923,9 +1933,11 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderFullyRefunde
 
 	order.Status = constant.OrderStatusPaymentSystemComplete
 	order.PaymentMethod.Params.Handler = "mock_ok"
-	order.VatAmount = &billing.OrderFee{
-		AmountPaymentMethodCurrency: 10,
-		AmountMerchantCurrency:      10,
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     20,
+		Amount:   10,
+		Currency: "RUB",
 	}
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 

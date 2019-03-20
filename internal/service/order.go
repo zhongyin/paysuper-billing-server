@@ -21,6 +21,7 @@ import (
 	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/entity"
 	repo "github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/paysuper/paysuper-recurring-repository/tools"
+	"github.com/paysuper/paysuper-tax-service/proto"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"sort"
@@ -79,6 +80,9 @@ const (
 	orderInlineFormImagesUrlMask = "//%s%s"
 
 	defaultExpireDateToFormInput = 30
+
+	taxTypeVat      = "vat"
+	taxTypeSalesTax = "sales_tax"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -221,9 +225,10 @@ func (s *Service) OrderCreateProcess(
 	rsp.PspFeeAmount = order.PspFeeAmount
 	rsp.PaymentSystemFeeAmount = order.PaymentSystemFeeAmount
 	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
-	rsp.SalesTax = order.SalesTax
+	rsp.Tax = order.Tax
 	rsp.Uuid = order.Uuid
 	rsp.ExpireDateToFormInput = order.ExpireDateToFormInput
+	rsp.TotalPaymentAmount = order.TotalPaymentAmount
 
 	return nil
 }
@@ -255,8 +260,8 @@ func (s *Service) PaymentFormJsonDataProcess(
 
 	rsp.Id = order.Uuid
 	rsp.Account = order.ProjectAccount
-	rsp.HasVat = order.Project.Merchant.IsVatEnabled
-	rsp.HasUserCommission = order.Project.Merchant.IsCommissionToUserEnabled
+	rsp.HasVat = order.Tax.Amount > 0
+	rsp.Vat = order.Tax.Amount
 	rsp.Project = &grpc.PaymentFormJsonDataProject{
 		Name:       order.Project.Name,
 		UrlSuccess: order.Project.UrlSuccess,
@@ -265,6 +270,8 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.PaymentMethods = pms
 	rsp.Token, _ = token.SignedString([]byte(s.cfg.CentrifugoSecret))
 	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
+	rsp.Amount = order.PaymentMethodOutcomeAmount
+	rsp.TotalAmount = order.TotalPaymentAmount
 
 	return nil
 }
@@ -544,11 +551,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	}
 
 	if merchantPayoutCurrency != nil && v.checked.currency.CodeInt != merchantPayoutCurrency.CodeInt {
-		amount, err := v.Service.Convert(
-			v.checked.currency.CodeInt,
-			merchantPayoutCurrency.CodeInt,
-			v.request.Amount,
-		)
+		amount, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, v.request.Amount)
 
 		if err != nil {
 			return nil, err
@@ -593,6 +596,12 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		Uuid:                               uuid.New().String(),
 	}
 
+	err := v.processOrderVat(order)
+
+	if err != nil {
+		return nil, err
+	}
+
 	if v.request.Description != "" {
 		order.Description = v.request.Description
 	}
@@ -620,6 +629,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	}
 
 	order.ExpireDateToFormInput, _ = ptypes.TimestampProto(time.Now().Add(time.Minute * defaultExpireDateToFormInput))
+	order.TotalPaymentAmount = tools.FormatAmount(order.PaymentMethodOutcomeAmount + float64(order.Tax.Amount))
 
 	return order, nil
 }
@@ -663,14 +673,14 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	}
 
 	data := &billing.PayerData{
-		Ip:            v.request.PayerIp,
-		CountryCodeA2: rsp.Country.IsoCode,
-		CountryName:   &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
-		City:          &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
-		Timezone:      rsp.Location.TimeZone,
-		Email:         v.request.PayerEmail,
-		Phone:         v.request.PayerPhone,
-		Language:      v.request.Language,
+		Ip:          v.request.PayerIp,
+		Country:     rsp.Country.IsoCode,
+		CountryName: &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
+		City:        &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
+		Timezone:    rsp.Location.TimeZone,
+		Email:       v.request.PayerEmail,
+		Phone:       v.request.PayerPhone,
+		Language:    v.request.Language,
 	}
 
 	if len(rsp.Subdivisions) > 0 {
@@ -693,7 +703,7 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 		return errors.New(orderErrorFixedPackagesIsEmpty)
 	}
 
-	region := v.checked.payerData.CountryCodeA2
+	region := v.checked.payerData.Country
 
 	if v.request.Region != "" {
 		region = v.request.Region
@@ -860,102 +870,58 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 	return nil
 }
 
+// Calculate VAT for order
+func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) error {
+	req := &tax_service.GetRateRequest{
+		IpData: &tax_service.GeoIdentity{
+			Zip:     order.PayerData.Zip,
+			Country: order.PayerData.Country,
+			City:    order.PayerData.City.En,
+			State:   order.PayerData.State,
+		},
+		UserData: &tax_service.GeoIdentity{},
+	}
+	rsp, err := v.tax.GetRate(context.TODO(), req)
+
+	if err != nil {
+		return errors.New(orderErrorUnknown)
+	}
+
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Rate:     rsp.Rate.Rate,
+		Amount:   float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate/100))),
+		Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
+	}
+
+	if order.PayerData.Country == "US" {
+		order.Tax.Type = taxTypeSalesTax
+	}
+
+	return nil
+}
+
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
-	pmOutAmount := o.ProjectIncomeAmount
 	mAccCur := o.Project.Merchant.GetPayoutCurrency()
 	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 	amount := float64(0)
 
-	// if merchant enable VAT calculation then we're need to calculate VAT for payer
-	if o.Project.Merchant.IsVatEnabled == true {
-		vat, err := v.Service.CalculateVat(o.PaymentMethodOutcomeAmount, o.PayerData.CountryCodeA2, o.PayerData.State)
-
-		if err != nil {
-			return err
-		}
-
-		o.VatAmount = &billing.OrderFee{AmountPaymentMethodCurrency: vat}
-
-		// convert amount of VAT to accounting currency of merchant
-		if mAccCur != nil {
-			amount, err := v.Service.Convert(pmOutCur, mAccCur.CodeInt, vat)
-
-			if err != nil {
-				return err
-			}
-			o.VatAmount.AmountMerchantCurrency = amount
-		}
-
-		// add VAT amount to payment amount
-		pmOutAmount += vat
-	}
-
 	// calculate commissions to selected payment method
-	commission, err := v.Service.CalculateCommission(o.Project.Id, o.PaymentMethod.Id, o.PaymentMethodOutcomeAmount)
+	commission, err := v.Service.CalculatePmCommission(o.Project.Id, o.PaymentMethod.Id, o.PaymentMethodOutcomeAmount)
 
 	if err != nil {
 		return err
 	}
-
-	totalCommission := commission.PMCommission + commission.PspCommission
-
-	// if merchant enable to shift commissions form project to payer then we're need to calculate commissions shifting
-	if o.Project.Merchant.IsCommissionToUserEnabled == true {
-		// subtract commission to user from project's commission
-		totalCommission -= commission.ToUserCommission
-
-		// add commission to user to payment amount
-		pmOutAmount += commission.ToUserCommission
-		o.ToPayerFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: commission.ToUserCommission}
-
-		// convert amount of fee shifted to user to accounting currency of merchant
-		if mAccCur != nil {
-			amount, err := v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission.ToUserCommission)
-
-			if err != nil {
-				return err
-			}
-			o.ToPayerFeeAmount.AmountMerchantCurrency = amount
-		}
-	}
-
-	o.ProjectFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: tools.FormatAmount(totalCommission)}
-
-	// convert amount of fee to project to accounting currency of merchant
-	if mAccCur != nil {
-		amount, err := v.Service.Convert(pmOutCur, mAccCur.CodeInt, totalCommission)
-
-		if err != nil {
-			return err
-		}
-		o.ProjectFeeAmount.AmountMerchantCurrency = amount
-	}
-
-	o.PspFeeAmount = &billing.OrderFeePsp{AmountPaymentMethodCurrency: commission.PspCommission}
-
-	if mAccCur != nil {
-		// convert PSP amount of fee to accounting currency of merchant
-		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission.PspCommission)
-		o.PspFeeAmount.AmountMerchantCurrency = amount
-	}
-
-	// convert PSP amount of fee to accounting currency of PSP
-	amount, err = v.Service.Convert(pmOutCur, v.Service.accountingCurrency.CodeInt, commission.PspCommission)
-
-	if err != nil {
-		return err
-	}
-	o.PspFeeAmount.AmountPspCurrency = amount
 
 	// save information about payment system commission
 	o.PaymentSystemFeeAmount = &billing.OrderFeePaymentSystem{
-		AmountPaymentMethodCurrency: commission.PMCommission,
+		AmountPaymentMethodCurrency: tools.FormatAmount(commission),
 	}
 
 	// convert payment system amount of fee to accounting currency of payment system
-	amount, err = v.Service.Convert(pmOutCur, o.PaymentMethod.PaymentSystem.AccountingCurrency.CodeInt, commission.PMCommission)
+	amount, err = v.Service.Convert(pmOutCur, o.PaymentMethod.PaymentSystem.AccountingCurrency.CodeInt, commission)
 
 	if err != nil {
 		return err
@@ -965,11 +931,9 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 
 	if mAccCur != nil {
 		// convert payment system amount of fee to accounting currency of merchant
-		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission.PMCommission)
+		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission)
 		o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
 	}
-
-	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
 
 	return nil
 }
@@ -1015,14 +979,13 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		}
 
 		formPm := &billing.PaymentFormPaymentMethod{
-			Id:                       pm.Id,
-			Name:                     pm.Name,
-			Icon:                     fmt.Sprintf(orderInlineFormImagesUrlMask, v.request.Host, pm.Icon),
-			Type:                     pm.Type,
-			Group:                    pm.Group,
-			AccountRegexp:            pm.AccountRegexp,
-			Currency:                 v.order.ProjectIncomeCurrency.CodeA3,
-			AmountWithoutCommissions: v.order.ProjectIncomeAmount,
+			Id:            pm.Id,
+			Name:          pm.Name,
+			Icon:          fmt.Sprintf(orderInlineFormImagesUrlMask, v.request.Host, pm.Icon),
+			Type:          pm.Type,
+			Group:         pm.Group,
+			AccountRegexp: pm.AccountRegexp,
+			Currency:      v.order.ProjectIncomeCurrency.CodeA3,
 		}
 
 		err := v.processPaymentMethodsData(formPm)
@@ -1051,35 +1014,6 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 }
 
 func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentFormPaymentMethod) error {
-	amount := pm.AmountWithoutCommissions
-
-	if v.order.Project.Merchant.IsCommissionToUserEnabled == true {
-		commission, err := v.service.CalculateCommission(v.order.Project.Id, pm.Id, v.order.ProjectIncomeAmount)
-
-		if err != nil {
-			return err
-		}
-
-		amount += commission.ToUserCommission
-		pm.UserCommissionAmount = commission.ToUserCommission
-	}
-
-	if v.order.Project.Merchant.IsVatEnabled == true {
-		vat, err := v.service.CalculateVat(
-			v.order.ProjectIncomeAmount,
-			v.order.PayerData.CountryCodeA2,
-			v.order.PayerData.State,
-		)
-
-		if err != nil {
-			return err
-		}
-
-		amount += vat
-		pm.VatAmount = vat
-	}
-
-	pm.AmountWithCommissions = amount
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {

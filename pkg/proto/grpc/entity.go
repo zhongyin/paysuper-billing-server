@@ -13,5 +13,6 @@ func (m *MerchantPaymentMethodRequest) HasPerTransactionCurrency() bool {
 }
 
 func (m *MerchantPaymentMethodRequest) HasIntegration() bool {
-	return m.Integration.TerminalId != "" && m.Integration.TerminalPassword != ""
+	return m.Integration.TerminalId != "" && m.Integration.TerminalPassword != "" &&
+		m.Integration.TerminalCallbackPassword != ""
 }
