@@ -53,6 +53,7 @@ message PaymentFormJsonDataRequest {
     string order_id = 1;
     string scheme = 2;
     string host = 3;
+    string locale = 4;
 }
 
 message PaymentFormJsonDataProject {
