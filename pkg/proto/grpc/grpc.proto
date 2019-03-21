@@ -34,6 +34,9 @@ service BillingService {
     rpc ListRefunds(ListRefundsRequest) returns(ListRefundsResponse) {}
     rpc GetRefund(GetRefundRequest) returns(CreateRefundResponse) {}
     rpc ProcessRefundCallback(CallbackRequest) returns (PaymentNotifyResponse) {}
+
+    //rpc PaymentFormDataChanged(PaymentFormDataChangedRequest) returns () {}
+    //rpc OrderCalculateAmounts() returns() {}
 }
 
 message EmptyRequest {}
@@ -76,6 +79,7 @@ message PaymentFormJsonDataResponse {
     repeated billing.PaymentFormPaymentMethod payment_methods = 8; // contain data about payment methods
     string inline_form_redirect_url = 9; // url to redirect user to inline form in PSP side
     string token = 10; // access token to websocket private chanel
+    bool need_billing_address = 11;
 }
 
 message PaymentNotifyRequest {
@@ -261,4 +265,16 @@ message CallbackRequest {
     string handler = 1;
     bytes body = 2;
     string signature = 3;
+}
+
+message PaymentFormDataChangedRequest {
+    string order_id = 1;
+    string lang = 2;
+    string account = 3;
+}
+
+message PaymentFormChangeLanguageRequest {
+    string order_id = 1;
+    // @inject_tag: validate:"required,len=2"
+    string lang = 2;
 }

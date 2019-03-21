@@ -273,6 +273,15 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
 
+	lang, country := s.getCountryFromAcceptLanguage(req.Locale)
+
+	if country != order.PayerData.Country {
+		order.PayerData.Language = lang
+		s.setOrderNeedUserAddressData(order)
+
+		rsp.NeedBillingAddress = true
+	}
+
 	return nil
 }
 
@@ -460,6 +469,10 @@ func (s *Service) PaymentCallbackProcess(
 	return nil
 }
 
+func (s *Service) PaymentFormDataChanged() {
+
+}
+
 func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
 		Account:   order.ProjectAccount,
@@ -483,6 +496,17 @@ func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 			},
 		)
 	}
+}
+
+func (s *Service) setOrderNeedUserAddressData(order *billing.Order) {
+	order.NeedUserAddressData = true
+	err := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	if err != nil {
+		s.logError("Update order data failed", []interface{}{"error", err.Error(), "order", order})
+	}
+
+	return
 }
 
 func (s *Service) getOrderById(id string) (order *billing.Order, err error) {

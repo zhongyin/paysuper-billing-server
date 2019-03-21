@@ -15,6 +15,7 @@ import (
 	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/paysuper/paysuper-tax-service/proto"
 	"go.uber.org/zap"
+	"strings"
 	"sync"
 	"time"
 )
@@ -252,4 +253,16 @@ func (s *Service) GetConvertRate(ctx context.Context, req *grpc.ConvertRateReque
 
 func (s *Service) IsDbNotFoundError(err error) bool {
 	return err.Error() == errorBbNotFoundMessage
+}
+
+func (s *Service) getCountryFromAcceptLanguage(acceptLanguage string) (string, string) {
+	it := strings.Split(acceptLanguage, ",")
+
+	if strings.Index(it[0], "-") == -1 {
+		return "", ""
+	}
+
+	it = strings.Split(it[0], "-")
+
+	return strings.ToLower(it[0]), strings.ToUpper(it[1])
 }

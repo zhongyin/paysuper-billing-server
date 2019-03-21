@@ -311,6 +311,9 @@ message Order {
     // @inject_tag: json:"-"
     google.protobuf.Timestamp expire_date_to_form_input = 39;
     double total_payment_amount = 43; // total amount to payment with all commissions
+
+    // @inject_tag: json:"-"
+    bool need_user_address_data = 44;
 }
 
 message Currency {

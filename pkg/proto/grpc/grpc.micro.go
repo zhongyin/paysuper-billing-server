@@ -41,6 +41,8 @@ It has these top-level messages:
 	ListRefundsResponse
 	GetRefundRequest
 	CallbackRequest
+	PaymentFormDataChangedRequest
+	PaymentFormChangeLanguageRequest
 */
 package grpc
 

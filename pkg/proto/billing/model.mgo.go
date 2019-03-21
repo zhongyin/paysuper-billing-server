@@ -197,6 +197,7 @@ type MgoOrder struct {
 	ExpireDateToFormInput time.Time `bson:"expire_date_to_form_input"`
 	Tax                   *OrderTax `bson:"tax"`
 	TotalPaymentAmount    float64   `bson:"total_payment_amount"`
+	NeedUserAddressData   bool      `bson:"need_user_address_data"`
 }
 
 type MgoPaymentSystem struct {
@@ -772,9 +773,10 @@ func (m *Order) GetBSON() (interface{}, error) {
 		ToPayerFeeAmount:                        m.ToPayerFeeAmount,
 		PaymentSystemFeeAmount:                  m.PaymentSystemFeeAmount,
 
-		Uuid:               m.Uuid,
-		Tax:                m.Tax,
-		TotalPaymentAmount: m.TotalPaymentAmount,
+		Uuid:                m.Uuid,
+		Tax:                 m.Tax,
+		TotalPaymentAmount:  m.TotalPaymentAmount,
+		NeedUserAddressData: m.NeedUserAddressData,
 	}
 
 	if m.PaymentMethod != nil {
@@ -976,6 +978,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.Uuid = decoded.Uuid
 	m.Tax = decoded.Tax
 	m.TotalPaymentAmount = decoded.TotalPaymentAmount
+	m.NeedUserAddressData = decoded.NeedUserAddressData
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 
