@@ -21,7 +21,6 @@ import (
 
 const (
 	errorNotFound                   = "[PAYONE_BILLING] %s not found"
-	initCacheErrorNotFound          = "[PAYONE_BILLING] %s query result is empty"
 	errorQueryMask                  = "[PAYONE_BILLING] Query from collection \"%s\" failed"
 	errorAccountingCurrencyNotFound = "[PAYONE_BILLING] Accounting currency not found"
 
@@ -39,6 +38,8 @@ const (
 	DefaultPaymentMethodFee               = 3
 	DefaultPaymentMethodPerTransactionFee = 2
 	DefaultPaymentMethodCurrency          = "RUB"
+
+	CountryCodeUSA = "US"
 )
 
 var (

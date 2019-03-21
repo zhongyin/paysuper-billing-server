@@ -596,11 +596,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		Uuid:                               uuid.New().String(),
 	}
 
-	err := v.processOrderVat(order)
-
-	if err != nil {
-		return nil, err
-	}
+	v.processOrderVat(order)
 
 	if v.request.Description != "" {
 		order.Description = v.request.Description
@@ -871,34 +867,37 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 }
 
 // Calculate VAT for order
-func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) error {
+func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
+	}
 	req := &tax_service.GetRateRequest{
 		IpData: &tax_service.GeoIdentity{
-			Zip:     order.PayerData.Zip,
 			Country: order.PayerData.Country,
 			City:    order.PayerData.City.En,
-			State:   order.PayerData.State,
 		},
 		UserData: &tax_service.GeoIdentity{},
 	}
+
+	if order.PayerData.Country == CountryCodeUSA {
+		order.Tax.Type = taxTypeSalesTax
+
+		req.IpData.Zip = order.PayerData.Zip
+		req.IpData.State = order.PayerData.State
+	}
+
 	rsp, err := v.tax.GetRate(context.TODO(), req)
 
 	if err != nil {
-		return errors.New(orderErrorUnknown)
+		v.logError("Tax service return error", []interface{}{"error", err.Error(), "request", req})
+		return
 	}
 
-	order.Tax = &billing.OrderTax{
-		Type:     taxTypeVat,
-		Rate:     rsp.Rate.Rate,
-		Amount:   float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate/100))),
-		Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
-	}
+	order.Tax.Rate = rsp.Rate.Rate
+	order.Tax.Amount = float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate/100)))
 
-	if order.PayerData.Country == "US" {
-		order.Tax.Type = taxTypeSalesTax
-	}
-
-	return nil
+	return
 }
 
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
