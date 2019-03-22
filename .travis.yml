@@ -15,7 +15,6 @@ jobs:
     - mongodb
     - rabbitmq
     env:
-      global:
       - GO111MODULE=on
       - MONGO_HOST=127.0.0.1:27017
       - MONGO_DB=paysuper_test
