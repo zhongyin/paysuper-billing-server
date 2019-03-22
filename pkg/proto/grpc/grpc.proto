@@ -3,6 +3,7 @@ syntax = "proto3";
 option go_package = "github.com/paysuper/paysuper-billing-server/pkg/proto/grpc";
 package grpc;
 
+import "google/protobuf/timestamp.proto";
 import "billing/billing.proto";
 
 service BillingService {
@@ -39,6 +40,11 @@ service BillingService {
     rpc PaymentFormLanguageChanged (PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {}
     rpc PaymentFormPaymentAccountChanged (PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
     rpc ProcessBillingAddress (ProcessBillingAddressRequest) returns (ProcessBillingAddressResponse) {}
+
+    rpc CreateOrUpdateProduct(Product) returns (Product) {}
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
+    rpc GetProduct(RequestProductById) returns (Product) {}
+    rpc DeleteProduct(RequestProductById) returns (EmptyResponse) {}
 }
 
 message EmptyRequest {
@@ -366,4 +372,72 @@ message ChangeMerchantAgreementTypeResponse {
     int32 status = 1;
     string message = 2;
     billing.Merchant item = 3;
+}
+
+message Product {
+    //@inject_tag: validate:"hexadecimal" json:"id" bson:"_id"
+    string id = 1;
+    //@inject_tag: validate:"required" json:"object"
+    string object = 2;
+    //@inject_tag: validate:"required" json:"type"
+    string type = 3;
+    //@inject_tag: validate:"required" json:"sku" bson:"sku"
+    string sku = 4;
+    //@inject_tag: validate:"required" json:"name"
+    string name = 5;
+    //@inject_tag: validate:"required,alpha,len=3" json:"default_currency"
+    string default_currency = 6;
+    //@inject_tag: validate:"required" json:"enabled"
+    bool enabled = 7;
+    //@inject_tag: validate:"required,min=1,dive" json:"prices"
+    repeated ProductPrice prices = 8;
+    //@inject_tag: validate:"required" json:"description"
+    string description = 9;
+    //@inject_tag: json:"long_description"
+    string long_description = 10;
+    //@inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 11;
+    //@inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 12;
+    //@inject_tag: validate:"dive,omitempty,uri" json:"images"
+    repeated string images = 13;
+    //@inject_tag: validate:"omitempty,url" json:"url"
+    string url = 14;
+    //@inject_tag: json:"metadata"
+    map<string, string> metadata = 15;
+    //@inject_tag: json:"deleted" bson: "deleted"
+    bool deleted = 16;
+}
+
+message ProductPrice {
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    float amount = 1;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 2;
+}
+
+message ListProductsRequest {
+    //@inject_tag: json:"name"
+    string name = 1;
+    //@inject_tag: json:"sku"
+    string sku = 2;
+    // @inject_tag: json:"limit"
+    int32 limit = 3;
+    // @inject_tag: json:"offset"
+    int32 offset = 4;
+}
+message ListProductsResponse {
+    // @inject_tag: json:"limit"
+    int32 limit = 1;
+    // @inject_tag: json:"offset"
+    int32 offset = 2;
+    // @inject_tag: json:"total"
+    int32 total = 3;
+    // @inject_tag: json:"products"
+    repeated Product products = 5;
+}
+
+message RequestProductById {
+    //@inject_tag: validate:"required" json:"id"
+    string id = 1;
 }
