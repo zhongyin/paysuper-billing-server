@@ -304,6 +304,7 @@ message UserIpData {
 }
 
 message PaymentFormDataChangeResponseItem {
+    // @inject_tag: json:"user_address_data_required"
     bool user_address_data_required = 1;
     UserIpData user_ip_data = 2;
 }
@@ -326,9 +327,13 @@ message OrderReCalculateAmountsRequest {
 }
 
 message OrderReCalculateAmountsResponseItem {
+    // @inject_tag: json:"has_vat"
     bool has_vat = 2;
+    // @inject_tag: json:"vat"
     float vat = 3;
+    // @inject_tag: json:"amount"
     float amount = 4;
+    // @inject_tag: json:"total_amount"
     float total_amount = 5;
 }
 
