@@ -285,7 +285,7 @@ message PaymentFormUserChangePaymentAccountRequest {
     // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,hexadecimal,len=24"
-    string payment_method_id = 2;
+    string method_id = 2;
     // @inject_tag: validate:"required"
     string account = 3;
 }

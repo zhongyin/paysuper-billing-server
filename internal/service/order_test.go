@@ -4519,9 +4519,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_BankCard
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethod.Id,
-		Account:         "4000000000000002",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethod.Id,
+		Account:  "4000000000000002",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4553,9 +4553,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Qiwi_Ok(
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
-		Account:         "375444190039",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
+		Account:  "375444190039",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4587,9 +4587,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_OrderNot
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         uuid.New().String(),
-		PaymentMethodId: suite.paymentMethod.Id,
-		Account:         "4000000000000002",
+		OrderId:  uuid.New().String(),
+		MethodId: suite.paymentMethod.Id,
+		Account:  "4000000000000002",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4616,9 +4616,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_PaymentM
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: bson.NewObjectId().Hex(),
-		Account:         "4000000000000002",
+		OrderId:  rsp.Uuid,
+		MethodId: bson.NewObjectId().Hex(),
+		Account:  "4000000000000002",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4645,9 +4645,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_AccountI
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethod.Id,
-		Account:         "some_account",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethod.Id,
+		Account:  "some_account",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4674,9 +4674,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_BinDataN
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethod.Id,
-		Account:         "5555555555554444",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethod.Id,
+		Account:  "5555555555554444",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4703,9 +4703,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_QiwiAcco
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
-		Account:         "some_account",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
+		Account:  "some_account",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4732,9 +4732,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_QiwiAcco
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
-		Account:         "244636739467",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
+		Account:  "244636739467",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4761,9 +4761,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Bitcoin_
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.pmBitcoin1.Id,
-		Account:         "some_account",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.pmBitcoin1.Id,
+		Account:  "some_account",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4792,9 +4792,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_CountryN
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
-		Account:         "380636739467",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
+		Account:  "380636739467",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
@@ -4821,9 +4821,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_NoChange
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:         rsp.Uuid,
-		PaymentMethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
-		Account:         "79211234567",
+		OrderId:  rsp.Uuid,
+		MethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
+		Account:  "79211234567",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)

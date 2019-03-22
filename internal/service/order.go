@@ -545,7 +545,7 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 		return nil
 	}
 
-	pm, err := s.GetPaymentMethodById(req.PaymentMethodId)
+	pm, err := s.GetPaymentMethodById(req.MethodId)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusBadData
