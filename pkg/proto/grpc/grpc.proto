@@ -35,8 +35,9 @@ service BillingService {
     rpc GetRefund(GetRefundRequest) returns(CreateRefundResponse) {}
     rpc ProcessRefundCallback(CallbackRequest) returns (PaymentNotifyResponse) {}
 
-    //rpc PaymentFormDataChanged(PaymentFormDataChangedRequest) returns () {}
-    //rpc OrderCalculateAmounts() returns() {}
+    rpc PaymentFormLanguageChanged(PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {}
+    rpc PaymentFormPaymentAccountChanged(PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
+    rpc OrderReCalculateAmounts(OrderReCalculateAmountsRequest) returns(OrderReCalculateAmountsResponse) {}
 }
 
 message EmptyRequest {}
@@ -273,8 +274,62 @@ message PaymentFormDataChangedRequest {
     string account = 3;
 }
 
-message PaymentFormChangeLanguageRequest {
+message PaymentFormUserChangeLangRequest {
+    string order_id = 1;
+    // @inject_tag: validate:"required"
+    string lang = 2;
+}
+
+message PaymentFormUserChangePaymentAccountRequest {
+    string order_id = 1;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string payment_method_id = 2;
+    // @inject_tag: validate:"required"
+    string account = 3;
+}
+
+message UserIpDataCountry {
+    string code = 1;
+    string name = 2;
+}
+
+message UserIpData {
+    UserIpDataCountry country = 1;
+    string city = 2;
+    string zip = 3;
+}
+
+message PaymentFormDataChangeResponseItem {
+    bool user_address_data_required = 1;
+    UserIpData user_ip_data = 2;
+}
+
+message PaymentFormDataChangeResponse {
+    int32 status = 1;
+    string message = 2;
+    PaymentFormDataChangeResponseItem item = 3;
+}
+
+message OrderReCalculateAmountsRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string order_id = 1;
     // @inject_tag: validate:"required,len=2"
-    string lang = 2;
+    string country = 2;
+    // @inject_tag: validate:"required"
+    string city = 3;
+    // @inject_tag: validate:"required"
+    string zip = 4;
+}
+
+message OrderReCalculateAmountsResponseItem {
+    bool has_vat = 2;
+    float vat = 3;
+    float amount = 4;
+    float total_amount = 5;
+}
+
+message OrderReCalculateAmountsResponse {
+    int32 status = 1;
+    string message = 2;
+    OrderReCalculateAmountsResponseItem item = 3;
 }

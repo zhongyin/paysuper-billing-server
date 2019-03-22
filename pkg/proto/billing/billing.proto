@@ -233,6 +233,13 @@ message OrderTax {
     string currency = 4;
 }
 
+message OrderBillingAddress {
+    string country = 1;
+    string city = 2;
+    string postal_code = 3;
+    string state = 4;
+}
+
 message Order {
     string id = 1; // unique order identifier in Protocol One
     // @inject_tag: bson:"project" structure:"project"
@@ -311,9 +318,10 @@ message Order {
     // @inject_tag: json:"-"
     google.protobuf.Timestamp expire_date_to_form_input = 39;
     double total_payment_amount = 43; // total amount to payment with all commissions
+    OrderBillingAddress billing_address = 44; // user billing address entered in payment form
 
     // @inject_tag: json:"-"
-    bool need_user_address_data = 44;
+    bool user_address_data_required = 45;
 }
 
 message Currency {

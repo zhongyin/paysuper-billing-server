@@ -17,7 +17,7 @@ func (m *TaxServiceOkMock) GetRate(
 	in *tax_service.GetRateRequest,
 	opts ...client.CallOption,
 ) (*tax_service.GetRateResponse, error) {
-	return &tax_service.GetRateResponse{
+	rate := &tax_service.GetRateResponse{
 		Rate: &tax_service.TaxRate{
 			Id:      0,
 			Zip:     "190000",
@@ -27,7 +27,23 @@ func (m *TaxServiceOkMock) GetRate(
 			Rate:    20,
 		},
 		UserDataPriority: false,
-	}, nil
+	}
+
+	if in.UserData != nil && in.UserData.Country == "US" {
+		rate = &tax_service.GetRateResponse{
+			Rate: &tax_service.TaxRate{
+				Id:      1,
+				Zip:     "98001",
+				Country: "US",
+				State:   "NY",
+				City:    "Washington",
+				Rate:    15,
+			},
+			UserDataPriority: true,
+		}
+	}
+
+	return rate, nil
 }
 
 func (m *TaxServiceOkMock) GetRates(

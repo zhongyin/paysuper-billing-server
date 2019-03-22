@@ -37,6 +37,9 @@ const (
 	PaymentCreateFieldStoreData       = "store_data"
 	PaymentCreateFieldRecurringId     = "recurring_id"
 	PaymentCreateFieldStoredCardId    = "stored_card_id"
+	PaymentCreateFieldUserCountry     = "country"
+	PaymentCreateFieldUserCity        = "city"
+	PaymentCreateFieldUserZip         = "zip"
 
 	TxnParamsFieldBankCardEmissionCountry = "emission_country"
 	TxnParamsFieldBankCardToken           = "token"
@@ -81,4 +84,31 @@ const (
 	PaymentSystemErrorCreateRefundRejected = "refund create request rejected"
 
 	PaymentSystemHandlerCardPay = "cardpay"
+)
+
+var (
+	CountryPhoneCodes = map[int32]string{
+		7:    "RU",
+		375:  "BY",
+		994:  "AZ",
+		91:   "IN",
+		77:   "KZ",
+		380:  "UA",
+		44:   "GB",
+		9955: "GE",
+		370:  "LT",
+		992:  "TJ",
+		66:   "TH",
+		998:  "UZ",
+		507:  "PA",
+		374:  "AM",
+		371:  "LV",
+		90:   "TR",
+		373:  "MD",
+		972:  "IL",
+		84:   "VN",
+		372:  "EE",
+		82:   "KR",
+		996:  "KG",
+	}
 )

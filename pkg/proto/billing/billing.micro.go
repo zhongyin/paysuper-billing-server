@@ -21,6 +21,7 @@ It has these top-level messages:
 	Notification
 	OrderPlatformFee
 	OrderTax
+	OrderBillingAddress
 	Order
 	Currency
 	PayerData
