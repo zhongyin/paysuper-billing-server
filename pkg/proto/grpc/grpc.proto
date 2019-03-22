@@ -275,12 +275,14 @@ message PaymentFormDataChangedRequest {
 }
 
 message PaymentFormUserChangeLangRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
-    // @inject_tag: validate:"required"
+    // @inject_tag: validate:"required,len=2"
     string lang = 2;
 }
 
 message PaymentFormUserChangePaymentAccountRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string payment_method_id = 2;
@@ -311,7 +313,7 @@ message PaymentFormDataChangeResponse {
 }
 
 message OrderReCalculateAmountsRequest {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,len=2"
     string country = 2;
