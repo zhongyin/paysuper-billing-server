@@ -275,7 +275,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 			return err
 		}
 
-		rsp.NeedBillingAddress = order.UserAddressDataRequired
+		rsp.UserAddressDataRequired = order.UserAddressDataRequired
 	}
 
 	expire := time.Now().Add(time.Minute * 30).Unix()
@@ -1124,6 +1124,8 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 
 // Calculate VAT for order
 func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
+	order.TotalPaymentAmount = order.PaymentMethodOutcomeAmount
+
 	order.Tax = &billing.OrderTax{
 		Type:     taxTypeVat,
 		Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
@@ -1165,7 +1167,7 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 
 	order.Tax.Rate = rsp.Rate.Rate
 	order.Tax.Amount = float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate/100)))
-	order.TotalPaymentAmount = tools.FormatAmount(order.PaymentMethodOutcomeAmount + float64(order.Tax.Amount))
+	order.TotalPaymentAmount = tools.FormatAmount(order.TotalPaymentAmount + float64(order.Tax.Amount))
 
 	return
 }

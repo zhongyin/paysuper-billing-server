@@ -72,6 +72,7 @@ message PaymentFormJsonDataResponse {
     string id = 1; // order unique identifier
     // @inject_tag: json:"account,omitempty"
     string account = 2; // user account, may be null
+    // @inject_tag: json:"has_vat"
     bool has_vat = 3; // flag to show VAT commission amount in payment form
     float vat = 4; // amount of vat for payment
     double amount = 5; // payment amount without VAT commission
@@ -80,7 +81,8 @@ message PaymentFormJsonDataResponse {
     repeated billing.PaymentFormPaymentMethod payment_methods = 8; // contain data about payment methods
     string inline_form_redirect_url = 9; // url to redirect user to inline form in PSP side
     string token = 10; // access token to websocket private chanel
-    bool need_billing_address = 11;
+    // @inject_tag: json:"user_address_data_required"
+    bool user_address_data_required = 11;
 }
 
 message PaymentNotifyRequest {
