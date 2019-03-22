@@ -145,9 +145,9 @@ func (h *Commission) getAll() (recs []interface{}, err error) {
 			continue
 		}
 
-		for _, v1 := range projects {
-			commission := make(map[string]map[string]*billing.MerchantPaymentMethodCommissions)
+		commission := make(map[string]map[string]*billing.MerchantPaymentMethodCommissions)
 
+		for _, v1 := range projects {
 			_, ok := commission[v1.Id]
 
 			if !ok {
