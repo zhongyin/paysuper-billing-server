@@ -522,7 +522,7 @@ func (s *Service) PaymentFormLanguageChanged(
 		UserAddressDataRequired: false,
 	}
 
-	if order.PayerData.Language == req.Lang {
+	if order.User.Locale == req.Lang {
 		return nil
 	}
 

@@ -4477,11 +4477,15 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormLanguageChanged_NoChanges_Ok()
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
-	order, err := suite.service.getOrderByUuid(rsp.Uuid)
-	assert.NoError(suite.T(), err)
-
-	order.PayerData.Language = "en"
-	err = suite.service.updateOrder(order)
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Id,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "en-US",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
 	assert.NoError(suite.T(), err)
 
 	req1 := &grpc.PaymentFormUserChangeLangRequest{
