@@ -3195,7 +3195,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_SavedCards_Ok()
 		Type:          suite.paymentMethod.Type,
 		Group:         suite.paymentMethod.Group,
 		AccountRegexp: suite.paymentMethod.AccountRegexp,
-		Currency:      order.ProjectIncomeCurrency.CodeA3,
 	}
 
 	assert.True(suite.T(), len(pm.SavedCards) <= 0)
@@ -3234,7 +3233,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_EmptySavedCards
 		Type:          suite.paymentMethod.Type,
 		Group:         suite.paymentMethod.Group,
 		AccountRegexp: suite.paymentMethod.AccountRegexp,
-		Currency:      order.ProjectIncomeCurrency.CodeA3,
 	}
 
 	assert.True(suite.T(), len(pm.SavedCards) <= 0)
@@ -3273,7 +3271,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_NotBankCard_Ok(
 		Type:          suite.paymentMethodWithInactivePaymentSystem.Type,
 		Group:         suite.paymentMethodWithInactivePaymentSystem.Group,
 		AccountRegexp: suite.paymentMethodWithInactivePaymentSystem.AccountRegexp,
-		Currency:      order.ProjectIncomeCurrency.CodeA3,
 	}
 
 	assert.True(suite.T(), len(pm.SavedCards) <= 0)
@@ -3312,7 +3309,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_GetSavedCards_E
 		Type:          suite.paymentMethod.Type,
 		Group:         suite.paymentMethod.Group,
 		AccountRegexp: suite.paymentMethod.AccountRegexp,
-		Currency:      order.ProjectIncomeCurrency.CodeA3,
 	}
 
 	err = processor.processPaymentMethodsData(pm)

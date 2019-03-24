@@ -304,6 +304,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.Account = order.ProjectAccount
 	rsp.HasVat = order.Tax.Amount > 0
 	rsp.Vat = order.Tax.Amount
+	rsp.Currency = order.ProjectIncomeCurrency.CodeA3
 	rsp.Project = &grpc.PaymentFormJsonDataProject{
 		Name:       order.Project.Name,
 		UrlSuccess: order.Project.UrlSuccess,
@@ -1271,7 +1272,6 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 			Type:          pm.Type,
 			Group:         pm.Group,
 			AccountRegexp: pm.AccountRegexp,
-			Currency:      v.order.ProjectIncomeCurrency.CodeA3,
 		}
 
 		err := v.processPaymentMethodsData(formPm)

@@ -613,7 +613,6 @@ message PaymentFormPaymentMethod {
     // @inject_tag: json:"group_alias"
     string group = 5;
     string account_regexp = 6;
-    string currency = 9;
     // @inject_tag: json:"has_saved_cards"
     bool has_saved_cards = 12;
     // @inject_tag: json:"saved_cards,omitempty"
