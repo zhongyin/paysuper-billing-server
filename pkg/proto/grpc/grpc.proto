@@ -296,8 +296,11 @@ message PaymentFormUserChangePaymentAccountRequest {
 }
 
 message UserIpData {
+    // @inject_tag: json:"country"
     string country = 1;
+    // @inject_tag: json:"city"
     string city = 2;
+    // @inject_tag: json:"zip"
     string zip = 3;
 }
 
