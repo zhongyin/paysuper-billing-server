@@ -199,6 +199,7 @@ type MgoOrder struct {
 	TotalPaymentAmount      float64              `bson:"total_payment_amount"`
 	UserAddressDataRequired bool                 `bson:"user_address_data_required"`
 	BillingAddress          *OrderBillingAddress `bson:"billing_address"`
+	User                    *OrderUser           `bson:"user"`
 }
 
 type MgoPaymentSystem struct {
@@ -779,6 +780,7 @@ func (m *Order) GetBSON() (interface{}, error) {
 		TotalPaymentAmount:      m.TotalPaymentAmount,
 		UserAddressDataRequired: m.UserAddressDataRequired,
 		BillingAddress:          m.BillingAddress,
+		User:                    m.User,
 	}
 
 	if m.PaymentMethod != nil {
@@ -982,6 +984,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.TotalPaymentAmount = decoded.TotalPaymentAmount
 	m.UserAddressDataRequired = decoded.UserAddressDataRequired
 	m.BillingAddress = decoded.BillingAddress
+	m.User = decoded.User
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 

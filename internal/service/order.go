@@ -90,6 +90,8 @@ const (
 
 	taxTypeVat      = "vat"
 	taxTypeSalesTax = "sales_tax"
+
+	objectTypeUser = "user"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -252,30 +254,47 @@ func (s *Service) PaymentFormJsonDataProcess(
 		return err
 	}
 
-	processor := &PaymentFormProcessor{
-		service: s,
-		order:   order,
-		request: req,
+	p := &PaymentFormProcessor{service: s, order: order, request: req}
+	p1 := &OrderCreateRequestProcessor{Service: s,
+		request: &billing.OrderCreateRequest{
+			PayerIp: req.Ip,
+		},
+		checked: &orderCreateRequestProcessorChecked{},
 	}
-	pms, err := processor.processRenderFormPaymentMethods()
+
+	err = p1.processPayerData()
 
 	if err != nil {
 		return err
 	}
 
-	lang, country := s.getCountryFromAcceptLanguage(req.Locale)
+	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
 
-	if country != order.PayerData.Country {
-		order.PayerData.Language = lang
+	order.User.Ip = p1.checked.payerData.Ip
+	order.User.Locale = loc
+	order.User.Address = &billing.OrderBillingAddress{
+		Country:    p1.checked.payerData.Country,
+		City:       p1.checked.payerData.City.En,
+		PostalCode: p1.checked.payerData.Zip,
+		State:      p1.checked.payerData.State,
+	}
+
+	if ctr != order.User.Address.Country {
 		order.UserAddressDataRequired = true
-
-		err = s.updateOrder(order)
-
-		if err != nil {
-			return err
-		}
-
 		rsp.UserAddressDataRequired = order.UserAddressDataRequired
+	}
+
+	p1.processOrderVat(order)
+	err = s.updateOrder(order)
+
+	if err != nil {
+		return err
+	}
+
+	pms, err := p.processRenderFormPaymentMethods()
+
+	if err != nil {
+		return err
 	}
 
 	expire := time.Now().Add(time.Minute * 30).Unix()
@@ -506,7 +525,7 @@ func (s *Service) PaymentFormLanguageChanged(
 		return nil
 	}
 
-	order.PayerData.Language = req.Lang
+	order.User.Locale = req.Lang
 	order.UserAddressDataRequired = true
 
 	err = s.updateOrder(order)
@@ -520,12 +539,9 @@ func (s *Service) PaymentFormLanguageChanged(
 
 	rsp.Item.UserAddressDataRequired = true
 	rsp.Item.UserIpData = &grpc.UserIpData{
-		Country: &grpc.UserIpDataCountry{
-			Name: order.PayerData.CountryName.En,
-			Code: order.PayerData.Country,
-		},
-		City: order.PayerData.City.En,
-		Zip:  order.PayerData.Zip,
+		Country: order.User.Address.Country,
+		City:    order.User.Address.City,
+		Zip:     order.User.Address.PostalCode,
 	}
 
 	return nil
@@ -609,17 +625,7 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 		return nil
 	}
 
-	cObj, err := s.GetCountryByCodeA2(country)
-
-	if err != nil || cObj == nil {
-		rsp.Status = pkg.ResponseStatusBadData
-		rsp.Message = orderErrorCountryByPaymentAccountNotFound
-
-		return nil
-	}
-
-	order.PayerData.Country = country
-	order.PayerData.CountryName = cObj.Name
+	order.User.Address.Country = country
 	order.UserAddressDataRequired = true
 
 	err = s.updateOrder(order)
@@ -633,12 +639,9 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 
 	rsp.Item.UserAddressDataRequired = true
 	rsp.Item.UserIpData = &grpc.UserIpData{
-		Country: &grpc.UserIpDataCountry{
-			Name: order.PayerData.CountryName.En,
-			Code: order.PayerData.Country,
-		},
-		City: order.PayerData.City.En,
-		Zip:  order.PayerData.Zip,
+		Country: order.User.Address.Country,
+		City:    order.User.Address.City,
+		Zip:     order.User.Address.PostalCode,
 	}
 
 	return nil
@@ -850,7 +853,19 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PaymentMethodOutcomeCurrency:       v.checked.currency,
 		PaymentMethodIncomeAmount:          amount,
 		PaymentMethodIncomeCurrency:        v.checked.currency,
-		Uuid:                               uuid.New().String(),
+
+		Uuid: uuid.New().String(),
+		User: &billing.OrderUser{
+			Object: objectTypeUser,
+			Email:  v.checked.payerData.Email,
+			Phone:  v.checked.payerData.Phone,
+			Address: &billing.OrderBillingAddress{
+				Country:    v.checked.payerData.Country,
+				City:       v.checked.payerData.City.En,
+				PostalCode: v.checked.payerData.Zip,
+				State:      v.checked.payerData.State,
+			},
+		},
 	}
 
 	v.processOrderVat(order)
@@ -1132,8 +1147,8 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 	}
 	req := &tax_service.GetRateRequest{
 		IpData: &tax_service.GeoIdentity{
-			Country: order.PayerData.Country,
-			City:    order.PayerData.City.En,
+			Country: order.User.Address.Country,
+			City:    order.User.Address.City,
 		},
 		UserData: &tax_service.GeoIdentity{},
 	}
@@ -1146,8 +1161,8 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 	if order.PayerData.Country == CountryCodeUSA {
 		order.Tax.Type = taxTypeSalesTax
 
-		req.IpData.Zip = order.PayerData.Zip
-		req.IpData.State = order.PayerData.State
+		req.IpData.Zip = order.User.Address.PostalCode
+		req.IpData.State = order.User.Address.State
 
 		if order.BillingAddress != nil {
 			req.UserData.Zip = order.BillingAddress.PostalCode

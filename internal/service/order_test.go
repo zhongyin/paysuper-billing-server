@@ -4431,7 +4431,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormLanguageChanged_Ok() {
 	assert.Empty(suite.T(), rsp1.Message)
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.True(suite.T(), rsp1.Item.UserAddressDataRequired)
-	assert.Equal(suite.T(), rsp.PayerData.Country, rsp1.Item.UserIpData.Country.Code)
+	assert.Equal(suite.T(), rsp.PayerData.Country, rsp1.Item.UserIpData.Country)
 	assert.Equal(suite.T(), rsp.PayerData.Zip, rsp1.Item.UserIpData.Zip)
 	assert.Equal(suite.T(), rsp.PayerData.City.En, rsp1.Item.UserIpData.City)
 }
@@ -4530,7 +4530,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_BankCard
 	assert.Empty(suite.T(), rsp1.Message)
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.True(suite.T(), rsp1.Item.UserAddressDataRequired)
-	assert.Equal(suite.T(), "US", rsp1.Item.UserIpData.Country.Code)
+	assert.Equal(suite.T(), "US", rsp1.Item.UserIpData.Country)
 	assert.Equal(suite.T(), rsp.PayerData.Zip, rsp1.Item.UserIpData.Zip)
 	assert.Equal(suite.T(), rsp.PayerData.City.En, rsp1.Item.UserIpData.City)
 }
@@ -4564,7 +4564,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Qiwi_Ok(
 	assert.Empty(suite.T(), rsp1.Message)
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.True(suite.T(), rsp1.Item.UserAddressDataRequired)
-	assert.Equal(suite.T(), "BY", rsp1.Item.UserIpData.Country.Code)
+	assert.Equal(suite.T(), "BY", rsp1.Item.UserIpData.Country)
 	assert.Equal(suite.T(), rsp.PayerData.Zip, rsp1.Item.UserIpData.Zip)
 	assert.Equal(suite.T(), rsp.PayerData.City.En, rsp1.Item.UserIpData.City)
 }
@@ -4772,35 +4772,6 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Bitcoin_
 	assert.Empty(suite.T(), rsp1.Message)
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.False(suite.T(), rsp1.Item.UserAddressDataRequired)
-}
-
-func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_CountryNotFound_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:   suite.project.Id,
-		Currency:    "RUB",
-		Amount:      100,
-		Account:     "unit test",
-		Description: "unit test",
-		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
-		PayerIp:     "127.0.0.1",
-	}
-
-	rsp := &billing.Order{}
-	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(rsp.Id) > 0)
-
-	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
-		OrderId:  rsp.Uuid,
-		MethodId: suite.paymentMethodWithInactivePaymentSystem.Id,
-		Account:  "380636739467",
-	}
-	rsp1 := &grpc.PaymentFormDataChangeResponse{}
-	err = suite.service.PaymentFormPaymentAccountChanged(context.TODO(), req1, rsp1)
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp1.Status)
-	assert.Equal(suite.T(), orderErrorCountryByPaymentAccountNotFound, rsp1.Message)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_NoChanges_Ok() {

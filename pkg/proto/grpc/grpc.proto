@@ -58,6 +58,7 @@ message PaymentFormJsonDataRequest {
     string scheme = 2;
     string host = 3;
     string locale = 4;
+    string ip = 5;
 }
 
 message PaymentFormJsonDataProject {
@@ -292,13 +293,8 @@ message PaymentFormUserChangePaymentAccountRequest {
     string account = 3;
 }
 
-message UserIpDataCountry {
-    string code = 1;
-    string name = 2;
-}
-
 message UserIpData {
-    UserIpDataCountry country = 1;
+    string country = 1;
     string city = 2;
     string zip = 3;
 }

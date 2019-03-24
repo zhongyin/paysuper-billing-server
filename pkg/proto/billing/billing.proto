@@ -240,6 +240,31 @@ message OrderBillingAddress {
     string state = 4;
 }
 
+message OrderUser {
+    // @inject_tag: bson:"uuid"
+    string id = 1;
+    // @inject_tag: bson:"object"
+    string object = 2;
+    // @inject_tag: bson:"name"
+    string name = 3;
+    // @inject_tag: bson:"email"
+    string email = 4;
+    // @inject_tag: bson:"email_verified"
+    bool email_verified = 5;
+    // @inject_tag: bson:"phone"
+    string phone = 6;
+    // @inject_tag: bson:"phone_verified"
+    bool phone_verified = 7;
+    // @inject_tag: bson:"ip"
+    string ip = 8;
+    // @inject_tag: bson:"locale"
+    string locale = 9;
+    // @inject_tag: bson:"address"
+    OrderBillingAddress address = 10;
+    // @inject_tag: bson:"metadata"
+    map<string, string> metadata = 11;
+}
+
 message Order {
     string id = 1; // unique order identifier in Protocol One
     // @inject_tag: bson:"project" structure:"project"
@@ -319,9 +344,10 @@ message Order {
     google.protobuf.Timestamp expire_date_to_form_input = 39;
     double total_payment_amount = 43; // total amount to payment with all commissions
     OrderBillingAddress billing_address = 44; // user billing address entered in payment form
+    OrderUser user = 45;
 
     // @inject_tag: json:"-"
-    bool user_address_data_required = 45;
+    bool user_address_data_required = 46;
 }
 
 message Currency {

@@ -44,7 +44,6 @@ It has these top-level messages:
 	PaymentFormDataChangedRequest
 	PaymentFormUserChangeLangRequest
 	PaymentFormUserChangePaymentAccountRequest
-	UserIpDataCountry
 	UserIpData
 	PaymentFormDataChangeResponseItem
 	PaymentFormDataChangeResponse
