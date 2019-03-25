@@ -1182,7 +1182,7 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 	}
 
 	order.Tax.Rate = rsp.Rate.Rate
-	order.Tax.Amount = float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate/100)))
+	order.Tax.Amount = float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate)))
 	order.TotalPaymentAmount = tools.FormatAmount(order.TotalPaymentAmount + float64(order.Tax.Amount))
 
 	return
