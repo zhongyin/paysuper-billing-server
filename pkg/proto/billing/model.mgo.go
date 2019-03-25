@@ -70,6 +70,7 @@ type MgoMerchantPaymentMethod struct {
 
 type MgoMerchant struct {
 	Id                        bson.ObjectId                        `bson:"_id"`
+	UserId                    string                               `bson:"user_id"`
 	Name                      string                               `bson:"name"`
 	AlternativeName           string                               `bson:"alternative_name"`
 	Website                   string                               `bson:"website"`
@@ -1223,6 +1224,7 @@ func (m *PaymentSystem) SetBSON(raw bson.Raw) error {
 
 func (m *Merchant) GetBSON() (interface{}, error) {
 	st := &MgoMerchant{
+		UserId:                    m.UserId,
 		Name:                      m.Name,
 		AlternativeName:           m.AlternativeName,
 		Website:                   m.Website,
@@ -1330,6 +1332,7 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Id = decoded.Id.Hex()
+	m.UserId = decoded.UserId
 	m.Name = decoded.Name
 	m.AlternativeName = decoded.AlternativeName
 	m.Website = decoded.Website

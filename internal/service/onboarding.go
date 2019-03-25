@@ -25,7 +25,6 @@ const (
 	merchantErrorNotFound                = "merchant with specified identifier not found"
 	notificationErrorMerchantIdIncorrect = "merchant identifier incorrect, notification can't be saved"
 	notificationErrorUserIdIncorrect     = "user identifier incorrect, notification can't be saved"
-	notificationErrorIdIncorrect         = "notification identifier incorrect"
 	notificationErrorMessageIsEmpty      = "notification message can't be empty"
 	notificationErrorNotFound            = "notification not found"
 )
@@ -49,7 +48,15 @@ func (s *Service) GetMerchantById(
 	req *grpc.FindByIdRequest,
 	rsp *grpc.MerchantGetMerchantResponse,
 ) error {
-	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
+	query := make(bson.M)
+
+	if bson.IsObjectIdHex(req.Id) == true {
+		query["$or"] = []bson.M{{"_id": bson.ObjectIdHex(req.Id)}, {"user_id": req.Id}}
+	} else {
+		query["user_id"] = req.Id
+	}
+
+	merchant, err := s.getMerchantBy(query)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusNotFound
@@ -143,6 +150,7 @@ func (s *Service) ChangeMerchant(
 	if isNew {
 		merchant = &billing.Merchant{
 			Id:     bson.NewObjectId().Hex(),
+			UserId: req.UserId,
 			Status: pkg.MerchantStatusDraft,
 		}
 	}
