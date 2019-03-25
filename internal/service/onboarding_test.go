@@ -593,12 +593,12 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_CreateMerchant_C
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_MerchantId_Ok() {
-	req := &grpc.FindByIdRequest{
-		Id: suite.merchant.Id,
+	req := &grpc.GetMerchantByRequest{
+		MerchantId: suite.merchant.Id,
 	}
 
 	rsp := &grpc.MerchantGetMerchantResponse{}
-	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
@@ -609,12 +609,12 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_MerchantId_Ok()
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_UserId_Ok() {
-	req := &grpc.FindByIdRequest{
-		Id: suite.merchant.UserId,
+	req := &grpc.GetMerchantByRequest{
+		UserId: suite.merchant.UserId,
 	}
 
 	rsp := &grpc.MerchantGetMerchantResponse{}
-	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
@@ -625,16 +625,27 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_UserId_Ok() {
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
-	req := &grpc.FindByIdRequest{
-		Id: bson.NewObjectId().Hex(),
+	req := &grpc.GetMerchantByRequest{
+		MerchantId: bson.NewObjectId().Hex(),
 	}
 
 	rsp := &grpc.MerchantGetMerchantResponse{}
-	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp.Status)
 	assert.Equal(suite.T(), merchantErrorNotFound, rsp.Message)
+	assert.Nil(suite.T(), rsp.Item)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantBy_IncorrectRequest_Error() {
+	req := &grpc.GetMerchantByRequest{}
+	rsp := &grpc.MerchantGetMerchantResponse{}
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), merchantErrorBadData, rsp.Message)
 	assert.Nil(suite.T(), rsp.Item)
 }
 

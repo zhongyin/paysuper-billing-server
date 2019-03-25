@@ -16,8 +16,7 @@ service BillingService {
     rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {}
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
-    rpc GetMerchantById(FindByIdRequest) returns (MerchantGetMerchantResponse) {}
-
+    rpc GetMerchantBy(GetMerchantByRequest) returns (MerchantGetMerchantResponse) {}
     rpc ListMerchants(MerchantListingRequest) returns (Merchants) {}
     rpc ChangeMerchant(OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
@@ -261,4 +260,9 @@ message CallbackRequest {
     string handler = 1;
     bytes body = 2;
     string signature = 3;
+}
+
+message GetMerchantByRequest {
+    string merchant_id = 1;
+    string user_id = 2;
 }

@@ -23,6 +23,7 @@ const (
 	merchantErrorSigned                  = "document can't be mark as signed"
 	merchantErrorUnknown                 = "request processing failed. try request later"
 	merchantErrorNotFound                = "merchant with specified identifier not found"
+	merchantErrorBadData                 = "request data is incorrect"
 	notificationErrorMerchantIdIncorrect = "merchant identifier incorrect, notification can't be saved"
 	notificationErrorUserIdIncorrect     = "user identifier incorrect, notification can't be saved"
 	notificationErrorMessageIsEmpty      = "notification message can't be empty"
@@ -43,17 +44,26 @@ var (
 	}
 )
 
-func (s *Service) GetMerchantById(
+func (s *Service) GetMerchantBy(
 	ctx context.Context,
-	req *grpc.FindByIdRequest,
+	req *grpc.GetMerchantByRequest,
 	rsp *grpc.MerchantGetMerchantResponse,
 ) error {
+	if req.MerchantId == "" && req.UserId == "" {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = merchantErrorBadData
+
+		return nil
+	}
+
 	query := make(bson.M)
 
-	if bson.IsObjectIdHex(req.Id) == true {
-		query["$or"] = []bson.M{{"_id": bson.ObjectIdHex(req.Id)}, {"user_id": req.Id}}
-	} else {
-		query["user_id"] = req.Id
+	if req.MerchantId != "" {
+		query["_id"] = bson.ObjectIdHex(req.MerchantId)
+	}
+
+	if req.UserId != "" {
+		query["user_id"] = req.UserId
 	}
 
 	merchant, err := s.getMerchantBy(query)
