@@ -23,9 +23,9 @@ const (
 	merchantErrorSigned                  = "document can't be mark as signed"
 	merchantErrorUnknown                 = "request processing failed. try request later"
 	merchantErrorNotFound                = "merchant with specified identifier not found"
+	merchantErrorBadData                 = "request data is incorrect"
 	notificationErrorMerchantIdIncorrect = "merchant identifier incorrect, notification can't be saved"
 	notificationErrorUserIdIncorrect     = "user identifier incorrect, notification can't be saved"
-	notificationErrorIdIncorrect         = "notification identifier incorrect"
 	notificationErrorMessageIsEmpty      = "notification message can't be empty"
 	notificationErrorNotFound            = "notification not found"
 )
@@ -44,12 +44,29 @@ var (
 	}
 )
 
-func (s *Service) GetMerchantById(
+func (s *Service) GetMerchantBy(
 	ctx context.Context,
-	req *grpc.FindByIdRequest,
+	req *grpc.GetMerchantByRequest,
 	rsp *grpc.MerchantGetMerchantResponse,
 ) error {
-	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
+	if req.MerchantId == "" && req.UserId == "" {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = merchantErrorBadData
+
+		return nil
+	}
+
+	query := make(bson.M)
+
+	if req.MerchantId != "" {
+		query["_id"] = bson.ObjectIdHex(req.MerchantId)
+	}
+
+	if req.UserId != "" {
+		query["user_id"] = req.UserId
+	}
+
+	merchant, err := s.getMerchantBy(query)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusNotFound
@@ -143,6 +160,7 @@ func (s *Service) ChangeMerchant(
 	if isNew {
 		merchant = &billing.Merchant{
 			Id:     bson.NewObjectId().Hex(),
+			UserId: req.UserId,
 			Status: pkg.MerchantStatusDraft,
 		}
 	}

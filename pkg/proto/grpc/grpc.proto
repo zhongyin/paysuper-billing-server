@@ -16,7 +16,7 @@ service BillingService {
     rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {}
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
-    rpc GetMerchantById(FindByIdRequest) returns (MerchantGetMerchantResponse) {}
+    rpc GetMerchantBy(GetMerchantByRequest) returns (MerchantGetMerchantResponse) {}
     rpc ListMerchants(MerchantListingRequest) returns (Merchants) {}
     rpc ChangeMerchant(OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus(MerchantChangeStatusRequest) returns (billing.Merchant) {}
@@ -120,6 +120,8 @@ message OnboardingBanking {
 
 message OnboardingRequest {
     string id = 1;
+    //@inject_tag: validate:"required"
+    string user_id = 2;
     //@inject_tag: validate:"required"
     string name = 3;
     string alternative_name = 4;
@@ -342,4 +344,9 @@ message ProcessBillingAddressResponse {
     int32 status = 1;
     string message = 2;
     ProcessBillingAddressResponseItem item = 3;
+}
+
+message GetMerchantByRequest {
+    string merchant_id = 1;
+    string user_id = 2;
 }

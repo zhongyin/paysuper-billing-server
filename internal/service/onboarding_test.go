@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -141,6 +142,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 
 	merchant := &billing.Merchant{
 		Id:      bson.NewObjectId().Hex(),
+		UserId:  uuid.New().String(),
 		Name:    "Unit test",
 		Country: country,
 		Zip:     "190000",
@@ -574,13 +576,29 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_CreateMerchant_C
 	assert.Len(suite.T(), rsp.Id, 0)
 }
 
-func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
-	req := &grpc.FindByIdRequest{
-		Id: suite.merchant.Id,
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_MerchantId_Ok() {
+	req := &grpc.GetMerchantByRequest{
+		MerchantId: suite.merchant.Id,
 	}
 
 	rsp := &grpc.MerchantGetMerchantResponse{}
-	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.True(suite.T(), len(rsp.Item.Id) > 0)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp.Item.Id)
+	assert.Equal(suite.T(), suite.merchant.Website, rsp.Item.Website)
+	assert.Equal(suite.T(), suite.merchant.Name, rsp.Item.Name)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_UserId_Ok() {
+	req := &grpc.GetMerchantByRequest{
+		UserId: suite.merchant.UserId,
+	}
+
+	rsp := &grpc.MerchantGetMerchantResponse{}
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
@@ -591,16 +609,27 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Ok() {
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_Error() {
-	req := &grpc.FindByIdRequest{
-		Id: bson.NewObjectId().Hex(),
+	req := &grpc.GetMerchantByRequest{
+		MerchantId: bson.NewObjectId().Hex(),
 	}
 
 	rsp := &grpc.MerchantGetMerchantResponse{}
-	err := suite.service.GetMerchantById(context.TODO(), req, rsp)
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp.Status)
 	assert.Equal(suite.T(), merchantErrorNotFound, rsp.Message)
+	assert.Nil(suite.T(), rsp.Item)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantBy_IncorrectRequest_Error() {
+	req := &grpc.GetMerchantByRequest{}
+	rsp := &grpc.MerchantGetMerchantResponse{}
+	err := suite.service.GetMerchantBy(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), merchantErrorBadData, rsp.Message)
 	assert.Nil(suite.T(), rsp.Item)
 }
 
