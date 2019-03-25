@@ -648,10 +648,10 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 	return nil
 }
 
-func (s *Service) OrderReCalculateAmounts(
+func (s *Service) ProcessBillingAddress(
 	ctx context.Context,
-	req *grpc.OrderReCalculateAmountsRequest,
-	rsp *grpc.OrderReCalculateAmountsResponse,
+	req *grpc.ProcessBillingAddressRequest,
+	rsp *grpc.ProcessBillingAddressResponse,
 ) error {
 	order, err := s.getOrderByUuidToForm(req.OrderId)
 
@@ -681,7 +681,7 @@ func (s *Service) OrderReCalculateAmounts(
 	}
 
 	rsp.Status = pkg.ResponseStatusOk
-	rsp.Item = &grpc.OrderReCalculateAmountsResponseItem{
+	rsp.Item = &grpc.ProcessBillingAddressResponseItem{
 		HasVat:      order.Tax.Amount > 0,
 		Vat:         order.Tax.Amount,
 		Amount:      float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount)),

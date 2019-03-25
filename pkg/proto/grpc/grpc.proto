@@ -37,7 +37,7 @@ service BillingService {
 
     rpc PaymentFormLanguageChanged(PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {}
     rpc PaymentFormPaymentAccountChanged(PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
-    rpc OrderReCalculateAmounts(OrderReCalculateAmountsRequest) returns(OrderReCalculateAmountsResponse) {}
+    rpc ProcessBillingAddress(ProcessBillingAddressRequest) returns(ProcessBillingAddressResponse) {}
 }
 
 message EmptyRequest {}
@@ -316,7 +316,7 @@ message PaymentFormDataChangeResponse {
     PaymentFormDataChangeResponseItem item = 3;
 }
 
-message OrderReCalculateAmountsRequest {
+message ProcessBillingAddressRequest {
     // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,len=2"
@@ -327,7 +327,7 @@ message OrderReCalculateAmountsRequest {
     string zip = 4;
 }
 
-message OrderReCalculateAmountsResponseItem {
+message ProcessBillingAddressResponseItem {
     // @inject_tag: json:"has_vat"
     bool has_vat = 2;
     // @inject_tag: json:"vat"
@@ -338,8 +338,8 @@ message OrderReCalculateAmountsResponseItem {
     float total_amount = 5;
 }
 
-message OrderReCalculateAmountsResponse {
+message ProcessBillingAddressResponse {
     int32 status = 1;
     string message = 2;
-    OrderReCalculateAmountsResponseItem item = 3;
+    ProcessBillingAddressResponseItem item = 3;
 }

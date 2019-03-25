@@ -4826,14 +4826,14 @@ func (suite *OrderTestSuite) TestOrder_OrderReCalculateAmounts_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.Nil(suite.T(), order.BillingAddress)
 
-	req1 := &grpc.OrderReCalculateAmountsRequest{
+	req1 := &grpc.ProcessBillingAddressRequest{
 		OrderId: rsp.Uuid,
 		Country: "US",
 		City:    "Washington",
 		Zip:     "98001",
 	}
-	rsp1 := &grpc.OrderReCalculateAmountsResponse{}
-	err = suite.service.OrderReCalculateAmounts(context.TODO(), req1, rsp1)
+	rsp1 := &grpc.ProcessBillingAddressResponse{}
+	err = suite.service.ProcessBillingAddress(context.TODO(), req1, rsp1)
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp1.Status)
 	assert.Empty(suite.T(), rsp1.Message)
@@ -4871,14 +4871,14 @@ func (suite *OrderTestSuite) TestOrder_OrderReCalculateAmounts_OrderNotFound_Err
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
-	req1 := &grpc.OrderReCalculateAmountsRequest{
+	req1 := &grpc.ProcessBillingAddressRequest{
 		OrderId: uuid.New().String(),
 		Country: "US",
 		City:    "Washington",
 		Zip:     "98001",
 	}
-	rsp1 := &grpc.OrderReCalculateAmountsResponse{}
-	err = suite.service.OrderReCalculateAmounts(context.TODO(), req1, rsp1)
+	rsp1 := &grpc.ProcessBillingAddressResponse{}
+	err = suite.service.ProcessBillingAddress(context.TODO(), req1, rsp1)
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp1.Status)
 	assert.Equal(suite.T(), orderErrorNotFound, rsp1.Message)

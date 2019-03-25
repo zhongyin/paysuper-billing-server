@@ -47,9 +47,9 @@ It has these top-level messages:
 	UserIpData
 	PaymentFormDataChangeResponseItem
 	PaymentFormDataChangeResponse
-	OrderReCalculateAmountsRequest
-	OrderReCalculateAmountsResponseItem
-	OrderReCalculateAmountsResponse
+	ProcessBillingAddressRequest
+	ProcessBillingAddressResponseItem
+	ProcessBillingAddressResponse
 */
 package grpc
 
@@ -109,7 +109,7 @@ type BillingService interface {
 	ProcessRefundCallback(ctx context.Context, in *CallbackRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
 	PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
-	OrderReCalculateAmounts(ctx context.Context, in *OrderReCalculateAmountsRequest, opts ...client.CallOption) (*OrderReCalculateAmountsResponse, error)
+	ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error)
 }
 
 type billingService struct {
@@ -380,9 +380,9 @@ func (c *billingService) PaymentFormPaymentAccountChanged(ctx context.Context, i
 	return out, nil
 }
 
-func (c *billingService) OrderReCalculateAmounts(ctx context.Context, in *OrderReCalculateAmountsRequest, opts ...client.CallOption) (*OrderReCalculateAmountsResponse, error) {
-	req := c.c.NewRequest(c.name, "BillingService.OrderReCalculateAmounts", in)
-	out := new(OrderReCalculateAmountsResponse)
+func (c *billingService) ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ProcessBillingAddress", in)
+	out := new(ProcessBillingAddressResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -418,7 +418,7 @@ type BillingServiceHandler interface {
 	ProcessRefundCallback(context.Context, *CallbackRequest, *PaymentNotifyResponse) error
 	PaymentFormLanguageChanged(context.Context, *PaymentFormUserChangeLangRequest, *PaymentFormDataChangeResponse) error
 	PaymentFormPaymentAccountChanged(context.Context, *PaymentFormUserChangePaymentAccountRequest, *PaymentFormDataChangeResponse) error
-	OrderReCalculateAmounts(context.Context, *OrderReCalculateAmountsRequest, *OrderReCalculateAmountsResponse) error
+	ProcessBillingAddress(context.Context, *ProcessBillingAddressRequest, *ProcessBillingAddressResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -448,7 +448,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error
 		PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, out *PaymentFormDataChangeResponse) error
 		PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, out *PaymentFormDataChangeResponse) error
-		OrderReCalculateAmounts(ctx context.Context, in *OrderReCalculateAmountsRequest, out *OrderReCalculateAmountsResponse) error
+		ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -561,6 +561,6 @@ func (h *billingServiceHandler) PaymentFormPaymentAccountChanged(ctx context.Con
 	return h.BillingServiceHandler.PaymentFormPaymentAccountChanged(ctx, in, out)
 }
 
-func (h *billingServiceHandler) OrderReCalculateAmounts(ctx context.Context, in *OrderReCalculateAmountsRequest, out *OrderReCalculateAmountsResponse) error {
-	return h.BillingServiceHandler.OrderReCalculateAmounts(ctx, in, out)
+func (h *billingServiceHandler) ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error {
+	return h.BillingServiceHandler.ProcessBillingAddress(ctx, in, out)
 }
