@@ -49,39 +49,6 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Database connection failed", "%v", err)
 	}
 
-	vat := []interface{}{
-		&billing.Vat{
-			Country: &billing.Country{
-				CodeInt:  643,
-				CodeA2:   "RU",
-				CodeA3:   "RUS",
-				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-				IsActive: true,
-			},
-			Subdivision: "",
-			Vat:         20,
-			IsActive:    true,
-		},
-		&billing.Vat{
-			Country: &billing.Country{
-				CodeInt:  840,
-				CodeA2:   "US",
-				CodeA3:   "USA",
-				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-				IsActive: true,
-			},
-			Subdivision: "CA",
-			Vat:         10.25,
-			IsActive:    true,
-		},
-	}
-
-	err = db.Collection(pkg.CollectionVat).Insert(vat...)
-
-	if err != nil {
-		suite.FailNow("Insert VAT test data failed", "%v", err)
-	}
-
 	rub := &billing.Currency{
 		CodeInt:  643,
 		CodeA3:   "RUB",
@@ -113,25 +80,6 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Insert rates test data failed", "%v", err)
 	}
 
-	project := &billing.Project{
-		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "default",
-		LimitsCurrency:   rub,
-		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 0,
-		Name:             "test project 1",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 1 secret key",
-		IsActive:         true,
-	}
-
-	err = db.Collection(pkg.CollectionProject).Insert(project)
-
-	if err != nil {
-		suite.FailNow("Insert project test data failed", "%v", err)
-	}
-
 	pmBankCard := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
 		Name:             "Bank card",
@@ -147,6 +95,95 @@ func (suite *FinanceTestSuite) SetupTest() {
 		Type:     "bank_card",
 		IsActive: true,
 	}
+
+	country := &billing.Country{
+		CodeInt:  643,
+		CodeA2:   "RU",
+		CodeA3:   "RUS",
+		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+		IsActive: true,
+	}
+
+	err = db.Collection(pkg.CollectionCountry).Insert(country)
+	assert.NoError(suite.T(), err, "Insert country test data failed")
+
+	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
+	assert.NoError(suite.T(), err, "Generate merchant date failed")
+
+	merchant := &billing.Merchant{
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "123456789",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "123456789",
+			},
+		},
+		Banking: &billing.MerchantBanking{
+			Currency: rub,
+			Name:     "Bank name",
+		},
+		IsVatEnabled:              true,
+		IsCommissionToUserEnabled: true,
+		Status:                    pkg.MerchantStatusDraft,
+		LastPayout: &billing.MerchantLastPayout{
+			Date:   date,
+			Amount: 999999,
+		},
+		IsSigned: true,
+		PaymentMethods: map[string]*billing.MerchantPaymentMethod{
+			pmBankCard.Id: {
+				PaymentMethod: &billing.MerchantPaymentMethodIdentification{
+					Id:   pmBankCard.Id,
+					Name: pmBankCard.Name,
+				},
+				Commission: &billing.MerchantPaymentMethodCommissions{
+					Fee: 2.5,
+					PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+						Fee:      30,
+						Currency: rub.CodeA3,
+					},
+				},
+				Integration: &billing.MerchantPaymentMethodIntegration{
+					TerminalId:       "1234567890",
+					TerminalPassword: "0987654321",
+					Integrated:       true,
+				},
+				IsActive: true,
+			},
+		},
+	}
+
+	err = db.Collection(pkg.CollectionMerchant).Insert(merchant)
+	assert.NoError(suite.T(), err, "Insert merchant test data failed")
+
+	project := &billing.Project{
+		Id:               bson.NewObjectId().Hex(),
+		CallbackCurrency: rub,
+		CallbackProtocol: "default",
+		LimitsCurrency:   rub,
+		MaxPaymentAmount: 15000,
+		MinPaymentAmount: 0,
+		Name:             "test project 1",
+		OnlyFixedAmounts: true,
+		SecretKey:        "test project 1 secret key",
+		IsActive:         true,
+		Merchant:         merchant,
+	}
+
+	err = db.Collection(pkg.CollectionProject).Insert(project)
+	assert.NoError(suite.T(), err, "Insert project test data failed")
+
 	pmQiwi := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
 		Name:             "Qiwi",
@@ -225,158 +262,13 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Insert commission test data failed", "%v", err)
 	}
 
-	country := &billing.Country{
-		CodeInt:  643,
-		CodeA2:   "RU",
-		CodeA3:   "RUS",
-		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-		IsActive: true,
-	}
-
-	err = db.Collection(pkg.CollectionCountry).Insert(country)
-
-	if err != nil {
-		suite.FailNow("Insert country test data failed", "%v", err)
-	}
-
-	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
-
-	if err != nil {
-		suite.FailNow("Generate merchant date failed", "%v", err)
-	}
-
-	merchant := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		Name:    "Unit test",
-		Country: country,
-		Zip:     "190000",
-		City:    "St.Petersburg",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "123456789",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "123456789",
-			},
-		},
-		Banking: &billing.MerchantBanking{
-			Currency: rub,
-			Name:     "Bank name",
-		},
-		IsVatEnabled:              true,
-		IsCommissionToUserEnabled: true,
-		Status:                    pkg.MerchantStatusDraft,
-		LastPayout: &billing.MerchantLastPayout{
-			Date:   date,
-			Amount: 999999,
-		},
-		IsSigned: true,
-		PaymentMethods: map[string]*billing.MerchantPaymentMethod{
-			pmBankCard.Id: {
-				PaymentMethod: &billing.MerchantPaymentMethodIdentification{
-					Id:   pmBankCard.Id,
-					Name: pmBankCard.Name,
-				},
-				Commission: &billing.MerchantPaymentMethodCommissions{
-					Fee: 2.5,
-					PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
-						Fee:      30,
-						Currency: rub.CodeA3,
-					},
-				},
-				Integration: &billing.MerchantPaymentMethodIntegration{
-					TerminalId:       "1234567890",
-					TerminalPassword: "0987654321",
-					Integrated:       true,
-				},
-				IsActive: true,
-			},
-		},
-	}
-
-	merchantAgreement := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		Name:    "Unit test status Agreement",
-		Country: country,
-		Zip:     "190000",
-		City:    "St.Petersburg",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "123456789",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "123456789",
-			},
-		},
-		Banking: &billing.MerchantBanking{
-			Currency: rub,
-			Name:     "Bank name",
-		},
-		IsVatEnabled:              true,
-		IsCommissionToUserEnabled: true,
-		Status:                    pkg.MerchantStatusAgreementRequested,
-		LastPayout: &billing.MerchantLastPayout{
-			Date:   date,
-			Amount: 10000,
-		},
-		IsSigned: true,
-	}
-	merchant1 := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		Name:    "merchant1",
-		Country: country,
-		Zip:     "190000",
-		City:    "St.Petersburg",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "123456789",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "123456789",
-			},
-		},
-		Banking: &billing.MerchantBanking{
-			Currency: rub,
-			Name:     "Bank name",
-		},
-		IsVatEnabled:              true,
-		IsCommissionToUserEnabled: true,
-		Status:                    pkg.MerchantStatusDraft,
-		LastPayout: &billing.MerchantLastPayout{
-			Date:   date,
-			Amount: 100000,
-		},
-		IsSigned: false,
-	}
-
-	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement, merchant1}...)
-
-	if err != nil {
-		suite.FailNow("Insert merchant test data failed", "%v", err)
-	}
-
 	suite.log, err = zap.NewProduction()
 
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {
@@ -438,79 +330,29 @@ func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyToError() {
 	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCurrencyRate), err.Error())
 }
 
-func (suite *FinanceTestSuite) TestFinance_CalculateVatWithoutSubdivisionOk() {
-	origin := float64(1000)
-	expect := float64(200)
-
-	amount1, err := suite.service.CalculateVat(origin, "RU", "SPE")
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), amount1 > 0)
-	assert.Equal(suite.T(), expect, amount1)
-
-	amount2, err := suite.service.CalculateVat(origin, "RU", "")
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), amount2 > 0)
-	assert.Equal(suite.T(), expect, amount2)
-
-	assert.Equal(suite.T(), amount1, amount2)
-}
-
-func (suite *FinanceTestSuite) TestFinance_CalculateVatWithSubdivisionOk() {
-	origin := float64(1000)
-	expect := float64(102.5)
-
-	amount, err := suite.service.CalculateVat(origin, "US", "CA")
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), amount > 0)
-	assert.Equal(suite.T(), expect, amount)
-}
-
-func (suite *FinanceTestSuite) TestFinance_CalculateVatCountryError() {
-	amount, err := suite.service.CalculateVat(float64(1000), "AU", "")
-
-	assert.Error(suite.T(), err)
-	assert.True(suite.T(), amount == 0)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionVat), err.Error())
-}
-
-func (suite *FinanceTestSuite) TestFinance_CalculateVatSubdivisionError() {
-	amount, err := suite.service.CalculateVat(float64(1000), "US", "AL")
-
-	assert.Error(suite.T(), err)
-	assert.True(suite.T(), amount == 0)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionVat), err.Error())
-}
-
 func (suite *FinanceTestSuite) TestFinance_CalculateCommissionOk() {
 	amount := float64(100)
 
-	commission, err := suite.service.CalculateCommission(suite.project.Id, suite.paymentMethod.Id, amount)
+	commission, err := suite.service.CalculatePmCommission(suite.project.Id, suite.paymentMethod.Id, amount)
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), commission)
-	assert.True(suite.T(), commission.PMCommission > 0)
-	assert.True(suite.T(), commission.PspCommission > 0)
-	assert.True(suite.T(), commission.ToUserCommission > 0)
-	assert.Equal(suite.T(), float64(1), commission.PMCommission)
-	assert.Equal(suite.T(), float64(2), commission.PspCommission)
-	assert.Equal(suite.T(), float64(1), commission.ToUserCommission)
+	assert.True(suite.T(), commission > 0)
+	assert.Equal(suite.T(), float64(2.5), commission)
 }
 
 func (suite *FinanceTestSuite) TestFinance_CalculateCommissionProjectError() {
-	commission, err := suite.service.CalculateCommission("5bf67ebd46452d00062c7cc1", suite.paymentMethod.Id, float64(100))
+	commission, err := suite.service.CalculatePmCommission(bson.NewObjectId().Hex(), suite.paymentMethod.Id, float64(100))
 
 	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), commission)
+	assert.Equal(suite.T(), float64(0), commission)
 	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCommission), err.Error())
 }
 
 func (suite *FinanceTestSuite) TestFinance_CalculateCommissionPaymentMethodError() {
-	commission, err := suite.service.CalculateCommission(suite.project.Id, "5bf67ebd46452d00062c7cc1", float64(100))
+	commission, err := suite.service.CalculatePmCommission(suite.project.Id, bson.NewObjectId().Hex(), float64(100))
 
 	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), commission)
+	assert.Equal(suite.T(), float64(0), commission)
 	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCommission), err.Error())
 }

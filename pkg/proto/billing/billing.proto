@@ -51,6 +51,8 @@ message OrderCreateRequest {
     string raw_body = 19; //`json:"-"`
     // @inject_tag: json:"-"
     bool is_json = 20;
+    // @inject_tag: json:"-"
+    string language = 21;
 }
 
 message Project {
@@ -219,8 +221,52 @@ message Notification {
     google.protobuf.Timestamp updated_at = 9;
 }
 
+message OrderPlatformFee {
+    float amount = 1;
+    string currency = 2;
+    float effective_rate = 3;
+}
+
+message OrderTax {
+    string type = 1;
+    float rate = 2;
+    float amount = 3;
+    string currency = 4;
+}
+
+message OrderBillingAddress {
+    string country = 1;
+    string city = 2;
+    string postal_code = 3;
+    string state = 4;
+}
+
+message OrderUser {
+    // @inject_tag: bson:"uuid"
+    string id = 1;
+    // @inject_tag: bson:"object"
+    string object = 2;
+    // @inject_tag: bson:"name"
+    string name = 3;
+    // @inject_tag: bson:"email"
+    string email = 4;
+    // @inject_tag: bson:"email_verified"
+    bool email_verified = 5;
+    // @inject_tag: bson:"phone"
+    string phone = 6;
+    // @inject_tag: bson:"phone_verified"
+    bool phone_verified = 7;
+    // @inject_tag: bson:"ip"
+    string ip = 8;
+    // @inject_tag: bson:"locale"
+    string locale = 9;
+    // @inject_tag: bson:"address"
+    OrderBillingAddress address = 10;
+    // @inject_tag: bson:"metadata"
+    map<string, string> metadata = 11;
+}
+
 message Order {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
     string id = 1; // unique order identifier in Protocol One
     // @inject_tag: bson:"project" structure:"project"
     ProjectOrder project = 2; // object described main entities of project in Protocol One payment solution
@@ -289,9 +335,20 @@ message Order {
     // @inject_tag: bson:"to_payer_fee_amount" structure:"to_payer_fee_amount"
     OrderFee to_payer_fee_amount = 34; // value of fee which added to payer amount
     // @inject_tag: bson:"vat_amount" structure:"vat_amount"
-    OrderFee vat_amount = 35; // vat amount
     // @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
     OrderFeePaymentSystem payment_system_fee_amount = 36; // payment system fee for payment operation
+
+    OrderTax tax = 37;
+    // @inject_tag: json:"-"
+    string uuid = 38;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp expire_date_to_form_input = 39;
+    double total_payment_amount = 43; // total amount to payment with all commissions
+    OrderBillingAddress billing_address = 44; // user billing address entered in payment form
+    OrderUser user = 45;
+
+    // @inject_tag: json:"-"
+    bool user_address_data_required = 46;
 }
 
 message Currency {
@@ -313,21 +370,20 @@ message PayerData {
     // @inject_tag: bson:"ip" structure:"ip"
     string ip = 1; // payer ip from create order request
     // @inject_tag: bson:"country_code_a2" structure:"country_code_a2"
-    string country_code_a2 = 2; // payer country code by ISO 3166-1 from create order request
+    string country = 2; // payer country code by ISO 3166-1 from create order request
     // @inject_tag: bson:"country_name" structure:"country_name"
     Name country_name = 3; // payer country names
     // @inject_tag: bson:"city" structure:"city"
     Name city = 4; // payer city names, get from ip geo location
     string zip = 5;
     string state = 6;
-    // @inject_tag: bson:"subdivision" structure:"subdivision"
-    string subdivision = 7; // payer subdivision code by ISO-3166-2
+    string language = 7;
     // @inject_tag: bson:"timezone" structure:"timezone"
-    string timezone = 8; // payer timezone name, get from ip geo location
+    string timezone = 9; // payer timezone name, get from ip geo location
     // @inject_tag: bson:"phone" structure:"phone"
-    string phone = 9; // payer phone from create order request
+    string phone = 10; // payer phone from create order request
     // @inject_tag: bson:"email" structure:"email"
-    string email = 10; // payer email from create order request
+    string email = 11; // payer email from create order request
 }
 
 message PaymentMethodOrder {
@@ -558,11 +614,6 @@ message PaymentFormPaymentMethod {
     // @inject_tag: json:"group_alias"
     string group = 5;
     string account_regexp = 6;
-    double amount_with_commissions = 7;
-    double amount_without_commissions = 8;
-    string currency = 9;
-    double user_commission_amount = 10;
-    double vat_amount = 11;
     // @inject_tag: json:"has_saved_cards"
     bool has_saved_cards = 12;
     // @inject_tag: json:"saved_cards,omitempty"
@@ -585,7 +636,8 @@ message MerchantPaymentMethodCommissions {
 message MerchantPaymentMethodIntegration {
     string terminal_id = 1;
     string terminal_password = 2;
-    bool integrated = 3;
+    string terminal_callback_password = 3;
+    bool integrated = 4;
 }
 
 message MerchantPaymentMethodIdentification {
@@ -620,5 +672,5 @@ message Refund {
     google.protobuf.Timestamp created_at = 9;
     google.protobuf.Timestamp updated_at = 10;
     RefundPayerData payer_data = 11;
-    double sales_tax = 12;
+    float sales_tax = 12;
 }

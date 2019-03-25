@@ -55,25 +55,6 @@ func (suite *ProjectTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	vat := &billing.Vat{
-		Country: &billing.Country{
-			CodeInt:  840,
-			CodeA2:   "US",
-			CodeA3:   "USA",
-			Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-			IsActive: true,
-		},
-		Subdivision: "CA",
-		Vat:         10.25,
-		IsActive:    true,
-	}
-
-	err = db.Collection(pkg.CollectionVat).Insert(vat)
-
-	if err != nil {
-		suite.FailNow("Insert VAT test data failed", "%v", err)
-	}
-
 	rub := &billing.Currency{
 		CodeInt:  643,
 		CodeA3:   "RUB",
@@ -360,7 +341,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	suite.projectId = project.Id
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {

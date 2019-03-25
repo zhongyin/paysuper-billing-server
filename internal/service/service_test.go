@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
@@ -24,20 +23,7 @@ type BillingServiceTestSuite struct {
 	exCh chan bool
 }
 
-type getAllEmptyResultTest Currency
 type getAllErrorTest Currency
-
-func newGetAllEmptyResultTest(svc *Service) Cacher {
-	return &getAllEmptyResultTest{svc: svc}
-}
-
-func (h *getAllEmptyResultTest) setCache(recs []interface{}) {
-	return
-}
-
-func (h *getAllEmptyResultTest) getAll() (recs []interface{}, err error) {
-	return
-}
 
 func newGetAllErrorTest(svc *Service) Cacher {
 	return &getAllErrorTest{svc: svc}
@@ -82,63 +68,6 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 
 	suite.db = db
 
-	vat := []interface{}{
-		&billing.Vat{
-			Country: &billing.Country{
-				CodeInt:  643,
-				CodeA2:   "RU",
-				CodeA3:   "RUS",
-				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-				IsActive: true,
-			},
-			Subdivision: "",
-			Vat:         20,
-			IsActive:    true,
-		},
-		&billing.Vat{
-			Country: &billing.Country{
-				CodeInt:  804,
-				CodeA2:   "UA",
-				CodeA3:   "UKR",
-				Name:     &billing.Name{Ru: "Украина", En: "Ukraine"},
-				IsActive: true,
-			},
-			Subdivision: "",
-			Vat:         22,
-			IsActive:    true,
-		},
-		&billing.Vat{
-			Country: &billing.Country{
-				CodeInt:  840,
-				CodeA2:   "US",
-				CodeA3:   "USA",
-				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-				IsActive: true,
-			},
-			Subdivision: "AL",
-			Vat:         13.5,
-			IsActive:    true,
-		},
-		&billing.Vat{
-			Country: &billing.Country{
-				CodeInt:  840,
-				CodeA2:   "US",
-				CodeA3:   "USA",
-				Name:     &billing.Name{Ru: "Соединенные Штаты Америки", En: "United States of America"},
-				IsActive: true,
-			},
-			Subdivision: "CA",
-			Vat:         10.25,
-			IsActive:    true,
-		},
-	}
-
-	err = suite.db.Collection(pkg.CollectionVat).Insert(vat...)
-
-	if err != nil {
-		suite.FailNow("Insert VAT test data failed", "%v", err)
-	}
-
 	rub := &billing.Currency{
 		CodeInt:  643,
 		CodeA3:   "RUB",
@@ -168,17 +97,139 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Insert currency test data failed", "%v", err)
 	}
 
-	projectDefault := &billing.Project{
+	country := &billing.Country{
+		CodeInt:  643,
+		CodeA2:   "RU",
+		CodeA3:   "RUS",
+		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
+		IsActive: true,
+	}
+
+	err = db.Collection(pkg.CollectionCountry).Insert(country)
+	assert.NoError(suite.T(), err, "Insert country test data failed")
+
+	pmBankCard := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "default",
-		LimitsCurrency:   rub,
+		Name:             "Bank card",
+		Group:            "BANKCARD",
+		MinPaymentAmount: 100,
 		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 0,
-		Name:             "test project 1",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 1 secret key",
-		IsActive:         true,
+		Currency:         rub,
+		Currencies:       []int32{643, 840, 980},
+		Params: &billing.PaymentMethodParams{
+			Handler:          "cardpay",
+			Terminal:         "15985",
+			Password:         "A1tph4I6BD0f",
+			CallbackPassword: "0V1rJ7t4jCRv",
+			ExternalId:       "BANKCARD",
+		},
+		Type:     "bank_card",
+		IsActive: true,
+		PaymentSystem: &billing.PaymentSystem{
+			Id:                 bson.NewObjectId().Hex(),
+			Name:               "CardPay",
+			AccountingCurrency: rub,
+			AccountingPeriod:   "every-day",
+			Country:            &billing.Country{},
+			IsActive:           true,
+		},
+	}
+
+	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -360))
+	assert.NoError(suite.T(), err, "Generate merchant date failed")
+
+	merchant := &billing.Merchant{
+		Id:      bson.NewObjectId().Hex(),
+		Name:    "Unit test",
+		Country: country,
+		Zip:     "190000",
+		City:    "St.Petersburg",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "123456789",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "123456789",
+			},
+		},
+		Banking: &billing.MerchantBanking{
+			Currency: rub,
+			Name:     "Bank name",
+		},
+		IsVatEnabled:              true,
+		IsCommissionToUserEnabled: true,
+		Status:                    pkg.MerchantStatusDraft,
+		LastPayout: &billing.MerchantLastPayout{
+			Date:   date,
+			Amount: 999999,
+		},
+		IsSigned: true,
+		PaymentMethods: map[string]*billing.MerchantPaymentMethod{
+			pmBankCard.Id: {
+				PaymentMethod: &billing.MerchantPaymentMethodIdentification{
+					Id:   pmBankCard.Id,
+					Name: pmBankCard.Name,
+				},
+				Commission: &billing.MerchantPaymentMethodCommissions{
+					Fee: 2.5,
+					PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+						Fee:      30,
+						Currency: rub.CodeA3,
+					},
+				},
+				Integration: &billing.MerchantPaymentMethodIntegration{
+					TerminalId:       "1234567890",
+					TerminalPassword: "0987654321",
+					Integrated:       true,
+				},
+				IsActive: true,
+			},
+		},
+	}
+
+	err = suite.db.Collection(pkg.CollectionMerchant).Insert(merchant)
+	assert.NoError(suite.T(), err, "Insert merchant test data failed")
+
+	projectDefault := &billing.Project{
+		Id:                       bson.NewObjectId().Hex(),
+		CallbackCurrency:         rub,
+		CallbackProtocol:         "default",
+		LimitsCurrency:           rub,
+		MaxPaymentAmount:         15000,
+		MinPaymentAmount:         1,
+		Name:                     "test project 1",
+		OnlyFixedAmounts:         true,
+		AllowDynamicRedirectUrls: true,
+		SecretKey:                "test project 1 secret key",
+		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
+			"BANKCARD": {
+				Id:        pmBankCard.Id,
+				Terminal:  "terminal",
+				Password:  "password",
+				CreatedAt: ptypes.TimestampNow(),
+			},
+		},
+		FixedPackage: map[string]*billing.FixedPackages{
+			"RU": {
+				FixedPackage: []*billing.FixedPackage{
+					{
+						Id:       "id_0",
+						Name:     "package 0",
+						Currency: rub,
+						Price:    10,
+						IsActive: true,
+					},
+				},
+			},
+			"US": {FixedPackage: []*billing.FixedPackage{}},
+		},
+		IsActive: true,
+		Merchant: merchant,
 	}
 	projectXsolla := &billing.Project{
 		Id:               bson.NewObjectId().Hex(),
@@ -285,21 +336,6 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Insert rates test data failed", "%v", err)
 	}
 
-	pmBankCard := &billing.PaymentMethod{
-		Id:               bson.NewObjectId().Hex(),
-		Name:             "Bank card",
-		Group:            "BANKCARD",
-		MinPaymentAmount: 0,
-		MaxPaymentAmount: 0,
-		Currencies:       []int32{643, 840, 980},
-		Params: &billing.PaymentMethodParams{
-			Handler:    "cardpay",
-			Terminal:   "15985",
-			ExternalId: "BANKCARD",
-		},
-		Type:     "bank_card",
-		IsActive: true,
-	}
 	pmQiwi := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
 		Name:             "Qiwi",
@@ -426,151 +462,6 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Insert commission test data failed", "%v", err)
 	}
 
-	country := &billing.Country{
-		CodeInt:  643,
-		CodeA2:   "RU",
-		CodeA3:   "RUS",
-		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-		IsActive: true,
-	}
-
-	err = db.Collection(pkg.CollectionCountry).Insert(country)
-
-	if err != nil {
-		suite.FailNow("Insert country test data failed", "%v", err)
-	}
-
-	date, err := ptypes.TimestampProto(time.Now().Add(time.Hour * -480))
-
-	if err != nil {
-		suite.FailNow("Generate merchant date failed", "%v", err)
-	}
-
-	merchant := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		Name:    "Unit test",
-		Country: country,
-		Zip:     "190000",
-		City:    "St.Petersburg",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "123456789",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "123456789",
-			},
-		},
-		Banking: &billing.MerchantBanking{
-			Currency: rub,
-			Name:     "Bank name",
-		},
-		IsVatEnabled:              true,
-		IsCommissionToUserEnabled: true,
-		Status:                    pkg.MerchantStatusDraft,
-		LastPayout: &billing.MerchantLastPayout{
-			Date:   date,
-			Amount: 999999,
-		},
-		IsSigned: true,
-		PaymentMethods: map[string]*billing.MerchantPaymentMethod{
-			pmBankCard.Id: {
-				PaymentMethod: &billing.MerchantPaymentMethodIdentification{
-					Id:   pmBankCard.Id,
-					Name: pmBankCard.Name,
-				},
-				Commission: &billing.MerchantPaymentMethodCommissions{
-					Fee: 2.5,
-					PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
-						Fee:      30,
-						Currency: rub.CodeA3,
-					},
-				},
-				Integration: &billing.MerchantPaymentMethodIntegration{
-					TerminalId:       "1234567890",
-					TerminalPassword: "0987654321",
-					Integrated:       true,
-				},
-				IsActive: true,
-			},
-		},
-	}
-
-	merchantAgreement := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		Name:    "Unit test status Agreement",
-		Country: country,
-		Zip:     "190000",
-		City:    "St.Petersburg",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "123456789",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "123456789",
-			},
-		},
-		Banking: &billing.MerchantBanking{
-			Currency: rub,
-			Name:     "Bank name",
-		},
-		IsVatEnabled:              true,
-		IsCommissionToUserEnabled: true,
-		Status:                    pkg.MerchantStatusAgreementRequested,
-		LastPayout: &billing.MerchantLastPayout{
-			Date:   date,
-			Amount: 10000,
-		},
-		IsSigned: true,
-	}
-	merchant1 := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		Name:    "merchant1",
-		Country: country,
-		Zip:     "190000",
-		City:    "St.Petersburg",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "123456789",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "123456789",
-			},
-		},
-		Banking: &billing.MerchantBanking{
-			Currency: rub,
-			Name:     "Bank name",
-		},
-		IsVatEnabled:              true,
-		IsCommissionToUserEnabled: true,
-		Status:                    pkg.MerchantStatusDraft,
-		LastPayout: &billing.MerchantLastPayout{
-			Date:   date,
-			Amount: 100000,
-		},
-		IsSigned: false,
-	}
-
-	err = db.Collection(pkg.CollectionMerchant).Insert([]interface{}{merchant, merchantAgreement, merchant1}...)
-
-	if err != nil {
-		suite.FailNow("Insert merchant test data failed", "%v", err)
-	}
-
 	suite.log, err = zap.NewProduction()
 
 	if err != nil {
@@ -589,7 +480,7 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
-	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -601,23 +492,12 @@ func (suite *BillingServiceTestSuite) TestNewBillingService() {
 	assert.True(suite.T(), len(service.currencyCache) > 0)
 	assert.True(suite.T(), len(service.projectCache) > 0)
 	assert.True(suite.T(), len(service.currencyRateCache) > 0)
-	assert.True(suite.T(), len(service.vatCache) > 0)
 	assert.True(suite.T(), len(service.paymentMethodCache) > 0)
 	assert.True(suite.T(), len(service.commissionCache) > 0)
 }
 
-func (suite *BillingServiceTestSuite) TestBillingService_GetAllEmptyResult() {
-	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
-
-	key := "unit"
-	err := svc.cache(key, newGetAllEmptyResultTest(svc))
-
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), fmt.Sprintf(initCacheErrorNotFound, key), err.Error())
-}
-
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
-	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
 
 	key := "unit"
 	err := svc.cache(key, newGetAllErrorTest(svc))
@@ -627,19 +507,19 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
-	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
 
 	key := "unit"
-	handlers[key] = newGetAllEmptyResultTest
+	handlers[key] = newGetAllErrorTest
 
 	err := svc.Init()
 
 	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), fmt.Sprintf(initCacheErrorNotFound, key), err.Error())
+	assert.Equal(suite.T(), "unit test", err.Error())
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
-	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -670,7 +550,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	cfg := suite.cfg
 	cfg.CacheConfig.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -700,37 +580,11 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	assert.Nil(suite.T(), service.rebuildError)
 }
 
-func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimerError() {
-	cfg := suite.cfg
-	cfg.CurrencyTimeout = 3
-
-	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil)
-
-	if _, ok := handlers["unit"]; ok {
-		delete(handlers, "unit")
-	}
-
-	err := service.Init()
-	assert.Nil(suite.T(), err)
-
-	time.Sleep(time.Second * 1)
-
-	assert.True(suite.T(), service.rebuild)
-	assert.Nil(suite.T(), service.rebuildError)
-
-	assert.Nil(suite.T(), suite.db.Collection(pkg.CollectionCurrency).DropCollection())
-
-	time.Sleep(time.Second * time.Duration(cfg.CurrencyTimeout+1))
-
-	assert.False(suite.T(), service.rebuild)
-	assert.Error(suite.T(), service.rebuildError)
-}
-
 func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitError() {
 	cfg, err := config.NewConfig()
 	cfg.AccountingCurrency = "AUD"
 
-	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -741,7 +595,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitE
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment() {
-	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")

@@ -21,6 +21,10 @@ func newProjectHandler(svc *Service) Cacher {
 func (h *Project) setCache(recs []interface{}) {
 	h.svc.projectCache = make(map[string]*billing.Project, len(recs))
 
+	if len(recs) <= 0 {
+		return
+	}
+
 	for _, r := range recs {
 		project := r.(*billing.Project)
 		h.svc.projectCache[project.Id] = project
@@ -62,6 +66,10 @@ func (h *PaymentMethod) setCache(recs []interface{}) {
 
 	h.svc.paymentMethodCache = make(map[string]map[int32]*billing.PaymentMethod, recsLen)
 	h.svc.paymentMethodIdCache = make(map[string]*billing.PaymentMethod, recsLen)
+
+	if len(recs) <= 0 {
+		return
+	}
 
 	for _, r := range recs {
 		pm := r.(*billing.PaymentMethod)
@@ -127,6 +135,10 @@ func newCountryHandler(svc *Service) Cacher {
 func (h *Country) setCache(recs []interface{}) {
 	h.svc.countryCache = make(map[string]*billing.Country, len(recs))
 
+	if len(recs) <= 0 {
+		return
+	}
+
 	for _, r := range recs {
 		country := r.(*billing.Country)
 		h.svc.countryCache[country.CodeA2] = country
@@ -165,6 +177,10 @@ func newMerchantHandler(svc *Service) Cacher {
 
 func (h *Merchant) setCache(recs []interface{}) {
 	h.svc.merchantPaymentMethods = make(map[string]map[string]*billing.MerchantPaymentMethod)
+
+	if len(recs) <= 0 {
+		return
+	}
 
 	for _, r := range recs {
 		m := r.(*billing.Merchant)

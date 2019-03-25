@@ -41,6 +41,15 @@ It has these top-level messages:
 	ListRefundsResponse
 	GetRefundRequest
 	CallbackRequest
+	PaymentFormDataChangedRequest
+	PaymentFormUserChangeLangRequest
+	PaymentFormUserChangePaymentAccountRequest
+	UserIpData
+	PaymentFormDataChangeResponseItem
+	PaymentFormDataChangeResponse
+	ProcessBillingAddressRequest
+	ProcessBillingAddressResponseItem
+	ProcessBillingAddressResponse
 	GetMerchantByRequest
 */
 package grpc
@@ -99,6 +108,9 @@ type BillingService interface {
 	ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...client.CallOption) (*ListRefundsResponse, error)
 	GetRefund(ctx context.Context, in *GetRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
 	ProcessRefundCallback(ctx context.Context, in *CallbackRequest, opts ...client.CallOption) (*PaymentNotifyResponse, error)
+	PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
+	PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
+	ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error)
 }
 
 type billingService struct {
@@ -349,6 +361,36 @@ func (c *billingService) ProcessRefundCallback(ctx context.Context, in *Callback
 	return out, nil
 }
 
+func (c *billingService) PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.PaymentFormLanguageChanged", in)
+	out := new(PaymentFormDataChangeResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.PaymentFormPaymentAccountChanged", in)
+	out := new(PaymentFormDataChangeResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ProcessBillingAddress", in)
+	out := new(ProcessBillingAddressResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -375,6 +417,9 @@ type BillingServiceHandler interface {
 	ListRefunds(context.Context, *ListRefundsRequest, *ListRefundsResponse) error
 	GetRefund(context.Context, *GetRefundRequest, *CreateRefundResponse) error
 	ProcessRefundCallback(context.Context, *CallbackRequest, *PaymentNotifyResponse) error
+	PaymentFormLanguageChanged(context.Context, *PaymentFormUserChangeLangRequest, *PaymentFormDataChangeResponse) error
+	PaymentFormPaymentAccountChanged(context.Context, *PaymentFormUserChangePaymentAccountRequest, *PaymentFormDataChangeResponse) error
+	ProcessBillingAddress(context.Context, *ProcessBillingAddressRequest, *ProcessBillingAddressResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -402,6 +447,9 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListRefunds(ctx context.Context, in *ListRefundsRequest, out *ListRefundsResponse) error
 		GetRefund(ctx context.Context, in *GetRefundRequest, out *CreateRefundResponse) error
 		ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error
+		PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, out *PaymentFormDataChangeResponse) error
+		PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, out *PaymentFormDataChangeResponse) error
+		ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -504,4 +552,16 @@ func (h *billingServiceHandler) GetRefund(ctx context.Context, in *GetRefundRequ
 
 func (h *billingServiceHandler) ProcessRefundCallback(ctx context.Context, in *CallbackRequest, out *PaymentNotifyResponse) error {
 	return h.BillingServiceHandler.ProcessRefundCallback(ctx, in, out)
+}
+
+func (h *billingServiceHandler) PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, out *PaymentFormDataChangeResponse) error {
+	return h.BillingServiceHandler.PaymentFormLanguageChanged(ctx, in, out)
+}
+
+func (h *billingServiceHandler) PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, out *PaymentFormDataChangeResponse) error {
+	return h.BillingServiceHandler.PaymentFormPaymentAccountChanged(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error {
+	return h.BillingServiceHandler.ProcessBillingAddress(ctx, in, out)
 }

@@ -34,6 +34,10 @@ service BillingService {
     rpc ListRefunds(ListRefundsRequest) returns(ListRefundsResponse) {}
     rpc GetRefund(GetRefundRequest) returns(CreateRefundResponse) {}
     rpc ProcessRefundCallback(CallbackRequest) returns (PaymentNotifyResponse) {}
+
+    rpc PaymentFormLanguageChanged(PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {}
+    rpc PaymentFormPaymentAccountChanged(PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
+    rpc ProcessBillingAddress(ProcessBillingAddressRequest) returns(ProcessBillingAddressResponse) {}
 }
 
 message EmptyRequest {}
@@ -53,6 +57,8 @@ message PaymentFormJsonDataRequest {
     string order_id = 1;
     string scheme = 2;
     string host = 3;
+    string locale = 4;
+    string ip = 5;
 }
 
 message PaymentFormJsonDataProject {
@@ -67,12 +73,19 @@ message PaymentFormJsonDataResponse {
     string id = 1; // order unique identifier
     // @inject_tag: json:"account,omitempty"
     string account = 2; // user account, may be null
+    // @inject_tag: json:"has_vat"
     bool has_vat = 3; // flag to show VAT commission amount in payment form
-    bool has_user_commission = 4; // flag to show commission amount changed to user in payment form
-    PaymentFormJsonDataProject project = 5; // contain data about project
-    repeated billing.PaymentFormPaymentMethod payment_methods = 6; // contain data about payment methods
-    string inline_form_redirect_url = 7; // url to redirect user to inline form in PSP side
-    string token = 8; // access token to websocket private chanel
+    // @inject_tag: json:"vat"
+    float vat = 4; // amount of vat for payment
+    double amount = 5; // payment amount without VAT commission
+    double total_amount = 6; // total payment amount with VAT commission
+    string currency = 7; // order currency
+    PaymentFormJsonDataProject project = 8; // contain data about project
+    repeated billing.PaymentFormPaymentMethod payment_methods = 9; // contain data about payment methods
+    string inline_form_redirect_url = 10; // url to redirect user to inline form in PSP side
+    string token = 11; // access token to websocket private chanel
+    // @inject_tag: json:"user_address_data_required"
+    bool user_address_data_required = 12;
 }
 
 message PaymentNotifyRequest {
@@ -260,6 +273,77 @@ message CallbackRequest {
     string handler = 1;
     bytes body = 2;
     string signature = 3;
+}
+
+message PaymentFormDataChangedRequest {
+    string order_id = 1;
+    string lang = 2;
+    string account = 3;
+}
+
+message PaymentFormUserChangeLangRequest {
+    // @inject_tag: validate:"required,uuid"
+    string order_id = 1;
+    // @inject_tag: validate:"required,len=2"
+    string lang = 2;
+}
+
+message PaymentFormUserChangePaymentAccountRequest {
+    // @inject_tag: validate:"required,uuid"
+    string order_id = 1;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string method_id = 2;
+    // @inject_tag: validate:"required"
+    string account = 3;
+}
+
+message UserIpData {
+    // @inject_tag: json:"country"
+    string country = 1;
+    // @inject_tag: json:"city"
+    string city = 2;
+    // @inject_tag: json:"zip"
+    string zip = 3;
+}
+
+message PaymentFormDataChangeResponseItem {
+    // @inject_tag: json:"user_address_data_required"
+    bool user_address_data_required = 1;
+    UserIpData user_ip_data = 2;
+}
+
+message PaymentFormDataChangeResponse {
+    int32 status = 1;
+    string message = 2;
+    PaymentFormDataChangeResponseItem item = 3;
+}
+
+message ProcessBillingAddressRequest {
+    // @inject_tag: validate:"required,uuid"
+    string order_id = 1;
+    // @inject_tag: validate:"required,len=2"
+    string country = 2;
+    // @inject_tag: validate:"required"
+    string city = 3;
+    // @inject_tag: validate:"required"
+    string zip = 4;
+}
+
+message ProcessBillingAddressResponseItem {
+    // @inject_tag: json:"has_vat"
+    bool has_vat = 2;
+    // @inject_tag: json:"vat"
+    float vat = 3;
+    // @inject_tag: json:"amount"
+    float amount = 4;
+    // @inject_tag: json:"total_amount"
+    float total_amount = 5;
+}
+
+message ProcessBillingAddressResponse {
+    int32 status = 1;
+    string message = 2;
+    ProcessBillingAddressResponseItem item = 3;
 }
 
 message GetMerchantByRequest {

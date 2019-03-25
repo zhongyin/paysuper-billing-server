@@ -193,6 +193,14 @@ type MgoOrder struct {
 	UrlFail                                 string                 `bson:"url_fail"`
 	CreatedAt                               time.Time              `bson:"created_at"`
 	UpdatedAt                               time.Time              `bson:"updated_at"`
+
+	Uuid                    string               `bson:"uuid"`
+	ExpireDateToFormInput   time.Time            `bson:"expire_date_to_form_input"`
+	Tax                     *OrderTax            `bson:"tax"`
+	TotalPaymentAmount      float64              `bson:"total_payment_amount"`
+	UserAddressDataRequired bool                 `bson:"user_address_data_required"`
+	BillingAddress          *OrderBillingAddress `bson:"billing_address"`
+	User                    *OrderUser           `bson:"user"`
 }
 
 type MgoPaymentSystem struct {
@@ -247,7 +255,7 @@ type MgoRefund struct {
 	CreatedAt  time.Time        `bson:"created_at"`
 	UpdatedAt  time.Time        `bson:"updated_at"`
 	PayerData  *RefundPayerData `bson:"payer_data"`
-	SalesTax   float64          `bson:"sales_tax"`
+	SalesTax   float32          `bson:"sales_tax"`
 }
 
 func (m *Vat) GetBSON() (interface{}, error) {
@@ -766,8 +774,14 @@ func (m *Order) GetBSON() (interface{}, error) {
 		PspFeeAmount:                            m.PspFeeAmount,
 		ProjectFeeAmount:                        m.ProjectFeeAmount,
 		ToPayerFeeAmount:                        m.ToPayerFeeAmount,
-		VatAmount:                               m.VatAmount,
 		PaymentSystemFeeAmount:                  m.PaymentSystemFeeAmount,
+
+		Uuid:                    m.Uuid,
+		Tax:                     m.Tax,
+		TotalPaymentAmount:      m.TotalPaymentAmount,
+		UserAddressDataRequired: m.UserAddressDataRequired,
+		BillingAddress:          m.BillingAddress,
+		User:                    m.User,
 	}
 
 	if m.PaymentMethod != nil {
@@ -870,6 +884,18 @@ func (m *Order) GetBSON() (interface{}, error) {
 		st.Project.Merchant.FirstPaymentAt = t
 	}
 
+	if m.ExpireDateToFormInput != nil {
+		t, err := ptypes.Timestamp(m.ExpireDateToFormInput)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.ExpireDateToFormInput = t
+	} else {
+		st.ExpireDateToFormInput = time.Now()
+	}
+
 	return st, nil
 }
 
@@ -952,8 +978,14 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.PspFeeAmount = decoded.PspFeeAmount
 	m.ProjectFeeAmount = decoded.ProjectFeeAmount
 	m.ToPayerFeeAmount = decoded.ToPayerFeeAmount
-	m.VatAmount = decoded.VatAmount
 	m.PaymentSystemFeeAmount = decoded.PaymentSystemFeeAmount
+
+	m.Uuid = decoded.Uuid
+	m.Tax = decoded.Tax
+	m.TotalPaymentAmount = decoded.TotalPaymentAmount
+	m.UserAddressDataRequired = decoded.UserAddressDataRequired
+	m.BillingAddress = decoded.BillingAddress
+	m.User = decoded.User
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 
@@ -992,6 +1024,12 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Project.Merchant.FirstPaymentAt, err = ptypes.TimestampProto(decoded.Project.Merchant.FirstPaymentAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.ExpireDateToFormInput, err = ptypes.TimestampProto(decoded.ExpireDateToFormInput)
 
 	if err != nil {
 		return err

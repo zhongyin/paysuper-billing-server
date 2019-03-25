@@ -1,8 +1,10 @@
 package billing
 
 import (
+	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/constant"
+	"time"
 )
 
 var (
@@ -40,4 +42,10 @@ func (m *Order) RefundAllowed() bool {
 	v, ok := orderRefundAllowedStatuses[m.Status]
 
 	return ok && v == true
+}
+
+func (m *Order) FormInputTimeIsEnded() bool {
+	t, err := ptypes.Timestamp(m.ExpireDateToFormInput)
+
+	return err != nil || t.Before(time.Now())
 }

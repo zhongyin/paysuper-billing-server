@@ -13,6 +13,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	protobuf "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
@@ -20,8 +21,11 @@ import (
 	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/entity"
 	repo "github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
 	"github.com/paysuper/paysuper-recurring-repository/tools"
+	"github.com/paysuper/paysuper-tax-service/proto"
 	"github.com/streadway/amqp"
+	"github.com/ttacon/libphonenumber"
 	"go.uber.org/zap"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,6 +58,7 @@ const (
 	orderErrorSignatureInvalid                         = "order request signature is invalid"
 	orderErrorNotFound                                 = "order with specified identifier not found"
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
+	orderErrorFormInputTimeExpired                     = "time to enter date on payment form expired"
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
 	orderErrorUnknown                                  = "unknown error. try request later"
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
@@ -61,10 +66,15 @@ const (
 	paymentRequestIncorrect                            = "payment request has incorrect format"
 	callbackRequestIncorrect                           = "callback request has incorrect format"
 	callbackHandlerIncorrect                           = "unknown callback type"
+	orderErrorCountryByPaymentAccountNotFound          = "information about user country can't be found"
+	orderErrorPaymentAccountIncorrect                  = "account in  payment system is incorrect"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
 	orderErrorCreatePaymentRequiredFieldEmailNotFound         = "required field \"email\" not found"
+	orderErrorCreatePaymentRequiredFieldUserCountryNotFound   = "user country is required"
+	orderErrorCreatePaymentRequiredFieldUserCityNotFound      = "user city is required"
+	orderErrorCreatePaymentRequiredFieldUserZipNotFound       = "user zip is required"
 
 	paymentCreateBankCardFieldBrand         = "card_brand"
 	paymentCreateBankCardFieldType          = "card_type"
@@ -75,6 +85,13 @@ const (
 	orderDefaultDescription      = "Payment by order # %s"
 	orderInlineFormUrlMask       = "%s://%s/order/%s"
 	orderInlineFormImagesUrlMask = "//%s%s"
+
+	defaultExpireDateToFormInput = 30
+
+	taxTypeVat      = "vat"
+	taxTypeSalesTax = "sales_tax"
+
+	objectTypeUser = "user"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -108,16 +125,17 @@ type PaymentCreateProcessor struct {
 }
 
 type BinData struct {
-	Id                 bson.ObjectId `bson:"_id"`
-	CardBin            int32         `bson:"card_bin"`
-	CardBrand          string        `bson:"card_brand"`
-	CardType           string        `bson:"card_type"`
-	CardCategory       string        `bson:"card_category"`
-	BankName           string        `bson:"bank_name"`
-	BankCountryName    string        `bson:"bank_country_name"`
-	BankCountryCodeInt int32         `bson:"bank_country_code_int"`
-	BankSite           string        `bson:"bank_site"`
-	BankPhone          string        `bson:"bank_phone"`
+	Id                bson.ObjectId `bson:"_id"`
+	CardBin           int32         `bson:"card_bin"`
+	CardBrand         string        `bson:"card_brand"`
+	CardType          string        `bson:"card_type"`
+	CardCategory      string        `bson:"card_category"`
+	BankName          string        `bson:"bank_name"`
+	BankCountryName   string        `bson:"bank_country_name"`
+	BankCountryCodeA2 string        `bson:"bank_country_code_a2"`
+	BankCountryCodeA3 string        `bson:"bank_country_code_a3"`
+	BankSite          string        `bson:"bank_site"`
+	BankPhone         string        `bson:"bank_phone"`
 }
 
 func (s *Service) OrderCreateProcess(
@@ -217,6 +235,10 @@ func (s *Service) OrderCreateProcess(
 	rsp.PspFeeAmount = order.PspFeeAmount
 	rsp.PaymentSystemFeeAmount = order.PaymentSystemFeeAmount
 	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
+	rsp.Tax = order.Tax
+	rsp.Uuid = order.Uuid
+	rsp.ExpireDateToFormInput = order.ExpireDateToFormInput
+	rsp.TotalPaymentAmount = order.TotalPaymentAmount
 
 	return nil
 }
@@ -232,12 +254,44 @@ func (s *Service) PaymentFormJsonDataProcess(
 		return err
 	}
 
-	processor := &PaymentFormProcessor{
-		service: s,
-		order:   order,
-		request: req,
+	p := &PaymentFormProcessor{service: s, order: order, request: req}
+	p1 := &OrderCreateRequestProcessor{Service: s,
+		request: &billing.OrderCreateRequest{
+			PayerIp: req.Ip,
+		},
+		checked: &orderCreateRequestProcessorChecked{},
 	}
-	pms, err := processor.processRenderFormPaymentMethods()
+
+	err = p1.processPayerData()
+
+	if err != nil {
+		return err
+	}
+
+	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
+
+	order.User.Ip = p1.checked.payerData.Ip
+	order.User.Locale = loc
+	order.User.Address = &billing.OrderBillingAddress{
+		Country:    p1.checked.payerData.Country,
+		City:       p1.checked.payerData.City.En,
+		PostalCode: p1.checked.payerData.Zip,
+		State:      p1.checked.payerData.State,
+	}
+
+	if ctr != order.User.Address.Country {
+		order.UserAddressDataRequired = true
+		rsp.UserAddressDataRequired = order.UserAddressDataRequired
+	}
+
+	p1.processOrderVat(order)
+	err = s.updateOrder(order)
+
+	if err != nil {
+		return err
+	}
+
+	pms, err := p.processRenderFormPaymentMethods()
 
 	if err != nil {
 		return err
@@ -246,10 +300,11 @@ func (s *Service) PaymentFormJsonDataProcess(
 	expire := time.Now().Add(time.Minute * 30).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": order.Id, "exp": expire})
 
-	rsp.Id = order.Id
+	rsp.Id = order.Uuid
 	rsp.Account = order.ProjectAccount
-	rsp.HasVat = order.Project.Merchant.IsVatEnabled
-	rsp.HasUserCommission = order.Project.Merchant.IsCommissionToUserEnabled
+	rsp.HasVat = order.Tax.Amount > 0
+	rsp.Vat = order.Tax.Amount
+	rsp.Currency = order.ProjectIncomeCurrency.CodeA3
 	rsp.Project = &grpc.PaymentFormJsonDataProject{
 		Name:       order.Project.Name,
 		UrlSuccess: order.Project.UrlSuccess,
@@ -257,7 +312,9 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 	rsp.PaymentMethods = pms
 	rsp.Token, _ = token.SignedString([]byte(s.cfg.CentrifugoSecret))
-	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, order.Id)
+	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
+	rsp.Amount = order.PaymentMethodOutcomeAmount
+	rsp.TotalAmount = order.TotalPaymentAmount
 
 	return nil
 }
@@ -446,6 +503,194 @@ func (s *Service) PaymentCallbackProcess(
 	return nil
 }
 
+func (s *Service) PaymentFormLanguageChanged(
+	ctx context.Context,
+	req *grpc.PaymentFormUserChangeLangRequest,
+	rsp *grpc.PaymentFormDataChangeResponse,
+) error {
+	order, err := s.getOrderByUuidToForm(req.OrderId)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = &grpc.PaymentFormDataChangeResponseItem{
+		UserAddressDataRequired: false,
+	}
+
+	if order.User.Locale == req.Lang {
+		return nil
+	}
+
+	order.User.Locale = req.Lang
+	order.UserAddressDataRequired = true
+
+	err = s.updateOrder(order)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	rsp.Item.UserAddressDataRequired = true
+	rsp.Item.UserIpData = &grpc.UserIpData{
+		Country: order.User.Address.Country,
+		City:    order.User.Address.City,
+		Zip:     order.User.Address.PostalCode,
+	}
+
+	return nil
+}
+
+func (s *Service) PaymentFormPaymentAccountChanged(
+	ctx context.Context,
+	req *grpc.PaymentFormUserChangePaymentAccountRequest,
+	rsp *grpc.PaymentFormDataChangeResponse,
+) error {
+	order, err := s.getOrderByUuidToForm(req.OrderId)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	pm, err := s.GetPaymentMethodById(req.MethodId)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = orderErrorPaymentMethodNotFound
+
+		return nil
+	}
+
+	match, err := regexp.MatchString(pm.AccountRegexp, req.Account)
+
+	if match == false || err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = orderErrorPaymentAccountIncorrect
+
+		return nil
+	}
+
+	country := ""
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = &grpc.PaymentFormDataChangeResponseItem{}
+
+	switch pm.Params.ExternalId {
+	case constant.PaymentSystemGroupAliasBankCard:
+		data := s.getBinData(req.Account)
+
+		if data == nil {
+			rsp.Status = pkg.ResponseStatusBadData
+			rsp.Message = orderErrorCountryByPaymentAccountNotFound
+
+			return nil
+		}
+
+		country = data.BankCountryCodeA2
+		break
+	case constant.PaymentSystemGroupAliasQiwi:
+		req.Account = "+" + req.Account
+		num, err := libphonenumber.Parse(req.Account, CountryCodeUSA)
+
+		if err != nil || num.CountryCode == nil {
+			rsp.Status = pkg.ResponseStatusBadData
+			rsp.Message = orderErrorPaymentAccountIncorrect
+		}
+
+		ok := false
+		country, ok = pkg.CountryPhoneCodes[*num.CountryCode]
+
+		if !ok {
+			rsp.Status = pkg.ResponseStatusBadData
+			rsp.Message = orderErrorCountryByPaymentAccountNotFound
+
+			return nil
+		}
+
+		break
+	default:
+		return nil
+	}
+
+	if order.PayerData.Country == country {
+		return nil
+	}
+
+	order.User.Address.Country = country
+	order.UserAddressDataRequired = true
+
+	err = s.updateOrder(order)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	rsp.Item.UserAddressDataRequired = true
+	rsp.Item.UserIpData = &grpc.UserIpData{
+		Country: order.User.Address.Country,
+		City:    order.User.Address.City,
+		Zip:     order.User.Address.PostalCode,
+	}
+
+	return nil
+}
+
+func (s *Service) ProcessBillingAddress(
+	ctx context.Context,
+	req *grpc.ProcessBillingAddressRequest,
+	rsp *grpc.ProcessBillingAddressResponse,
+) error {
+	order, err := s.getOrderByUuidToForm(req.OrderId)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	order.BillingAddress = &billing.OrderBillingAddress{
+		Country:    req.Country,
+		City:       req.City,
+		PostalCode: req.Zip,
+	}
+
+	processor := &OrderCreateRequestProcessor{Service: s}
+	processor.processOrderVat(order)
+
+	err = s.updateOrder(order)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = &grpc.ProcessBillingAddressResponseItem{
+		HasVat:      order.Tax.Amount > 0,
+		Vat:         order.Tax.Amount,
+		Amount:      float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount)),
+		TotalAmount: float32(tools.FormatAmount(order.TotalPaymentAmount)),
+	}
+
+	return nil
+}
+
 func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
 		Account:   order.ProjectAccount,
@@ -471,6 +716,18 @@ func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	}
 }
 
+func (s *Service) updateOrder(order *billing.Order) error {
+	err := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+
+	if err != nil {
+		s.logError("Update order data failed", []interface{}{"error", err.Error(), "order", order})
+
+		return errors.New(orderErrorUnknown)
+	}
+
+	return nil
+}
+
 func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 	err = s.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(id)).One(&order)
 
@@ -483,6 +740,38 @@ func (s *Service) getOrderById(id string) (order *billing.Order, err error) {
 	}
 
 	return
+}
+
+func (s *Service) getOrderByUuid(uuid string) (order *billing.Order, err error) {
+	err = s.db.Collection(pkg.CollectionOrder).Find(bson.M{"uuid": uuid}).One(&order)
+
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Order not found in payment create process", []interface{}{"err", err.Error(), "uuid", uuid})
+	}
+
+	if order == nil {
+		return order, errors.New(orderErrorNotFound)
+	}
+
+	return
+}
+
+func (s *Service) getOrderByUuidToForm(uuid string) (*billing.Order, error) {
+	order, err := s.getOrderByUuid(uuid)
+
+	if err != nil {
+		return nil, errors.New(orderErrorNotFound)
+	}
+
+	if order.HasEndedStatus() == true {
+		return nil, errors.New(orderErrorOrderAlreadyComplete)
+	}
+
+	if order.FormInputTimeIsEnded() == true {
+		return nil, errors.New(orderErrorFormInputTimeExpired)
+	}
+
+	return order, nil
 }
 
 func (s *Service) getBinData(pan string) (data *BinData) {
@@ -523,11 +812,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	}
 
 	if merchantPayoutCurrency != nil && v.checked.currency.CodeInt != merchantPayoutCurrency.CodeInt {
-		amount, err := v.Service.Convert(
-			v.checked.currency.CodeInt,
-			merchantPayoutCurrency.CodeInt,
-			v.request.Amount,
-		)
+		amount, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, v.request.Amount)
 
 		if err != nil {
 			return nil, err
@@ -569,7 +854,22 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PaymentMethodOutcomeCurrency:       v.checked.currency,
 		PaymentMethodIncomeAmount:          amount,
 		PaymentMethodIncomeCurrency:        v.checked.currency,
+
+		Uuid: uuid.New().String(),
+		User: &billing.OrderUser{
+			Object: objectTypeUser,
+			Email:  v.checked.payerData.Email,
+			Phone:  v.checked.payerData.Phone,
+			Address: &billing.OrderBillingAddress{
+				Country:    v.checked.payerData.Country,
+				City:       v.checked.payerData.City.En,
+				PostalCode: v.checked.payerData.Zip,
+				State:      v.checked.payerData.State,
+			},
+		},
 	}
+
+	v.processOrderVat(order)
 
 	if v.request.Description != "" {
 		order.Description = v.request.Description
@@ -596,6 +896,8 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			return nil, err
 		}
 	}
+
+	order.ExpireDateToFormInput, _ = ptypes.TimestampProto(time.Now().Add(time.Minute * defaultExpireDateToFormInput))
 
 	return order, nil
 }
@@ -639,17 +941,22 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	}
 
 	data := &billing.PayerData{
-		Ip:            v.request.PayerIp,
-		CountryCodeA2: rsp.Country.IsoCode,
-		CountryName:   &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
-		City:          &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
-		Timezone:      rsp.Location.TimeZone,
-		Email:         v.request.PayerEmail,
-		Phone:         v.request.PayerPhone,
+		Ip:          v.request.PayerIp,
+		Country:     rsp.Country.IsoCode,
+		CountryName: &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
+		City:        &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
+		Timezone:    rsp.Location.TimeZone,
+		Email:       v.request.PayerEmail,
+		Phone:       v.request.PayerPhone,
+		Language:    v.request.Language,
 	}
 
 	if len(rsp.Subdivisions) > 0 {
-		data.Subdivision = rsp.Subdivisions[0].IsoCode
+		data.State = rsp.Subdivisions[0].IsoCode
+	}
+
+	if rsp.Postal != nil {
+		data.Zip = rsp.Postal.Code
 	}
 
 	v.checked.payerData = data
@@ -664,7 +971,7 @@ func (v *OrderCreateRequestProcessor) processFixedPackage() error {
 		return errors.New(orderErrorFixedPackagesIsEmpty)
 	}
 
-	region := v.checked.payerData.CountryCodeA2
+	region := v.checked.payerData.Country
 
 	if v.request.Region != "" {
 		region = v.request.Region
@@ -831,102 +1138,77 @@ func (v *OrderCreateRequestProcessor) processSignature() error {
 	return nil
 }
 
+// Calculate VAT for order
+func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
+	order.TotalPaymentAmount = order.PaymentMethodOutcomeAmount
+
+	order.Tax = &billing.OrderTax{
+		Type:     taxTypeVat,
+		Currency: order.PaymentMethodOutcomeCurrency.CodeA3,
+	}
+	req := &tax_service.GetRateRequest{
+		IpData: &tax_service.GeoIdentity{
+			Country: order.User.Address.Country,
+			City:    order.User.Address.City,
+		},
+		UserData: &tax_service.GeoIdentity{},
+	}
+
+	if order.BillingAddress != nil {
+		req.UserData.Country = order.BillingAddress.Country
+		req.UserData.City = order.BillingAddress.City
+	}
+
+	if order.PayerData.Country == CountryCodeUSA {
+		order.Tax.Type = taxTypeSalesTax
+
+		req.IpData.Zip = order.User.Address.PostalCode
+		req.IpData.State = order.User.Address.State
+
+		if order.BillingAddress != nil {
+			req.UserData.Zip = order.BillingAddress.PostalCode
+		}
+	}
+
+	rsp, err := v.tax.GetRate(context.TODO(), req)
+
+	if err != nil {
+		v.logError("Tax service return error", []interface{}{"error", err.Error(), "request", req})
+		return
+	}
+
+	if order.BillingAddress != nil {
+		req.UserData.State = rsp.Rate.State
+	}
+
+	order.Tax.Rate = rsp.Rate.Rate
+	order.Tax.Amount = float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate)))
+	order.TotalPaymentAmount = tools.FormatAmount(order.TotalPaymentAmount + float64(order.Tax.Amount))
+
+	return
+}
+
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
-	pmOutAmount := o.ProjectIncomeAmount
 	mAccCur := o.Project.Merchant.GetPayoutCurrency()
 	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 	amount := float64(0)
 
-	// if merchant enable VAT calculation then we're need to calculate VAT for payer
-	if o.Project.Merchant.IsVatEnabled == true {
-		vat, err := v.Service.CalculateVat(o.PaymentMethodOutcomeAmount, o.PayerData.CountryCodeA2, o.PayerData.Subdivision)
-
-		if err != nil {
-			return err
-		}
-
-		o.VatAmount = &billing.OrderFee{AmountPaymentMethodCurrency: vat}
-
-		// convert amount of VAT to accounting currency of merchant
-		if mAccCur != nil {
-			amount, err := v.Service.Convert(pmOutCur, mAccCur.CodeInt, vat)
-
-			if err != nil {
-				return err
-			}
-			o.VatAmount.AmountMerchantCurrency = amount
-		}
-
-		// add VAT amount to payment amount
-		pmOutAmount += vat
-	}
-
 	// calculate commissions to selected payment method
-	commission, err := v.Service.CalculateCommission(o.Project.Id, o.PaymentMethod.Id, o.PaymentMethodOutcomeAmount)
+	commission, err := v.Service.CalculatePmCommission(o.Project.Id, o.PaymentMethod.Id, o.PaymentMethodOutcomeAmount)
 
 	if err != nil {
 		return err
 	}
-
-	totalCommission := commission.PMCommission + commission.PspCommission
-
-	// if merchant enable to shift commissions form project to payer then we're need to calculate commissions shifting
-	if o.Project.Merchant.IsCommissionToUserEnabled == true {
-		// subtract commission to user from project's commission
-		totalCommission -= commission.ToUserCommission
-
-		// add commission to user to payment amount
-		pmOutAmount += commission.ToUserCommission
-		o.ToPayerFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: commission.ToUserCommission}
-
-		// convert amount of fee shifted to user to accounting currency of merchant
-		if mAccCur != nil {
-			amount, err := v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission.ToUserCommission)
-
-			if err != nil {
-				return err
-			}
-			o.ToPayerFeeAmount.AmountMerchantCurrency = amount
-		}
-	}
-
-	o.ProjectFeeAmount = &billing.OrderFee{AmountPaymentMethodCurrency: tools.FormatAmount(totalCommission)}
-
-	// convert amount of fee to project to accounting currency of merchant
-	if mAccCur != nil {
-		amount, err := v.Service.Convert(pmOutCur, mAccCur.CodeInt, totalCommission)
-
-		if err != nil {
-			return err
-		}
-		o.ProjectFeeAmount.AmountMerchantCurrency = amount
-	}
-
-	o.PspFeeAmount = &billing.OrderFeePsp{AmountPaymentMethodCurrency: commission.PspCommission}
-
-	if mAccCur != nil {
-		// convert PSP amount of fee to accounting currency of merchant
-		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission.PspCommission)
-		o.PspFeeAmount.AmountMerchantCurrency = amount
-	}
-
-	// convert PSP amount of fee to accounting currency of PSP
-	amount, err = v.Service.Convert(pmOutCur, v.Service.accountingCurrency.CodeInt, commission.PspCommission)
-
-	if err != nil {
-		return err
-	}
-	o.PspFeeAmount.AmountPspCurrency = amount
 
 	// save information about payment system commission
 	o.PaymentSystemFeeAmount = &billing.OrderFeePaymentSystem{
-		AmountPaymentMethodCurrency: commission.PMCommission,
+		AmountPaymentMethodCurrency: tools.FormatAmount(commission),
 	}
 
 	// convert payment system amount of fee to accounting currency of payment system
-	amount, err = v.Service.Convert(pmOutCur, o.PaymentMethod.PaymentSystem.AccountingCurrency.CodeInt, commission.PMCommission)
+	amount, err = v.Service.Convert(pmOutCur, o.PaymentMethod.PaymentSystem.AccountingCurrency.CodeInt, commission)
 
 	if err != nil {
 		return err
@@ -936,11 +1218,9 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 
 	if mAccCur != nil {
 		// convert payment system amount of fee to accounting currency of merchant
-		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission.PMCommission)
+		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission)
 		o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
 	}
-
-	o.PaymentMethodOutcomeAmount = tools.FormatAmount(pmOutAmount)
 
 	return nil
 }
@@ -986,14 +1266,12 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		}
 
 		formPm := &billing.PaymentFormPaymentMethod{
-			Id:                       pm.Id,
-			Name:                     pm.Name,
-			Icon:                     fmt.Sprintf(orderInlineFormImagesUrlMask, v.request.Host, pm.Icon),
-			Type:                     pm.Type,
-			Group:                    pm.Group,
-			AccountRegexp:            pm.AccountRegexp,
-			Currency:                 v.order.ProjectIncomeCurrency.CodeA3,
-			AmountWithoutCommissions: v.order.ProjectIncomeAmount,
+			Id:            pm.Id,
+			Name:          pm.Name,
+			Icon:          fmt.Sprintf(orderInlineFormImagesUrlMask, v.request.Host, pm.Icon),
+			Type:          pm.Type,
+			Group:         pm.Group,
+			AccountRegexp: pm.AccountRegexp,
 		}
 
 		err := v.processPaymentMethodsData(formPm)
@@ -1022,35 +1300,6 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 }
 
 func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentFormPaymentMethod) error {
-	amount := pm.AmountWithoutCommissions
-
-	if v.order.Project.Merchant.IsCommissionToUserEnabled == true {
-		commission, err := v.service.CalculateCommission(v.order.Project.Id, pm.Id, v.order.ProjectIncomeAmount)
-
-		if err != nil {
-			return err
-		}
-
-		amount += commission.ToUserCommission
-		pm.UserCommissionAmount = commission.ToUserCommission
-	}
-
-	if v.order.Project.Merchant.IsVatEnabled == true {
-		vat, err := v.service.CalculateVat(
-			v.order.ProjectIncomeAmount,
-			v.order.PayerData.CountryCodeA2,
-			v.order.PayerData.Subdivision,
-		)
-
-		if err != nil {
-			return err
-		}
-
-		amount += vat
-		pm.VatAmount = vat
-	}
-
-	pm.AmountWithCommissions = amount
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
@@ -1102,14 +1351,27 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return errors.New(orderErrorCreatePaymentRequiredFieldEmailNotFound)
 	}
 
-	order, err := v.service.getOrderById(v.data[pkg.PaymentCreateFieldOrderId])
+	order, err := v.service.getOrderByUuidToForm(v.data[pkg.PaymentCreateFieldOrderId])
 
 	if err != nil {
-		return errors.New(orderErrorNotFound)
+		return err
 	}
 
-	if order.HasEndedStatus() == true {
-		return errors.New(orderErrorOrderAlreadyComplete)
+	if order.UserAddressDataRequired == true {
+		if _, ok := v.data[pkg.PaymentCreateFieldUserCountry]; !ok ||
+			v.data[pkg.PaymentCreateFieldUserCountry] == "" {
+			return errors.New(orderErrorCreatePaymentRequiredFieldUserCountryNotFound)
+		}
+
+		if _, ok := v.data[pkg.PaymentCreateFieldUserCity]; !ok ||
+			v.data[pkg.PaymentCreateFieldUserCity] == "" {
+			return errors.New(orderErrorCreatePaymentRequiredFieldUserCityNotFound)
+		}
+
+		if _, ok := v.data[pkg.PaymentCreateFieldUserZip]; !ok ||
+			v.data[pkg.PaymentCreateFieldUserZip] == "" {
+			return errors.New(orderErrorCreatePaymentRequiredFieldUserZipNotFound)
+		}
 	}
 
 	processor := &OrderCreateRequestProcessor{
@@ -1143,6 +1405,26 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 
 	order.PayerData.Email = v.data[pkg.PaymentCreateFieldEmail]
 	order.PaymentRequisites = make(map[string]string)
+
+	if order.UserAddressDataRequired == true {
+		if order.BillingAddress == nil {
+			order.BillingAddress = &billing.OrderBillingAddress{}
+		}
+
+		if order.BillingAddress.Country != v.data[pkg.PaymentCreateFieldUserCountry] {
+			order.BillingAddress.Country = v.data[pkg.PaymentCreateFieldUserCountry]
+		}
+
+		if order.BillingAddress.City != v.data[pkg.PaymentCreateFieldUserCity] {
+			order.BillingAddress.City = v.data[pkg.PaymentCreateFieldUserCity]
+		}
+
+		if order.BillingAddress.PostalCode != v.data[pkg.PaymentCreateFieldUserZip] {
+			order.BillingAddress.PostalCode = v.data[pkg.PaymentCreateFieldUserZip]
+		}
+
+		processor.processOrderVat(order)
+	}
 
 	delete(v.data, pkg.PaymentCreateFieldOrderId)
 	delete(v.data, pkg.PaymentCreateFieldPaymentMethodId)
