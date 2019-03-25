@@ -20,9 +20,9 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type EmptyRequest struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *EmptyRequest) Reset()         { *m = EmptyRequest{} }
@@ -50,9 +50,9 @@ func (m *EmptyRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_EmptyRequest proto.InternalMessageInfo
 
 type EmptyResponse struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *EmptyResponse) Reset()         { *m = EmptyResponse{} }
@@ -81,9 +81,9 @@ var xxx_messageInfo_EmptyResponse proto.InternalMessageInfo
 
 type PaymentCreateRequest struct {
 	Data                 map[string]string `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte            `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32             `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentCreateRequest) Reset()         { *m = PaymentCreateRequest{} }
@@ -121,9 +121,9 @@ type PaymentCreateResponse struct {
 	Status               int32    `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	RedirectUrl          string   `protobuf:"bytes,2,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
 	Error                string   `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentCreateResponse) Reset()         { *m = PaymentCreateResponse{} }
@@ -177,9 +177,9 @@ type PaymentFormJsonDataRequest struct {
 	Host                 string   `protobuf:"bytes,3,opt,name=host,proto3" json:"host,omitempty"`
 	Locale               string   `protobuf:"bytes,4,opt,name=locale,proto3" json:"locale,omitempty"`
 	Ip                   string   `protobuf:"bytes,5,opt,name=ip,proto3" json:"ip,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormJsonDataRequest) Reset()         { *m = PaymentFormJsonDataRequest{} }
@@ -247,9 +247,9 @@ type PaymentFormJsonDataProject struct {
 	UrlSuccess string `protobuf:"bytes,2,opt,name=url_success,json=urlSuccess,proto3" json:"url_success,omitempty"`
 	// @inject_tag: json:"url_fail,omitempty"
 	UrlFail              string   `protobuf:"bytes,3,opt,name=url_fail,json=urlFail,proto3" json:"url_fail,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormJsonDataProject) Reset()         { *m = PaymentFormJsonDataProject{} }
@@ -302,9 +302,9 @@ type PaymentFormJsonDataResponse struct {
 	// @inject_tag: json:"account,omitempty"
 	Account string `protobuf:"bytes,2,opt,name=account,proto3" json:"account,omitempty"`
 	// @inject_tag: json:"has_vat"
-	HasVat bool `protobuf:"varint,3,opt,name=has_vat,json=hasVat,proto3" json:"has_vat,omitempty"`
+	HasVat bool `protobuf:"varint,3,opt,name=has_vat,json=hasVat,proto3" json:"has_vat"`
 	// @inject_tag: json:"vat"
-	Vat                   float32                             `protobuf:"fixed32,4,opt,name=vat,proto3" json:"vat,omitempty"`
+	Vat                   float32                             `protobuf:"fixed32,4,opt,name=vat,proto3" json:"vat"`
 	Amount                float64                             `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	TotalAmount           float64                             `protobuf:"fixed64,6,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
 	Currency              string                              `protobuf:"bytes,7,opt,name=currency,proto3" json:"currency,omitempty"`
@@ -313,10 +313,10 @@ type PaymentFormJsonDataResponse struct {
 	InlineFormRedirectUrl string                              `protobuf:"bytes,10,opt,name=inline_form_redirect_url,json=inlineFormRedirectUrl,proto3" json:"inline_form_redirect_url,omitempty"`
 	Token                 string                              `protobuf:"bytes,11,opt,name=token,proto3" json:"token,omitempty"`
 	// @inject_tag: json:"user_address_data_required"
-	UserAddressDataRequired bool     `protobuf:"varint,12,opt,name=user_address_data_required,json=userAddressDataRequired,proto3" json:"user_address_data_required,omitempty"`
-	XXX_NoUnkeyedLiteral    struct{} `json:"-"`
-	XXX_unrecognized        []byte   `json:"-"`
-	XXX_sizecache           int32    `json:"-"`
+	UserAddressDataRequired bool     `protobuf:"varint,12,opt,name=user_address_data_required,json=userAddressDataRequired,proto3" json:"user_address_data_required"`
+	XXX_NoUnkeyedLiteral    struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized        []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache           int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormJsonDataResponse) Reset()         { *m = PaymentFormJsonDataResponse{} }
@@ -431,9 +431,9 @@ type PaymentNotifyRequest struct {
 	OrderId              string   `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	Request              []byte   `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
 	Signature            string   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentNotifyRequest) Reset()         { *m = PaymentNotifyRequest{} }
@@ -484,9 +484,9 @@ func (m *PaymentNotifyRequest) GetSignature() string {
 type PaymentNotifyResponse struct {
 	Status               int32    `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Error                string   `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentNotifyResponse) Reset()         { *m = PaymentNotifyResponse{} }
@@ -530,9 +530,9 @@ func (m *PaymentNotifyResponse) GetError() string {
 type ConvertRateRequest struct {
 	From                 int32    `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
 	To                   int32    `protobuf:"varint,2,opt,name=to,proto3" json:"to,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ConvertRateRequest) Reset()         { *m = ConvertRateRequest{} }
@@ -575,9 +575,9 @@ func (m *ConvertRateRequest) GetTo() int32 {
 
 type ConvertRateResponse struct {
 	Rate                 float64  `protobuf:"fixed64,1,opt,name=rate,proto3" json:"rate,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ConvertRateResponse) Reset()         { *m = ConvertRateResponse{} }
@@ -613,15 +613,15 @@ func (m *ConvertRateResponse) GetRate() float64 {
 
 type OnboardingBanking struct {
 	// @inject_tag: validate:"omitempty,len=3"
-	Currency             string   `protobuf:"bytes,1,opt,name=currency,proto3" json:"currency,omitempty"`
+	Currency             string   `protobuf:"bytes,1,opt,name=currency,proto3" json:"currency,omitempty" validate:"omitempty,len=3"`
 	Name                 string   `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Address              string   `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
 	AccountNumber        string   `protobuf:"bytes,4,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"`
 	Swift                string   `protobuf:"bytes,5,opt,name=swift,proto3" json:"swift,omitempty"`
 	Details              string   `protobuf:"bytes,6,opt,name=details,proto3" json:"details,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *OnboardingBanking) Reset()         { *m = OnboardingBanking{} }
@@ -693,11 +693,11 @@ func (m *OnboardingBanking) GetDetails() string {
 type OnboardingRequest struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// @inject_tag: validate:"required"
-	Name            string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Name            string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty" validate:"required"`
 	AlternativeName string `protobuf:"bytes,4,opt,name=alternative_name,json=alternativeName,proto3" json:"alternative_name,omitempty"`
 	Website         string `protobuf:"bytes,5,opt,name=website,proto3" json:"website,omitempty"`
 	// @inject_tag: validate:"omitempty,len=2"
-	Country            string `protobuf:"bytes,6,opt,name=country,proto3" json:"country,omitempty"`
+	Country            string `protobuf:"bytes,6,opt,name=country,proto3" json:"country,omitempty" validate:"omitempty,len=2"`
 	State              string `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
 	Zip                string `protobuf:"bytes,8,opt,name=zip,proto3" json:"zip,omitempty"`
 	City               string `protobuf:"bytes,9,opt,name=city,proto3" json:"city,omitempty"`
@@ -706,12 +706,12 @@ type OnboardingRequest struct {
 	RegistrationNumber string `protobuf:"bytes,12,opt,name=registration_number,json=registrationNumber,proto3" json:"registration_number,omitempty"`
 	TaxId              string `protobuf:"bytes,13,opt,name=tax_id,json=taxId,proto3" json:"tax_id,omitempty"`
 	// @inject_tag: validate:"required,dive"
-	Contacts *billing.MerchantContact `protobuf:"bytes,14,opt,name=contacts,proto3" json:"contacts,omitempty"`
+	Contacts *billing.MerchantContact `protobuf:"bytes,14,opt,name=contacts,proto3" json:"contacts,omitempty" validate:"required,dive"`
 	// @inject_tag: validate:"required,dive"
-	Banking              *OnboardingBanking `protobuf:"bytes,15,opt,name=banking,proto3" json:"banking,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
-	XXX_unrecognized     []byte             `json:"-"`
-	XXX_sizecache        int32              `json:"-"`
+	Banking              *OnboardingBanking `protobuf:"bytes,15,opt,name=banking,proto3" json:"banking,omitempty" validate:"required,dive"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte             `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32              `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *OnboardingRequest) Reset()         { *m = OnboardingRequest{} }
@@ -838,9 +838,9 @@ func (m *OnboardingRequest) GetBanking() *OnboardingBanking {
 
 type FindByIdRequest struct {
 	Id                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *FindByIdRequest) Reset()         { *m = FindByIdRequest{} }
@@ -883,9 +883,9 @@ type MerchantListingRequest struct {
 	Sort                 []string `protobuf:"bytes,6,rep,name=sort,proto3" json:"sort,omitempty"`
 	Limit                int32    `protobuf:"varint,7,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset               int32    `protobuf:"varint,8,opt,name=offset,proto3" json:"offset,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *MerchantListingRequest) Reset()         { *m = MerchantListingRequest{} }
@@ -970,9 +970,9 @@ func (m *MerchantListingRequest) GetOffset() int32 {
 
 type Merchants struct {
 	Merchants            []*billing.Merchant `protobuf:"bytes,1,rep,name=merchants,proto3" json:"merchants,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte              `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32               `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *Merchants) Reset()         { *m = Merchants{} }
@@ -1008,14 +1008,14 @@ func (m *Merchants) GetMerchants() []*billing.Merchant {
 
 type MerchantChangeStatusRequest struct {
 	// @inject_tag: validate:"required,hexadecimal"
-	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" validate:"required,hexadecimal"`
 	UserId     string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// @inject_tag: validate:"required,numeric"
-	Status               int32    `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
+	Status               int32    `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty" validate:"required,numeric"`
 	Message              string   `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *MerchantChangeStatusRequest) Reset()         { *m = MerchantChangeStatusRequest{} }
@@ -1072,15 +1072,15 @@ func (m *MerchantChangeStatusRequest) GetMessage() string {
 
 type NotificationRequest struct {
 	// @inject_tag: validate:"required,hexadecimal"
-	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" validate:"required,hexadecimal"`
 	UserId     string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// @inject_tag: validate:"required"
-	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty" validate:"required"`
 	// @inject_tag: validate:"required"
-	Message              string   `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Message              string   `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty" validate:"required"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *NotificationRequest) Reset()         { *m = NotificationRequest{} }
@@ -1137,9 +1137,9 @@ func (m *NotificationRequest) GetMessage() string {
 
 type Notifications struct {
 	Notifications        []*billing.Notification `protobuf:"bytes,1,rep,name=notifications,proto3" json:"notifications,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
-	XXX_unrecognized     []byte                  `json:"-"`
-	XXX_sizecache        int32                   `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte                  `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32                   `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *Notifications) Reset()         { *m = Notifications{} }
@@ -1178,9 +1178,9 @@ type ListingNotificationRequest struct {
 	UserId               string   `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Limit                int32    `protobuf:"varint,7,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset               int32    `protobuf:"varint,8,opt,name=offset,proto3" json:"offset,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ListingNotificationRequest) Reset()         { *m = ListingNotificationRequest{} }
@@ -1237,9 +1237,9 @@ func (m *ListingNotificationRequest) GetOffset() int32 {
 
 type ListingMerchantPaymentMethod struct {
 	PaymentMethods       []*billing.MerchantPaymentMethod `protobuf:"bytes,1,rep,name=payment_methods,json=paymentMethods,proto3" json:"payment_methods,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                         `json:"-"`
-	XXX_unrecognized     []byte                           `json:"-"`
-	XXX_sizecache        int32                            `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}                         `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte                           `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32                            `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ListingMerchantPaymentMethod) Reset()         { *m = ListingMerchantPaymentMethod{} }
@@ -1275,12 +1275,12 @@ func (m *ListingMerchantPaymentMethod) GetPaymentMethods() []*billing.MerchantPa
 
 type GetMerchantPaymentMethodRequest struct {
 	// @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
-	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" query:"merchant_id" validate:"required,hexadecimal,len=24"`
 	// @inject_tag: query:"payment_method_id", validate:"required,hexadecimal,len=24"
-	PaymentMethodId      string   `protobuf:"bytes,2,opt,name=payment_method_id,json=paymentMethodId,proto3" json:"payment_method_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	PaymentMethodId      string   `protobuf:"bytes,2,opt,name=payment_method_id,json=paymentMethodId,proto3" json:"payment_method_id,omitempty" query:"payment_method_id" validate:"required,hexadecimal,len=24"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *GetMerchantPaymentMethodRequest) Reset()         { *m = GetMerchantPaymentMethodRequest{} }
@@ -1323,12 +1323,12 @@ func (m *GetMerchantPaymentMethodRequest) GetPaymentMethodId() string {
 
 type ListMerchantPaymentMethodsRequest struct {
 	// @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
-	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" query:"merchant_id" validate:"required,hexadecimal,len=24"`
 	// @inject_tag: query:"payment_method_name"
-	PaymentMethodName    string   `protobuf:"bytes,2,opt,name=payment_method_name,json=paymentMethodName,proto3" json:"payment_method_name,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	PaymentMethodName    string   `protobuf:"bytes,2,opt,name=payment_method_name,json=paymentMethodName,proto3" json:"payment_method_name,omitempty" query:"payment_method_name"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ListMerchantPaymentMethodsRequest) Reset()         { *m = ListMerchantPaymentMethodsRequest{} }
@@ -1371,18 +1371,18 @@ func (m *ListMerchantPaymentMethodsRequest) GetPaymentMethodName() string {
 
 type MerchantPaymentMethodRequest struct {
 	// @inject_tag: validate:"required,hexadecimal,len=24"
-	MerchantId string `protobuf:"bytes,2,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	MerchantId string `protobuf:"bytes,2,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty" validate:"required,hexadecimal,len=24"`
 	// @inject_tag: validate:"required,dive"
-	PaymentMethod *billing.MerchantPaymentMethodIdentification `protobuf:"bytes,3,opt,name=payment_method,json=paymentMethod,proto3" json:"payment_method,omitempty"`
+	PaymentMethod *billing.MerchantPaymentMethodIdentification `protobuf:"bytes,3,opt,name=payment_method,json=paymentMethod,proto3" json:"payment_method,omitempty" validate:"required,dive"`
 	// @inject_tag: validate:"required,dive"
-	Commission *billing.MerchantPaymentMethodCommissions `protobuf:"bytes,4,opt,name=commission,proto3" json:"commission,omitempty"`
+	Commission *billing.MerchantPaymentMethodCommissions `protobuf:"bytes,4,opt,name=commission,proto3" json:"commission,omitempty" validate:"required,dive"`
 	// @inject_tag: validate:"required,dive"
-	Integration *billing.MerchantPaymentMethodIntegration `protobuf:"bytes,5,opt,name=integration,proto3" json:"integration,omitempty"`
+	Integration *billing.MerchantPaymentMethodIntegration `protobuf:"bytes,5,opt,name=integration,proto3" json:"integration,omitempty" validate:"required,dive"`
 	// @inject_tag: validate:"required"
-	IsActive             bool     `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	IsActive             bool     `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty" validate:"required"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *MerchantPaymentMethodRequest) Reset()         { *m = MerchantPaymentMethodRequest{} }
@@ -1448,9 +1448,9 @@ type MerchantPaymentMethodResponse struct {
 	Status               int32                          `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Message              string                         `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Item                 *billing.MerchantPaymentMethod `protobuf:"bytes,3,opt,name=item,proto3" json:"item,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
-	XXX_unrecognized     []byte                         `json:"-"`
-	XXX_sizecache        int32                          `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}                       `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte                         `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32                          `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *MerchantPaymentMethodResponse) Reset()         { *m = MerchantPaymentMethodResponse{} }
@@ -1502,9 +1502,9 @@ type MerchantGetMerchantResponse struct {
 	Status               int32             `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Message              string            `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Item                 *billing.Merchant `protobuf:"bytes,3,opt,name=item,proto3" json:"item,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte            `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32             `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *MerchantGetMerchantResponse) Reset()         { *m = MerchantGetMerchantResponse{} }
@@ -1555,9 +1555,9 @@ func (m *MerchantGetMerchantResponse) GetItem() *billing.Merchant {
 type GetNotificationRequest struct {
 	MerchantId           string   `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
 	NotificationId       string   `protobuf:"bytes,2,opt,name=notification_id,json=notificationId,proto3" json:"notification_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *GetNotificationRequest) Reset()         { *m = GetNotificationRequest{} }
@@ -1600,14 +1600,14 @@ func (m *GetNotificationRequest) GetNotificationId() string {
 
 type CreateRefundRequest struct {
 	// @inject_tag: validate:"required,hexadecimal,len=24"
-	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty" validate:"required,hexadecimal,len=24"`
 	// @inject_tag: validate:"required,numeric,gt=0"
-	Amount               float64  `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount               float64  `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" validate:"required,numeric,gt=0"`
 	CreatorId            string   `protobuf:"bytes,3,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
 	Reason               string   `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *CreateRefundRequest) Reset()         { *m = CreateRefundRequest{} }
@@ -1666,9 +1666,9 @@ type CreateRefundResponse struct {
 	Status               int32           `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Message              string          `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Item                 *billing.Refund `protobuf:"bytes,3,opt,name=item,proto3" json:"item,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
-	XXX_unrecognized     []byte          `json:"-"`
-	XXX_sizecache        int32           `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte          `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32           `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *CreateRefundResponse) Reset()         { *m = CreateRefundResponse{} }
@@ -1720,9 +1720,9 @@ type ListRefundsRequest struct {
 	OrderId              string   `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	Limit                int32    `protobuf:"varint,7,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset               int32    `protobuf:"varint,8,opt,name=offset,proto3" json:"offset,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ListRefundsRequest) Reset()         { *m = ListRefundsRequest{} }
@@ -1773,9 +1773,9 @@ func (m *ListRefundsRequest) GetOffset() int32 {
 type ListRefundsResponse struct {
 	Count                int32             `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
 	Items                []*billing.Refund `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte            `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32             `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ListRefundsResponse) Reset()         { *m = ListRefundsResponse{} }
@@ -1819,9 +1819,9 @@ func (m *ListRefundsResponse) GetItems() []*billing.Refund {
 type GetRefundRequest struct {
 	OrderId              string   `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	RefundId             string   `protobuf:"bytes,2,opt,name=refund_id,json=refundId,proto3" json:"refund_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *GetRefundRequest) Reset()         { *m = GetRefundRequest{} }
@@ -1866,9 +1866,9 @@ type CallbackRequest struct {
 	Handler              string   `protobuf:"bytes,1,opt,name=handler,proto3" json:"handler,omitempty"`
 	Body                 []byte   `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
 	Signature            string   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *CallbackRequest) Reset()         { *m = CallbackRequest{} }
@@ -1920,9 +1920,9 @@ type PaymentFormDataChangedRequest struct {
 	OrderId              string   `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	Lang                 string   `protobuf:"bytes,2,opt,name=lang,proto3" json:"lang,omitempty"`
 	Account              string   `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormDataChangedRequest) Reset()         { *m = PaymentFormDataChangedRequest{} }
@@ -1972,12 +1972,12 @@ func (m *PaymentFormDataChangedRequest) GetAccount() string {
 
 type PaymentFormUserChangeLangRequest struct {
 	// @inject_tag: validate:"required,uuid"
-	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty" validate:"required,uuid"`
 	// @inject_tag: validate:"required,len=2"
-	Lang                 string   `protobuf:"bytes,2,opt,name=lang,proto3" json:"lang,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Lang                 string   `protobuf:"bytes,2,opt,name=lang,proto3" json:"lang,omitempty" validate:"required,len=2"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormUserChangeLangRequest) Reset()         { *m = PaymentFormUserChangeLangRequest{} }
@@ -2020,14 +2020,14 @@ func (m *PaymentFormUserChangeLangRequest) GetLang() string {
 
 type PaymentFormUserChangePaymentAccountRequest struct {
 	// @inject_tag: validate:"required,uuid"
-	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty" validate:"required,uuid"`
 	// @inject_tag: validate:"required,hexadecimal,len=24"
-	MethodId string `protobuf:"bytes,2,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"`
+	MethodId string `protobuf:"bytes,2,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty" validate:"required,hexadecimal,len=24"`
 	// @inject_tag: validate:"required"
-	Account              string   `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Account              string   `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty" validate:"required"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormUserChangePaymentAccountRequest) Reset() {
@@ -2081,14 +2081,14 @@ func (m *PaymentFormUserChangePaymentAccountRequest) GetAccount() string {
 
 type UserIpData struct {
 	// @inject_tag: json:"country"
-	Country string `protobuf:"bytes,1,opt,name=country,proto3" json:"country,omitempty"`
+	Country string `protobuf:"bytes,1,opt,name=country,proto3" json:"country"`
 	// @inject_tag: json:"city"
-	City string `protobuf:"bytes,2,opt,name=city,proto3" json:"city,omitempty"`
+	City string `protobuf:"bytes,2,opt,name=city,proto3" json:"city"`
 	// @inject_tag: json:"zip"
-	Zip                  string   `protobuf:"bytes,3,opt,name=zip,proto3" json:"zip,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Zip                  string   `protobuf:"bytes,3,opt,name=zip,proto3" json:"zip"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *UserIpData) Reset()         { *m = UserIpData{} }
@@ -2138,11 +2138,11 @@ func (m *UserIpData) GetZip() string {
 
 type PaymentFormDataChangeResponseItem struct {
 	// @inject_tag: json:"user_address_data_required"
-	UserAddressDataRequired bool        `protobuf:"varint,1,opt,name=user_address_data_required,json=userAddressDataRequired,proto3" json:"user_address_data_required,omitempty"`
+	UserAddressDataRequired bool        `protobuf:"varint,1,opt,name=user_address_data_required,json=userAddressDataRequired,proto3" json:"user_address_data_required"`
 	UserIpData              *UserIpData `protobuf:"bytes,2,opt,name=user_ip_data,json=userIpData,proto3" json:"user_ip_data,omitempty"`
-	XXX_NoUnkeyedLiteral    struct{}    `json:"-"`
-	XXX_unrecognized        []byte      `json:"-"`
-	XXX_sizecache           int32       `json:"-"`
+	XXX_NoUnkeyedLiteral    struct{}    `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized        []byte      `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache           int32       `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormDataChangeResponseItem) Reset()         { *m = PaymentFormDataChangeResponseItem{} }
@@ -2187,9 +2187,9 @@ type PaymentFormDataChangeResponse struct {
 	Status               int32                              `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Message              string                             `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Item                 *PaymentFormDataChangeResponseItem `protobuf:"bytes,3,opt,name=item,proto3" json:"item,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
-	XXX_unrecognized     []byte                             `json:"-"`
-	XXX_sizecache        int32                              `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte                             `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32                              `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *PaymentFormDataChangeResponse) Reset()         { *m = PaymentFormDataChangeResponse{} }
@@ -2239,16 +2239,16 @@ func (m *PaymentFormDataChangeResponse) GetItem() *PaymentFormDataChangeResponse
 
 type ProcessBillingAddressRequest struct {
 	// @inject_tag: validate:"required,uuid"
-	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	OrderId string `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty" validate:"required,uuid"`
 	// @inject_tag: validate:"required,len=2"
-	Country string `protobuf:"bytes,2,opt,name=country,proto3" json:"country,omitempty"`
+	Country string `protobuf:"bytes,2,opt,name=country,proto3" json:"country,omitempty" validate:"required,len=2"`
 	// @inject_tag: validate:"required"
-	City string `protobuf:"bytes,3,opt,name=city,proto3" json:"city,omitempty"`
+	City string `protobuf:"bytes,3,opt,name=city,proto3" json:"city,omitempty" validate:"required"`
 	// @inject_tag: validate:"required"
-	Zip                  string   `protobuf:"bytes,4,opt,name=zip,proto3" json:"zip,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Zip                  string   `protobuf:"bytes,4,opt,name=zip,proto3" json:"zip,omitempty" validate:"required"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ProcessBillingAddressRequest) Reset()         { *m = ProcessBillingAddressRequest{} }
@@ -2305,16 +2305,16 @@ func (m *ProcessBillingAddressRequest) GetZip() string {
 
 type ProcessBillingAddressResponseItem struct {
 	// @inject_tag: json:"has_vat"
-	HasVat bool `protobuf:"varint,2,opt,name=has_vat,json=hasVat,proto3" json:"has_vat,omitempty"`
+	HasVat bool `protobuf:"varint,2,opt,name=has_vat,json=hasVat,proto3" json:"has_vat"`
 	// @inject_tag: json:"vat"
-	Vat float32 `protobuf:"fixed32,3,opt,name=vat,proto3" json:"vat,omitempty"`
+	Vat float32 `protobuf:"fixed32,3,opt,name=vat,proto3" json:"vat"`
 	// @inject_tag: json:"amount"
-	Amount float32 `protobuf:"fixed32,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount float32 `protobuf:"fixed32,4,opt,name=amount,proto3" json:"amount"`
 	// @inject_tag: json:"total_amount"
-	TotalAmount          float32  `protobuf:"fixed32,5,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	TotalAmount          float32  `protobuf:"fixed32,5,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte   `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32    `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ProcessBillingAddressResponseItem) Reset()         { *m = ProcessBillingAddressResponseItem{} }
@@ -2373,9 +2373,9 @@ type ProcessBillingAddressResponse struct {
 	Status               int32                              `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Message              string                             `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Item                 *ProcessBillingAddressResponseItem `protobuf:"bytes,3,opt,name=item,proto3" json:"item,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
-	XXX_unrecognized     []byte                             `json:"-"`
-	XXX_sizecache        int32                              `json:"-"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_unrecognized     []byte                             `json:"-" bson:"-" structure:"-" validate:"-"`
+	XXX_sizecache        int32                              `json:"-" bson:"-" structure:"-" validate:"-"`
 }
 
 func (m *ProcessBillingAddressResponse) Reset()         { *m = ProcessBillingAddressResponse{} }
