@@ -171,10 +171,17 @@ message MerchantLastPayout {
     double amount = 2;
 }
 
+message MerchantUser {
+    // @inject_tag: json:"id" validate:"required"
+    string id = 1;
+    // @inject_tag: json:"email" validate:"required,email"
+    string email = 2;
+}
+
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
-    string user_id = 2;
+    MerchantUser user = 2;
     string name = 4;
     string alternative_name = 5;
     string website = 6;
@@ -204,6 +211,7 @@ message Merchant {
     bool has_merchant_signature = 23;
     // @inject_tag: json:"-"
     bool has_psp_signature = 24;
+    // @inject_tag: json:"last_payout"
     MerchantLastPayout last_payout = 25;
     bool is_signed = 26;
     map<string, MerchantPaymentMethod> payment_methods = 28;

@@ -63,7 +63,7 @@ func (s *Service) GetMerchantBy(
 	}
 
 	if req.UserId != "" {
-		query["user_id"] = req.UserId
+		query["user.id"] = req.UserId
 	}
 
 	merchant, err := s.getMerchantBy(query)
@@ -160,7 +160,7 @@ func (s *Service) ChangeMerchant(
 	if isNew {
 		merchant = &billing.Merchant{
 			Id:     bson.NewObjectId().Hex(),
-			UserId: req.UserId,
+			User:   req.User,
 			Status: pkg.MerchantStatusDraft,
 		}
 	}

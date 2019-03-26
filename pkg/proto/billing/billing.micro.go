@@ -17,6 +17,7 @@ It has these top-level messages:
 	MerchantContactAuthorized
 	MerchantBanking
 	MerchantLastPayout
+	MerchantUser
 	Merchant
 	Notification
 	OrderPlatformFee

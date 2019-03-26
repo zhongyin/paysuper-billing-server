@@ -141,8 +141,11 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Generate merchant date failed")
 
 	merchant := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
-		UserId:  uuid.New().String(),
+		Id: bson.NewObjectId().Hex(),
+		User: &billing.MerchantUser{
+			Id:    uuid.New().String(),
+			Email: "test@unit.test",
+		},
 		Name:    "Unit test",
 		Country: country,
 		Zip:     "190000",
@@ -594,7 +597,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_MerchantId_Ok()
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantById_UserId_Ok() {
 	req := &grpc.GetMerchantByRequest{
-		UserId: suite.merchant.UserId,
+		UserId: suite.merchant.User.Id,
 	}
 
 	rsp := &grpc.MerchantGetMerchantResponse{}
