@@ -150,7 +150,6 @@ message OnboardingRequest {
     string id = 1;
     //@inject_tag: validate:"required"
     billing.MerchantUser user = 2;
-    //@inject_tag: validate:"required"
     string name = 3;
     string alternative_name = 4;
     string website = 5;
@@ -163,9 +162,9 @@ message OnboardingRequest {
     string address_additional = 11;
     string registration_number = 12;
     string tax_id = 13;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required"
     billing.MerchantContact contacts = 14;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required"
     OnboardingBanking banking = 15;
 }
 
