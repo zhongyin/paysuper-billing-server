@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
@@ -143,10 +144,24 @@ func (s *Service) ChangeMerchant(
 	var merchant *billing.Merchant
 	var isNew bool
 
-	if req.Id == "" || bson.IsObjectIdHex(req.Id) == false {
+	if req.Id == "" && (req.User == nil || req.User.Id == "") {
 		isNew = true
 	} else {
-		merchant, err = s.getMerchantBy(bson.M{"$or": []bson.M{{"_id": bson.ObjectIdHex(req.Id)}, {"user.id": req.User.Id}}})
+		query := make(bson.M)
+
+		if req.Id != "" && req.User.Id != "" {
+			query["$or"] = []bson.M{{"_id": bson.ObjectIdHex(req.Id)}, {"user.id": req.User.Id}}
+		} else {
+			if req.Id != "" {
+				query["_id"] = bson.ObjectIdHex(req.Id)
+			}
+
+			if req.User.Id != "" {
+				query["user.id"] = req.User.Id
+			}
+		}
+
+		merchant, err = s.getMerchantBy(query)
 
 		if err != nil {
 			if err != ErrMerchantNotFound {
@@ -159,9 +174,10 @@ func (s *Service) ChangeMerchant(
 
 	if isNew {
 		merchant = &billing.Merchant{
-			Id:     bson.NewObjectId().Hex(),
-			User:   req.User,
-			Status: pkg.MerchantStatusDraft,
+			Id:        bson.NewObjectId().Hex(),
+			User:      req.User,
+			Status:    pkg.MerchantStatusDraft,
+			CreatedAt: ptypes.TimestampNow(),
 		}
 	}
 
@@ -169,24 +185,33 @@ func (s *Service) ChangeMerchant(
 		return errors.New(merchantErrorChangeNotAllowed)
 	}
 
-	country, err := s.GetCountryByCodeA2(req.Country)
+	if req.Country != "" {
+		country, err := s.GetCountryByCodeA2(req.Country)
 
-	if err != nil {
-		s.logError("Get country for merchant failed", []interface{}{"err", err.Error(), "request", req})
-		return errors.New(merchantErrorCountryNotFound)
+		if err != nil {
+			s.logError("Get country for merchant failed", []interface{}{"err", err.Error(), "request", req})
+			return errors.New(merchantErrorCountryNotFound)
+		}
+
+		merchant.Country = country
 	}
 
-	currency, err := s.GetCurrencyByCodeA3(req.Banking.Currency)
+	merchant.Banking = &billing.MerchantBanking{}
 
-	if err != nil {
-		s.logError("Get currency for merchant failed", []interface{}{"err", err.Error(), "request", req})
-		return errors.New(merchantErrorCurrencyNotFound)
+	if req.Banking != nil && req.Banking.Currency != "" {
+		currency, err := s.GetCurrencyByCodeA3(req.Banking.Currency)
+
+		if err != nil {
+			s.logError("Get currency for merchant failed", []interface{}{"err", err.Error(), "request", req})
+			return errors.New(merchantErrorCurrencyNotFound)
+		}
+
+		merchant.Banking.Currency = currency
 	}
 
 	merchant.Name = req.Name
 	merchant.AlternativeName = req.AlternativeName
 	merchant.Website = req.Website
-	merchant.Country = country
 	merchant.State = req.State
 	merchant.Zip = req.Zip
 	merchant.City = req.City
@@ -195,14 +220,12 @@ func (s *Service) ChangeMerchant(
 	merchant.RegistrationNumber = req.RegistrationNumber
 	merchant.TaxId = req.TaxId
 	merchant.Contacts = req.Contacts
-	merchant.Banking = &billing.MerchantBanking{
-		Currency:      currency,
-		Name:          req.Banking.Name,
-		Address:       req.Banking.Address,
-		AccountNumber: req.Banking.AccountNumber,
-		Swift:         req.Banking.Swift,
-		Details:       req.Banking.Details,
-	}
+	merchant.Banking.Name = req.Banking.Name
+	merchant.Banking.Address = req.Banking.Address
+	merchant.Banking.AccountNumber = req.Banking.AccountNumber
+	merchant.Banking.Swift = req.Banking.Swift
+	merchant.Banking.Details = req.Banking.Details
+	merchant.UpdatedAt = ptypes.TimestampNow()
 
 	if isNew {
 		err = s.db.Collection(pkg.CollectionMerchant).Insert(merchant)
@@ -578,6 +601,7 @@ func (s *Service) getMerchantBy(query bson.M) (merchant *billing.Merchant, err e
 
 func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merchant) {
 	rsp.Id = merchant.Id
+	rsp.User = merchant.User
 	rsp.Status = merchant.Status
 	rsp.CreatedAt = merchant.CreatedAt
 	rsp.Name = merchant.Name
@@ -597,6 +621,8 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.HasPspSignature = merchant.HasPspSignature
 	rsp.LastPayout = merchant.LastPayout
 	rsp.IsSigned = merchant.IsSigned
+	rsp.CreatedAt = merchant.CreatedAt
+	rsp.UpdatedAt = merchant.UpdatedAt
 }
 
 func (s *Service) addNotification(title, msg, merchantId, userId string) (*billing.Notification, error) {

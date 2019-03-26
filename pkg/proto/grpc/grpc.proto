@@ -147,6 +147,7 @@ message OnboardingBanking {
 }
 
 message OnboardingRequest {
+    // @inject_tag: validate:"omitempty,hexadecimal,len=24"
     string id = 1;
     //@inject_tag: validate:"required"
     billing.MerchantUser user = 2;
