@@ -146,7 +146,7 @@ func (s *Service) ChangeMerchant(
 	if req.Id == "" || bson.IsObjectIdHex(req.Id) == false {
 		isNew = true
 	} else {
-		merchant, err = s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.Id)})
+		merchant, err = s.getMerchantBy(bson.M{"$or": []bson.M{{"_id": bson.ObjectIdHex(req.Id)}, {"user.id": req.User.Id}}})
 
 		if err != nil {
 			if err != ErrMerchantNotFound {
