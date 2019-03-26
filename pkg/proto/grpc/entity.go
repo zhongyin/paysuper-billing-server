@@ -16,3 +16,12 @@ func (m *MerchantPaymentMethodRequest) HasIntegration() bool {
 	return m.Integration.TerminalId != "" && m.Integration.TerminalPassword != "" &&
 		m.Integration.TerminalCallbackPassword != ""
 }
+
+func (p *Product) IsPricesContainDefaultCurrency() bool {
+	for _, price := range p.Prices {
+		if price.Currency == p.DefaultCurrency {
+			return true
+		}
+	}
+	return false
+}
