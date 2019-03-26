@@ -448,7 +448,11 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchant_O
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchant_UpdateMerchantNotAllowed_Error() {
 	req := &grpc.OnboardingRequest{
-		Id:                 suite.merchantAgreement.Id,
+		Id: suite.merchantAgreement.Id,
+		User: &billing.MerchantUser{
+			Id:    bson.NewObjectId().Hex(),
+			Email: "test@unit.test",
+		},
 		Name:               "Unit test",
 		AlternativeName:    "",
 		Website:            "https://unit.test",
