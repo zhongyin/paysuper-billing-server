@@ -19,8 +19,8 @@ import (
 
 var (
 	createdProductId string
-	initialName      string = "Double Yeti"
-	newName          string = "Double Yeti Reload"
+	initialName      = "Double Yeti"
+	newName          = "Double Yeti Reload"
 )
 
 type ProductTestSuite struct {

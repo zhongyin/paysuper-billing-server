@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 )
@@ -13,9 +12,9 @@ import (
 func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, res *grpc.Product) error {
 	var (
 		err     error
-		product *grpc.Product        = &grpc.Product{}
-		isNew   bool                 = req.Id == ""
-		now     *timestamp.Timestamp = ptypes.TimestampNow()
+		product = &grpc.Product{}
+		isNew   = req.Id == ""
+		now     = ptypes.TimestampNow()
 	)
 
 	if isNew {
@@ -34,7 +33,7 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 
 	if !req.IsPricesContainDefaultCurrency() {
 		s.logError("No price in default currency", []interface{}{"data", req})
-		return errors.New("No price in default currency")
+		return errors.New("no price in default currency")
 	}
 
 	if isNew {
@@ -48,7 +47,22 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 		return err
 	}
 
-	*res = *req
+	res.Id = req.Id
+	res.Object = req.Object
+	res.Type = req.Type
+	res.Sku = req.Sku
+	res.Name = req.Name
+	res.DefaultCurrency = req.DefaultCurrency
+	res.Enabled = req.Enabled
+	res.Prices = req.Prices
+	res.Description = req.Description
+	res.LongDescription = req.LongDescription
+	res.Images = req.Images
+	res.Url = req.Url
+	res.Metadata = req.Metadata
+	res.CreatedAt = req.CreatedAt
+	res.UpdatedAt = req.UpdatedAt
+	res.Deleted = req.Deleted
 
 	return nil
 }
@@ -107,7 +121,7 @@ func (s *Service) GetProduct(ctx context.Context, req *grpc.RequestProductById, 
 
 func (s *Service) DeleteProduct(ctx context.Context, req *grpc.RequestProductById, res *grpc.EmptyResponse) error {
 
-	var product *grpc.Product = &grpc.Product{}
+	product := &grpc.Product{}
 
 	err := s.GetProduct(ctx, &grpc.RequestProductById{Id: req.Id}, product)
 	if err != nil {
