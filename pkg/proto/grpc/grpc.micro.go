@@ -51,6 +51,8 @@ It has these top-level messages:
 	ProcessBillingAddressResponseItem
 	ProcessBillingAddressResponse
 	GetMerchantByRequest
+	ChangeMerchantAgreementTypeRequest
+	ChangeMerchantAgreementTypeResponse
 	Product
 	ProductPrice
 	ListProductsRequest
@@ -104,6 +106,7 @@ type BillingService interface {
 	ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*Merchants, error)
 	ChangeMerchant(ctx context.Context, in *OnboardingRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, opts ...client.CallOption) (*billing.Merchant, error)
+	ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error)
 	CreateNotification(ctx context.Context, in *NotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	GetNotification(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	ListNotifications(ctx context.Context, in *ListingNotificationRequest, opts ...client.CallOption) (*Notifications, error)
@@ -255,6 +258,16 @@ func (c *billingService) ChangeMerchant(ctx context.Context, in *OnboardingReque
 func (c *billingService) ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, opts ...client.CallOption) (*billing.Merchant, error) {
 	req := c.c.NewRequest(c.name, "BillingService.ChangeMerchantStatus", in)
 	out := new(billing.Merchant)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ChangeMerchantAgreementType", in)
+	out := new(ChangeMerchantAgreementTypeResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -457,6 +470,7 @@ type BillingServiceHandler interface {
 	ListMerchants(context.Context, *MerchantListingRequest, *Merchants) error
 	ChangeMerchant(context.Context, *OnboardingRequest, *billing.Merchant) error
 	ChangeMerchantStatus(context.Context, *MerchantChangeStatusRequest, *billing.Merchant) error
+	ChangeMerchantAgreementType(context.Context, *ChangeMerchantAgreementTypeRequest, *ChangeMerchantAgreementTypeResponse) error
 	CreateNotification(context.Context, *NotificationRequest, *billing.Notification) error
 	GetNotification(context.Context, *GetNotificationRequest, *billing.Notification) error
 	ListNotifications(context.Context, *ListingNotificationRequest, *Notifications) error
@@ -491,6 +505,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListMerchants(ctx context.Context, in *MerchantListingRequest, out *Merchants) error
 		ChangeMerchant(ctx context.Context, in *OnboardingRequest, out *billing.Merchant) error
 		ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, out *billing.Merchant) error
+		ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, out *ChangeMerchantAgreementTypeResponse) error
 		CreateNotification(ctx context.Context, in *NotificationRequest, out *billing.Notification) error
 		GetNotification(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error
 		ListNotifications(ctx context.Context, in *ListingNotificationRequest, out *Notifications) error
@@ -567,6 +582,10 @@ func (h *billingServiceHandler) ChangeMerchant(ctx context.Context, in *Onboardi
 
 func (h *billingServiceHandler) ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, out *billing.Merchant) error {
 	return h.BillingServiceHandler.ChangeMerchantStatus(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, out *ChangeMerchantAgreementTypeResponse) error {
+	return h.BillingServiceHandler.ChangeMerchantAgreementType(ctx, in, out)
 }
 
 func (h *billingServiceHandler) CreateNotification(ctx context.Context, in *NotificationRequest, out *billing.Notification) error {
