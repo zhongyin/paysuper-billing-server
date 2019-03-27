@@ -28,6 +28,11 @@ func (m *Merchant) GetPayoutCurrency() *Currency {
 	return m.Banking.Currency
 }
 
+func (m *Merchant) SelectAgreementTypeAllow() bool {
+	return m.Status == pkg.MerchantStatusApproved && m.HasPspSignature == false &&
+		m.HasMerchantSignature == false && m.IsSigned == false
+}
+
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
 	return m.PaymentSystem.AccountingCurrency
 }

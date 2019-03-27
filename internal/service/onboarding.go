@@ -13,22 +13,23 @@ import (
 )
 
 const (
-	merchantErrorChangeNotAllowed        = "merchant data changing not allowed"
-	merchantErrorCountryNotFound         = "merchant country not found"
-	merchantErrorCurrencyNotFound        = "merchant bank accounting currency not found"
-	merchantErrorStatusDraft             = "merchant status can't be set to draft. draft status allowed only for new merchant"
-	merchantErrorAgreementRequested      = "agreement for merchant can't be requested"
-	merchantErrorOnReview                = "merchant hasn't allowed status for review"
-	merchantErrorReturnFromReview        = "this action is impossible by workflow"
-	merchantErrorSigning                 = "signing unapproved merchant is impossible"
-	merchantErrorSigned                  = "document can't be mark as signed"
-	merchantErrorUnknown                 = "request processing failed. try request later"
-	merchantErrorNotFound                = "merchant with specified identifier not found"
-	merchantErrorBadData                 = "request data is incorrect"
-	notificationErrorMerchantIdIncorrect = "merchant identifier incorrect, notification can't be saved"
-	notificationErrorUserIdIncorrect     = "user identifier incorrect, notification can't be saved"
-	notificationErrorMessageIsEmpty      = "notification message can't be empty"
-	notificationErrorNotFound            = "notification not found"
+	merchantErrorChangeNotAllowed            = "merchant data changing not allowed"
+	merchantErrorCountryNotFound             = "merchant country not found"
+	merchantErrorCurrencyNotFound            = "merchant bank accounting currency not found"
+	merchantErrorStatusDraft                 = "merchant status can't be set to draft. draft status allowed only for new merchant"
+	merchantErrorAgreementRequested          = "agreement for merchant can't be requested"
+	merchantErrorOnReview                    = "merchant hasn't allowed status for review"
+	merchantErrorReturnFromReview            = "this action is impossible by workflow"
+	merchantErrorSigning                     = "signing unapproved merchant is impossible"
+	merchantErrorSigned                      = "document can't be mark as signed"
+	merchantErrorUnknown                     = "request processing failed. try request later"
+	merchantErrorNotFound                    = "merchant with specified identifier not found"
+	merchantErrorBadData                     = "request data is incorrect"
+	merchantErrorAgreementTypeSelectNotAllow = "merchant status not allow select agreement type"
+	notificationErrorMerchantIdIncorrect     = "merchant identifier incorrect, notification can't be saved"
+	notificationErrorUserIdIncorrect         = "user identifier incorrect, notification can't be saved"
+	notificationErrorMessageIsEmpty          = "notification message can't be empty"
+	notificationErrorNotFound                = "notification not found"
 )
 
 var (
@@ -303,6 +304,43 @@ func (s *Service) ChangeMerchantStatus(
 	}
 
 	s.mapMerchantData(rsp, merchant)
+
+	return nil
+}
+
+func (s *Service) ChangeMerchantAgreementType(
+	ctx context.Context,
+	req *grpc.ChangeMerchantAgreementTypeRequest,
+	rsp *grpc.ChangeMerchantAgreementTypeResponse,
+) error {
+	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = merchantErrorNotFound
+
+		return nil
+	}
+
+	if merchant.SelectAgreementTypeAllow() == false {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = merchantErrorAgreementTypeSelectNotAllow
+
+		return nil
+	}
+
+	merchant.Status = pkg.MerchantStatusAgreementSigning
+	merchant.AgreementType = req.AgreementType
+
+	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
+
+	if err != nil {
+		s.logError("Query to change merchant data failed", []interface{}{"err", err.Error(), "data", merchant})
+		return errors.New(merchantErrorUnknown)
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = merchant
 
 	return nil
 }

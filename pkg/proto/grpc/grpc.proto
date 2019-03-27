@@ -6,64 +6,39 @@ package grpc;
 import "billing/billing.proto";
 
 service BillingService {
-    rpc OrderCreateProcess (billing.OrderCreateRequest) returns (billing.Order) {
-    }
-    rpc PaymentFormJsonDataProcess (PaymentFormJsonDataRequest) returns (PaymentFormJsonDataResponse) {
-    }
-    rpc PaymentCreateProcess (PaymentCreateRequest) returns (PaymentCreateResponse) {
-    }
-    rpc PaymentCallbackProcess (PaymentNotifyRequest) returns (PaymentNotifyResponse) {
-    }
+    rpc OrderCreateProcess (billing.OrderCreateRequest) returns (billing.Order) {}
+    rpc PaymentFormJsonDataProcess (PaymentFormJsonDataRequest) returns (PaymentFormJsonDataResponse) {}
+    rpc PaymentCreateProcess (PaymentCreateRequest) returns (PaymentCreateResponse) {}
+    rpc PaymentCallbackProcess (PaymentNotifyRequest) returns (PaymentNotifyResponse) {}
 
-    rpc RebuildCache (EmptyRequest) returns (EmptyResponse) {
-    }
-    rpc UpdateOrder (billing.Order) returns (EmptyResponse) {
-    }
-    rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {
-    }
-    rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {
-    }
+    rpc RebuildCache (EmptyRequest) returns (EmptyResponse) {}
+    rpc UpdateOrder (billing.Order) returns (EmptyResponse) {}
+    rpc UpdateMerchant (billing.Merchant) returns (EmptyResponse) {}
+    rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
-    rpc GetMerchantBy (GetMerchantByRequest) returns (MerchantGetMerchantResponse) {
-    }
-    rpc ListMerchants (MerchantListingRequest) returns (Merchants) {
-    }
-    rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {
-    }
-    rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {
-    }
+    rpc GetMerchantBy (GetMerchantByRequest) returns (MerchantGetMerchantResponse) {}
+    rpc ListMerchants (MerchantListingRequest) returns (Merchants) {}
+    rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {}
+    rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
+    rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
 
-    rpc CreateNotification (NotificationRequest) returns (billing.Notification) {
-    }
-    rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {
-    }
-    rpc ListNotifications (ListingNotificationRequest) returns (Notifications) {
-    }
-    rpc MarkNotificationAsRead (GetNotificationRequest) returns (billing.Notification) {
-    }
+    rpc CreateNotification (NotificationRequest) returns (billing.Notification) {}
+    rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {}
+    rpc ListNotifications (ListingNotificationRequest) returns (Notifications) {}
+    rpc MarkNotificationAsRead (GetNotificationRequest) returns (billing.Notification) {}
 
-    rpc ListMerchantPaymentMethods (ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {
-    }
-    rpc GetMerchantPaymentMethod (GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {
-    }
-    rpc ChangeMerchantPaymentMethod (MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {
-    }
+    rpc ListMerchantPaymentMethods (ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
+    rpc GetMerchantPaymentMethod (GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
+    rpc ChangeMerchantPaymentMethod (MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
 
-    rpc CreateRefund (CreateRefundRequest) returns (CreateRefundResponse) {
-    }
-    rpc ListRefunds (ListRefundsRequest) returns (ListRefundsResponse) {
-    }
-    rpc GetRefund (GetRefundRequest) returns (CreateRefundResponse) {
-    }
-    rpc ProcessRefundCallback (CallbackRequest) returns (PaymentNotifyResponse) {
-    }
+    rpc CreateRefund (CreateRefundRequest) returns (CreateRefundResponse) {}
+    rpc ListRefunds (ListRefundsRequest) returns (ListRefundsResponse) {}
+    rpc GetRefund (GetRefundRequest) returns (CreateRefundResponse) {}
+    rpc ProcessRefundCallback (CallbackRequest) returns (PaymentNotifyResponse) {}
 
-    rpc PaymentFormLanguageChanged (PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {
-    }
-    rpc PaymentFormPaymentAccountChanged (PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {
-    }
-    rpc ProcessBillingAddress (ProcessBillingAddressRequest) returns (ProcessBillingAddressResponse) {
-    }
+    rpc PaymentFormLanguageChanged (PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {}
+    rpc PaymentFormPaymentAccountChanged (PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
+    rpc ProcessBillingAddress (ProcessBillingAddressRequest) returns (ProcessBillingAddressResponse) {}
 }
 
 message EmptyRequest {
@@ -377,4 +352,17 @@ message ProcessBillingAddressResponse {
 message GetMerchantByRequest {
     string merchant_id = 1;
     string user_id = 2;
+}
+
+message ChangeMerchantAgreementTypeRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: validate:"required,numeric,oneof=1 2"
+    int32 agreement_type = 2;
+}
+
+message ChangeMerchantAgreementTypeResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Merchant item = 3;
 }
