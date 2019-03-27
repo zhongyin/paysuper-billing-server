@@ -425,7 +425,7 @@ message ListProductsRequest {
     string sku = 2;
     // @inject_tag: validate:"required,numeric,gt=0" json:"limit"
     int32 limit = 3;
-    // @inject_tag: validate:"omitempty,numeric,gt=0" json:"offset"
+    // @inject_tag: validate:"omitempty,numeric,gte=0" json:"offset"
     int32 offset = 4;
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"merchant_id" bson:"merchant_id"
     string merchant_id = 5;

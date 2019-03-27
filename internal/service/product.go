@@ -90,7 +90,7 @@ func (s *Service) ListProducts(ctx context.Context, req *grpc.ListProductsReques
 	res.Total = int32(total)
 	res.Products = []*grpc.Product{}
 
-	if res.Offset > res.Total {
+	if res.Total == 0 || res.Offset > res.Total {
 		return nil
 	}
 
