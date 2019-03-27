@@ -384,7 +384,7 @@ message Product {
     //@inject_tag: validate:"required" json:"sku" bson:"sku"
     string sku = 4;
     //@inject_tag: validate:"required" json:"name"
-    string name = 5;
+    map<string, string> name = 5;
     //@inject_tag: validate:"required,alpha,len=3" json:"default_currency"
     string default_currency = 6;
     //@inject_tag: validate:"required" json:"enabled"
@@ -392,9 +392,9 @@ message Product {
     //@inject_tag: validate:"required,min=1,dive" json:"prices"
     repeated ProductPrice prices = 8;
     //@inject_tag: validate:"required" json:"description"
-    string description = 9;
-    //@inject_tag: json:"long_description"
-    string long_description = 10;
+    map<string, string> description = 9;
+    //@inject_tag: validate:"omitempty" json:"long_description"
+    map<string, string> long_description = 10;
     //@inject_tag: json:"created_at"
     google.protobuf.Timestamp created_at = 11;
     //@inject_tag: json:"updated_at"
@@ -440,4 +440,11 @@ message ListProductsResponse {
 message RequestProductById {
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"id"
     string id = 1;
+}
+
+message I18NTextSearchable {
+    //@inject_tag: validate:"required,alpha,len=2" json:"lang"
+    string lang = 1;
+    //@inject_tag: validate:"required" json:"value"
+    string value = 2;
 }

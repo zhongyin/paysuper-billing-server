@@ -56,6 +56,7 @@ It has these top-level messages:
 	ListProductsRequest
 	ListProductsResponse
 	RequestProductById
+	I18NTextSearchable
 */
 package grpc
 

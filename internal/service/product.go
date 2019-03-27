@@ -75,7 +75,7 @@ func (s *Service) ListProducts(ctx context.Context, req *grpc.ListProductsReques
 		query["sku"] = bson.RegEx{req.Sku, "i"}
 	}
 	if req.Name != "" {
-		query["name"] = bson.RegEx{req.Name, "i"}
+		query["name"] = bson.M{"$elemMatch": bson.M{"value": bson.RegEx{req.Name, "i"}}}
 	}
 
 	total, err := s.db.Collection(pkg.CollectionProduct).Find(query).Count()

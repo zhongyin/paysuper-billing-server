@@ -110,11 +110,11 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		Object:          "product",
 		Type:            "simple_product",
 		Sku:             "ru_double_yeti",
-		Name:            initialName,
+		Name:            map[string]string{"en": initialName},
 		DefaultCurrency: "USD",
 		Enabled:         true,
-		Description:     "blah-blah-blah",
-		LongDescription: "Super game steam keys",
+		Description:     map[string]string{"en": "blah-blah-blah"},
+		LongDescription: map[string]string{"en": "Super game steam keys"},
 		Url:             "http://test.ru/dffdsfsfs",
 		Images:          []string{"/home/image.jpg"},
 		Metadata: map[string]string{
@@ -132,7 +132,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 	err := suite.service.CreateOrUpdateProduct(context.TODO(), req, &res)
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), res.Name, initialName)
+	assert.Equal(suite.T(), res.Name["en"], initialName)
 	assert.Equal(suite.T(), len(res.Prices), 1)
 
 	createdProductId = res.Id
@@ -148,7 +148,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 	err = suite.service.GetProduct(context.TODO(), req2, &res2)
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), res2.Name, initialName)
+	assert.Equal(suite.T(), res2.Name["en"], initialName)
 	assert.Equal(suite.T(), len(res2.Prices), 1)
 
 	// Update product OK
@@ -158,11 +158,11 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		Object:          "product",
 		Type:            "simple_product",
 		Sku:             "ru_double_yeti_rel",
-		Name:            newName,
+		Name:            map[string]string{"en": newName},
 		DefaultCurrency: "USD",
 		Enabled:         true,
-		Description:     "Yet another cool game",
-		LongDescription: "Super game steam keys",
+		Description:     map[string]string{"en": "Yet another cool game"},
+		LongDescription: map[string]string{"en": "Super game steam keys"},
 		Url:             "http://mygame.ru/duoble_yeti",
 		Images:          []string{"/home/image.jpg"},
 		Metadata: map[string]string{
@@ -184,7 +184,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 	err = suite.service.CreateOrUpdateProduct(context.TODO(), req3, &res3)
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), res3.Name, newName)
+	assert.Equal(suite.T(), res3.Name["en"], newName)
 	assert.Equal(suite.T(), len(res3.Prices), 2)
 
 	// Delete product Ok
@@ -213,11 +213,11 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		Object:          "product",
 		Type:            "simple_product",
 		Sku:             "ru_double_yeti_rel",
-		Name:            newName,
+		Name:            map[string]string{"en": newName},
 		DefaultCurrency: "USD",
 		Enabled:         true,
-		Description:     "Yet another cool game",
-		LongDescription: "Super game steam keys",
+		Description:     map[string]string{"en": "One another cool game"},
+		LongDescription: map[string]string{"en": "Ultra game steam keys"},
 		Url:             "http://mygame.ru/duoble_yeti",
 		Images:          []string{"/home/image.jpg"},
 		Metadata: map[string]string{
@@ -249,10 +249,10 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 			Object:          "product",
 			Type:            "simple_product",
 			Sku:             "ru_" + strconv.Itoa(i) + "_" + strcase.SnakeCase(n),
-			Name:            n,
+			Name:            map[string]string{"en": n},
 			DefaultCurrency: "USD",
 			Enabled:         true,
-			Description:     n + " description",
+			Description:     map[string]string{"en": n + " description"},
 		}
 
 		req.Prices = append(req.Prices, &grpc.ProductPrice{
