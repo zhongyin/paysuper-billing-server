@@ -28,6 +28,7 @@ type MgoProduct struct {
 	Url             string                `bson:"url,omitempty" json:"url"`
 	Metadata        map[string]string     `bson:"metadata,omitempty" json:"metadata"`
 	Deleted         bool                  `bson:"deleted" json:"deleted"`
+	MerchantId      bson.ObjectId         `bson:"merchant_id" json:"-"`
 }
 
 func (p *Product) SetBSON(raw bson.Raw) error {
@@ -51,6 +52,7 @@ func (p *Product) SetBSON(raw bson.Raw) error {
 	p.Url = decoded.Url
 	p.Metadata = decoded.Metadata
 	p.Deleted = decoded.Deleted
+	p.MerchantId = decoded.MerchantId.Hex()
 
 	p.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 
@@ -96,6 +98,16 @@ func (p *Product) GetBSON() (interface{}, error) {
 		}
 
 		st.Id = bson.ObjectIdHex(p.Id)
+	}
+
+	if len(p.Id) <= 0 {
+		return nil, errors.New(errorInvalidObjectId)
+	} else {
+		if bson.IsObjectIdHex(p.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.MerchantId = bson.ObjectIdHex(p.MerchantId)
 	}
 
 	if p.CreatedAt != nil {

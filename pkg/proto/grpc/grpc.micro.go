@@ -55,7 +55,7 @@ It has these top-level messages:
 	ProductPrice
 	ListProductsRequest
 	ListProductsResponse
-	RequestProductById
+	RequestProduct
 	I18NTextSearchable
 */
 package grpc
@@ -120,8 +120,8 @@ type BillingService interface {
 	ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error)
 	CreateOrUpdateProduct(ctx context.Context, in *Product, opts ...client.CallOption) (*Product, error)
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error)
-	GetProduct(ctx context.Context, in *RequestProductById, opts ...client.CallOption) (*Product, error)
-	DeleteProduct(ctx context.Context, in *RequestProductById, opts ...client.CallOption) (*EmptyResponse, error)
+	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
+	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
 type billingService struct {
@@ -422,7 +422,7 @@ func (c *billingService) ListProducts(ctx context.Context, in *ListProductsReque
 	return out, nil
 }
 
-func (c *billingService) GetProduct(ctx context.Context, in *RequestProductById, opts ...client.CallOption) (*Product, error) {
+func (c *billingService) GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error) {
 	req := c.c.NewRequest(c.name, "BillingService.GetProduct", in)
 	out := new(Product)
 	err := c.c.Call(ctx, req, out, opts...)
@@ -432,7 +432,7 @@ func (c *billingService) GetProduct(ctx context.Context, in *RequestProductById,
 	return out, nil
 }
 
-func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProductById, opts ...client.CallOption) (*EmptyResponse, error) {
+func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.DeleteProduct", in)
 	out := new(EmptyResponse)
 	err := c.c.Call(ctx, req, out, opts...)
@@ -473,8 +473,8 @@ type BillingServiceHandler interface {
 	ProcessBillingAddress(context.Context, *ProcessBillingAddressRequest, *ProcessBillingAddressResponse) error
 	CreateOrUpdateProduct(context.Context, *Product, *Product) error
 	ListProducts(context.Context, *ListProductsRequest, *ListProductsResponse) error
-	GetProduct(context.Context, *RequestProductById, *Product) error
-	DeleteProduct(context.Context, *RequestProductById, *EmptyResponse) error
+	GetProduct(context.Context, *RequestProduct, *Product) error
+	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -507,8 +507,8 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error
 		CreateOrUpdateProduct(ctx context.Context, in *Product, out *Product) error
 		ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error
-		GetProduct(ctx context.Context, in *RequestProductById, out *Product) error
-		DeleteProduct(ctx context.Context, in *RequestProductById, out *EmptyResponse) error
+		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
+		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -633,10 +633,10 @@ func (h *billingServiceHandler) ListProducts(ctx context.Context, in *ListProduc
 	return h.BillingServiceHandler.ListProducts(ctx, in, out)
 }
 
-func (h *billingServiceHandler) GetProduct(ctx context.Context, in *RequestProductById, out *Product) error {
+func (h *billingServiceHandler) GetProduct(ctx context.Context, in *RequestProduct, out *Product) error {
 	return h.BillingServiceHandler.GetProduct(ctx, in, out)
 }
 
-func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestProductById, out *EmptyResponse) error {
+func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error {
 	return h.BillingServiceHandler.DeleteProduct(ctx, in, out)
 }

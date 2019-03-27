@@ -21,6 +21,7 @@ var (
 	createdProductId string
 	initialName      = "Double Yeti"
 	newName          = "Double Yeti Reload"
+	merchantId       = "5bdc35de5d1e1100019fb7db"
 )
 
 type ProductTestSuite struct {
@@ -117,6 +118,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		LongDescription: map[string]string{"en": "Super game steam keys"},
 		Url:             "http://test.ru/dffdsfsfs",
 		Images:          []string{"/home/image.jpg"},
+		MerchantId:      merchantId,
 		Metadata: map[string]string{
 			"SomeKey": "SomeValue",
 		},
@@ -139,8 +141,9 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 
 	// Get product OK
 
-	req2 := &grpc.RequestProductById{
-		Id: createdProductId,
+	req2 := &grpc.RequestProduct{
+		Id:         createdProductId,
+		MerchantId: merchantId,
 	}
 
 	res2 := grpc.Product{}
@@ -165,6 +168,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		LongDescription: map[string]string{"en": "Super game steam keys"},
 		Url:             "http://mygame.ru/duoble_yeti",
 		Images:          []string{"/home/image.jpg"},
+		MerchantId:      merchantId,
 		Metadata: map[string]string{
 			"SomeKey": "SomeValue",
 		},
@@ -189,8 +193,9 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 
 	// Delete product Ok
 
-	req4 := &grpc.RequestProductById{
-		Id: createdProductId,
+	req4 := &grpc.RequestProduct{
+		Id:         createdProductId,
+		MerchantId: merchantId,
 	}
 
 	err = suite.service.DeleteProduct(context.TODO(), req4, &grpc.EmptyResponse{})
@@ -199,8 +204,9 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 
 	// Product not found after deletion
 
-	req5 := &grpc.RequestProductById{
-		Id: createdProductId,
+	req5 := &grpc.RequestProduct{
+		Id:         createdProductId,
+		MerchantId: merchantId,
 	}
 	err = suite.service.GetProduct(context.TODO(), req5, &grpc.Product{})
 
@@ -220,6 +226,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		LongDescription: map[string]string{"en": "Ultra game steam keys"},
 		Url:             "http://mygame.ru/duoble_yeti",
 		Images:          []string{"/home/image.jpg"},
+		MerchantId:      merchantId,
 		Metadata: map[string]string{
 			"SomeKey": "SomeValue",
 		},
@@ -253,6 +260,7 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 			DefaultCurrency: "USD",
 			Enabled:         true,
 			Description:     map[string]string{"en": n + " description"},
+			MerchantId:      merchantId,
 		}
 
 		req.Prices = append(req.Prices, &grpc.ProductPrice{
@@ -268,7 +276,8 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	res := grpc.ListProductsResponse{}
 
 	err := suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
-		Limit: 2,
+		MerchantId: merchantId,
+		Limit:      2,
 	}, &res)
 
 	assert.NoError(suite.T(), err)
@@ -281,8 +290,9 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	res2 := grpc.ListProductsResponse{}
 
 	err = suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
-		Limit:  2,
-		Offset: 1,
+		MerchantId: merchantId,
+		Limit:      2,
+		Offset:     1,
 	}, &res2)
 
 	assert.NoError(suite.T(), err)
@@ -293,8 +303,9 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	res3 := grpc.ListProductsResponse{}
 
 	err = suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
-		Limit: 2,
-		Name:  "cAr",
+		MerchantId: merchantId,
+		Limit:      2,
+		Name:       "cAr",
 	}, &res3)
 
 	assert.NoError(suite.T(), err)
@@ -305,8 +316,9 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	res4 := grpc.ListProductsResponse{}
 
 	err = suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
-		Limit: 2,
-		Name:  "Cars M",
+		MerchantId: merchantId,
+		Limit:      2,
+		Name:       "Cars M",
 	}, &res4)
 
 	assert.NoError(suite.T(), err)
@@ -317,8 +329,9 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	res5 := grpc.ListProductsResponse{}
 
 	err = suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
-		Limit: 2,
-		Sku:   "_cars_",
+		MerchantId: merchantId,
+		Limit:      2,
+		Sku:        "_cars_",
 	}, &res5)
 
 	assert.NoError(suite.T(), err)
@@ -329,9 +342,10 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	res6 := grpc.ListProductsResponse{}
 
 	err = suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
-		Limit: 2,
-		Name:  "cAr",
-		Sku:   "ru_0_",
+		MerchantId: merchantId,
+		Limit:      2,
+		Name:       "cAr",
+		Sku:        "ru_0_",
 	}, &res6)
 
 	assert.NoError(suite.T(), err)

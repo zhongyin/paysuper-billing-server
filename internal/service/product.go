@@ -21,7 +21,7 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 		req.Id = bson.NewObjectId().Hex()
 		req.CreatedAt = now
 	} else {
-		err = s.GetProduct(ctx, &grpc.RequestProductById{Id: req.Id}, product)
+		err = s.GetProduct(ctx, &grpc.RequestProduct{Id: req.Id, MerchantId: req.MerchantId}, product)
 		if err != nil {
 			s.logError("Product that requested to change is not found", []interface{}{"err", err.Error(), "data", req})
 			return err
@@ -63,13 +63,14 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 	res.CreatedAt = req.CreatedAt
 	res.UpdatedAt = req.UpdatedAt
 	res.Deleted = req.Deleted
+	res.MerchantId = req.MerchantId
 
 	return nil
 }
 
 func (s *Service) ListProducts(ctx context.Context, req *grpc.ListProductsRequest, res *grpc.ListProductsResponse) error {
 
-	query := bson.M{"deleted": false}
+	query := bson.M{"merchant_id": bson.ObjectIdHex(req.MerchantId), "deleted": false}
 
 	if req.Sku != "" {
 		query["sku"] = bson.RegEx{req.Sku, "i"}
@@ -106,9 +107,13 @@ func (s *Service) ListProducts(ctx context.Context, req *grpc.ListProductsReques
 	return nil
 }
 
-func (s *Service) GetProduct(ctx context.Context, req *grpc.RequestProductById, res *grpc.Product) error {
+func (s *Service) GetProduct(ctx context.Context, req *grpc.RequestProduct, res *grpc.Product) error {
 
-	query := bson.M{"_id": bson.ObjectIdHex(req.Id), "deleted": false}
+	query := bson.M{
+		"_id":         bson.ObjectIdHex(req.Id),
+		"merchant_id": bson.ObjectIdHex(req.MerchantId),
+		"deleted":     false,
+	}
 	err := s.db.Collection(pkg.CollectionProduct).Find(query).One(&res)
 
 	if err != nil {
@@ -119,11 +124,11 @@ func (s *Service) GetProduct(ctx context.Context, req *grpc.RequestProductById, 
 	return nil
 }
 
-func (s *Service) DeleteProduct(ctx context.Context, req *grpc.RequestProductById, res *grpc.EmptyResponse) error {
+func (s *Service) DeleteProduct(ctx context.Context, req *grpc.RequestProduct, res *grpc.EmptyResponse) error {
 
 	product := &grpc.Product{}
 
-	err := s.GetProduct(ctx, &grpc.RequestProductById{Id: req.Id}, product)
+	err := s.GetProduct(ctx, &grpc.RequestProduct{Id: req.Id, MerchantId: req.MerchantId}, product)
 	if err != nil {
 		s.logError("Product that requested to delete is not found", []interface{}{"err", err.Error(), "data", req})
 		return err
