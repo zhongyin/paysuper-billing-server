@@ -405,7 +405,7 @@ message Product {
     string url = 14;
     //@inject_tag: json:"metadata"
     map<string, string> metadata = 15;
-    //@inject_tag: json:"deleted" bson:"deleted"
+    //@inject_tag: json:"-" bson:"deleted"
     bool deleted = 16;
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"-" bson:"merchant_id"
     string merchant_id = 17;
