@@ -134,40 +134,51 @@ message ProjectOrder {
 }
 
 message MerchantContact {
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required" json:"authorized"
     MerchantContactAuthorized authorized = 1;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required" json:"technical"
     MerchantContactTechnical technical = 2;
 }
 
 message MerchantContactTechnical {
+    // @inject_tag: json:"name"
     string name = 1;
-    // @inject_tag: validate:"omitempty,email"
+    // @inject_tag: validate:"omitempty,email" json:"email"
     string email = 2;
-    // @inject_tag: validate:"omitempty,phone"
+    // @inject_tag: validate:"omitempty,phone" json:"phone"
     string phone = 3;
 }
 
 message MerchantContactAuthorized {
+    // @inject_tag: json:"name"
     string name = 1;
-    // @inject_tag: validate:"omitempty,email"
+    // @inject_tag: validate:"omitempty,email" json:"email"
     string email = 2;
-    // @inject_tag: validate:"omitempty,phone"
+    // @inject_tag: validate:"omitempty,phone" json:"phone"
     string phone = 3;
+    // @inject_tag: json:"position"
     string position = 4;
 }
 
 message MerchantBanking {
+    // @inject_tag: json:"currency"
     Currency currency = 1;
+    // @inject_tag: json:"name"
     string name = 2;
+    // @inject_tag: json:"address"
     string address = 3;
+    // @inject_tag: json:"account_number"
     string account_number = 4;
+    // @inject_tag: json:"swift"
     string swift = 5;
+    // @inject_tag: json:"details"
     string details = 6;
 }
 
 message MerchantLastPayout {
+    // @inject_tag: json:"date"
     google.protobuf.Timestamp date = 1;
+    // @inject_tag: json:"amount"
     double amount = 2;
 }
 
@@ -181,40 +192,58 @@ message MerchantUser {
 message Merchant {
     // @inject_tag: bson:"_id"
     string id = 1;
+    // @inject_tag: json:"user"
     MerchantUser user = 2;
+    // @inject_tag: json:"name"
     string name = 4;
+    // @inject_tag: json:"alternative_name"
     string alternative_name = 5;
+    // @inject_tag: json:"website"
     string website = 6;
+    // @inject_tag: json:"country"
     Country country = 7;
+    // @inject_tag: json:"state"
     string state = 8;
+    // @inject_tag: json:"zip"
     string zip = 9;
+    // @inject_tag: json:"city"
     string city = 10;
+    // @inject_tag: json:"address"
     string address = 11;
+    // @inject_tag: json:"address_additional"
     string address_additional = 12;
+    // @inject_tag: json:"registration_number"
     string registration_number = 13;
+    // @inject_tag: json:"tax_id"
     string tax_id = 14;
+    // @inject_tag: json:"contacts"
     MerchantContact contacts = 15;
+    // @inject_tag: json:"banking"
     MerchantBanking banking = 16;
-    // @inject_tag: bson:"status"
+    // @inject_tag: json:"status"
     int32 status = 17;
-    // @inject_tag: bson:"created_at"
+    // @inject_tag: json:"created_at"
     google.protobuf.Timestamp created_at = 18;
-    // @inject_tag: bson:"updated_at"
+    // @inject_tag: json:"updated_at"
     google.protobuf.Timestamp updated_at = 19;
-    // @inject_tag: bson:"first_payment_at"
+    // @inject_tag: json:"first_payment_at"
     google.protobuf.Timestamp first_payment_at = 20;
     // @inject_tag: json:"-"
     bool is_vat_enabled = 21;
     // @inject_tag: json:"-"
     bool is_commission_to_user_enabled = 22;
-    // @inject_tag: json:"-"
+    // @inject_tag: json:"has_merchant_signature"
     bool has_merchant_signature = 23;
-    // @inject_tag: json:"-"
+    // @inject_tag: json:"has_psp_signature"
     bool has_psp_signature = 24;
     // @inject_tag: json:"last_payout"
     MerchantLastPayout last_payout = 25;
+    // @inject_tag: json:"is_signed"
     bool is_signed = 26;
+    // @inject_tag: json:"payment_methods"
     map<string, MerchantPaymentMethod> payment_methods = 28;
+    // @inject_tag: json:"agreement_type"
+    int32 agreement_type = 29;
 }
 
 message Notification {
@@ -547,15 +576,15 @@ message PaymentMethod {
 }
 
 message Country {
-    // @inject_tag: bson:"code_int"
+    // @inject_tag: bson:"code_int" json:"code_int"
     int32 code_int = 1;
-    // @inject_tag: bson:"code_a2"
+    // @inject_tag: bson:"code_a2" json:"code_a2"
     string code_a2 = 2;
-    // @inject_tag: bson:"code_a3"
+    // @inject_tag: bson:"code_a3" json:"code_a3"
     string code_a3 = 3;
-    // @inject_tag: bson:"name"
+    // @inject_tag: bson:"name" json:"name"
     Name name = 4;
-    // @inject_tag: bson:"is_active"
+    // @inject_tag: bson:"is_active" json:"is_active"
     bool is_active = 5;
     // @inject_tag: bson:"created_at"
     google.protobuf.Timestamp created_at = 6;
@@ -629,29 +658,34 @@ message PaymentFormPaymentMethod {
 }
 
 message MerchantPaymentMethodPerTransactionCommission {
-    // @inject_tag: validate:"omitempty,numeric,gte=0"
+    // @inject_tag: validate:"omitempty,numeric,gte=0" json:"fee"
     double fee = 1;
+    // @inject_tag: json:"currency"
     string currency = 2;
 }
 
 message MerchantPaymentMethodCommissions {
-    // @inject_tag: validate:"omitempty,numeric,gte=0,lte=100"
+    // @inject_tag: validate:"omitempty,numeric,gte=0,lte=100" json:"fee"
     double fee = 1;
-    // @inject_tag: validate:"required,dive"
+    // @inject_tag: validate:"required" json:"per_transaction"
     MerchantPaymentMethodPerTransactionCommission per_transaction = 2;
 }
 
 message MerchantPaymentMethodIntegration {
+    // @inject_tag: json:"terminal_id"
     string terminal_id = 1;
+    // @inject_tag: json:"terminal_password"
     string terminal_password = 2;
+    // @inject_tag: json:"terminal_callback_password"
     string terminal_callback_password = 3;
+    // @inject_tag: json:"integrated"
     bool integrated = 4;
 }
 
 message MerchantPaymentMethodIdentification {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
+    // @inject_tag: validate:"required,hexadecimal,len=24" json:"id"
     string id = 1;
-    // @inject_tag: validate:"required"
+    // @inject_tag: validate:"required" json:"name"
     string name = 2;
 }
 
