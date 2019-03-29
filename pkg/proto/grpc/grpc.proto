@@ -409,6 +409,8 @@ message Product {
     bool deleted = 16;
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"-" bson:"merchant_id"
     string merchant_id = 17;
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"project_id" bson:"project_id"
+    string project_id = 18;
 }
 
 message ProductPrice {
@@ -429,6 +431,8 @@ message ListProductsRequest {
     int32 offset = 4;
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"merchant_id" bson:"merchant_id"
     string merchant_id = 5;
+    //@inject_tag: validate:"omitempty,hexadecimal,len=24" json:"project_id" bson:"project_id"
+    string project_id = 6;
 }
 message ListProductsResponse {
     // @inject_tag: json:"limit"

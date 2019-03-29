@@ -22,6 +22,7 @@ var (
 	initialName      = "Double Yeti"
 	newName          = "Double Yeti Reload"
 	merchantId       = "5bdc35de5d1e1100019fb7db"
+	projectId        = "5bdc39a95d1e1100019fb7df"
 )
 
 type ProductTestSuite struct {
@@ -119,6 +120,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		Url:             "http://test.ru/dffdsfsfs",
 		Images:          []string{"/home/image.jpg"},
 		MerchantId:      merchantId,
+		ProjectId:       projectId,
 		Metadata: map[string]string{
 			"SomeKey": "SomeValue",
 		},
@@ -169,6 +171,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		Url:             "http://mygame.ru/duoble_yeti",
 		Images:          []string{"/home/image.jpg"},
 		MerchantId:      merchantId,
+		ProjectId:       projectId,
 		Metadata: map[string]string{
 			"SomeKey": "SomeValue",
 		},
@@ -190,6 +193,37 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), res3.Name["en"], newName)
 	assert.Equal(suite.T(), len(res3.Prices), 2)
+
+	// Attempt to create yet another active product with the same projectId+Sku
+
+	req31 := &grpc.Product{
+		Object:          "product",
+		Type:            "simple_product",
+		Sku:             "ru_double_yeti_rel",
+		Name:            map[string]string{"en": initialName},
+		DefaultCurrency: "USD",
+		Enabled:         true,
+		Description:     map[string]string{"en": "blah-blah-blah"},
+		LongDescription: map[string]string{"en": "Super game steam keys"},
+		Url:             "http://test.ru/dffdsfsfs",
+		Images:          []string{"/home/image.jpg"},
+		MerchantId:      merchantId,
+		ProjectId:       projectId,
+		Metadata: map[string]string{
+			"SomeKey": "SomeValue",
+		},
+	}
+
+	req31.Prices = append(req31.Prices, &grpc.ProductPrice{
+		Currency: "USD",
+		Amount:   1005.00,
+	})
+
+	res31 := grpc.Product{}
+
+	err = suite.service.CreateOrUpdateProduct(context.TODO(), req31, &res31)
+
+	assert.Error(suite.T(), err)
 
 	// Delete product Ok
 
@@ -227,6 +261,7 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 		Url:             "http://mygame.ru/duoble_yeti",
 		Images:          []string{"/home/image.jpg"},
 		MerchantId:      merchantId,
+		ProjectId:       projectId,
 		Metadata: map[string]string{
 			"SomeKey": "SomeValue",
 		},
@@ -244,6 +279,39 @@ func (suite *ProductTestSuite) TestProduct_CRUDProduct_Ok() {
 	err = suite.service.CreateOrUpdateProduct(context.TODO(), req6, &grpc.Product{})
 
 	assert.Error(suite.T(), err)
+
+	// But now we CAN create another product with the same projectId+Sku
+
+	req7 := &grpc.Product{
+		Object:          "product",
+		Type:            "simple_product",
+		Sku:             "ru_double_yeti",
+		Name:            map[string]string{"en": initialName},
+		DefaultCurrency: "USD",
+		Enabled:         true,
+		Description:     map[string]string{"en": "blah-blah-blah"},
+		LongDescription: map[string]string{"en": "Super game steam keys"},
+		Url:             "http://test.ru/dffdsfsfs",
+		Images:          []string{"/home/image.jpg"},
+		MerchantId:      merchantId,
+		ProjectId:       projectId,
+		Metadata: map[string]string{
+			"SomeKey": "SomeValue",
+		},
+	}
+
+	req7.Prices = append(req7.Prices, &grpc.ProductPrice{
+		Currency: "USD",
+		Amount:   1005.00,
+	})
+
+	res7 := grpc.Product{}
+
+	err = suite.service.CreateOrUpdateProduct(context.TODO(), req7, &res7)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), res7.Name["en"], initialName)
+	assert.Equal(suite.T(), len(res7.Prices), 1)
 }
 
 func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
@@ -261,6 +329,7 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 			Enabled:         true,
 			Description:     map[string]string{"en": n + " description"},
 			MerchantId:      merchantId,
+			ProjectId:       projectId,
 		}
 
 		req.Prices = append(req.Prices, &grpc.ProductPrice{
@@ -350,4 +419,18 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), res6.Total, int32(1))
+
+	// search both by name and project_id
+
+	res7 := grpc.ListProductsResponse{}
+
+	err = suite.service.ListProducts(context.TODO(), &grpc.ListProductsRequest{
+		MerchantId: merchantId,
+		Limit:      2,
+		Name:       "cAr",
+		ProjectId:  projectId,
+	}, &res7)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), res7.Total, int32(3))
 }

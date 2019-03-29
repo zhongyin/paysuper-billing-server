@@ -29,6 +29,7 @@ type MgoProduct struct {
 	Metadata        map[string]string     `bson:"metadata,omitempty" json:"metadata"`
 	Deleted         bool                  `bson:"deleted" json:"deleted"`
 	MerchantId      bson.ObjectId         `bson:"merchant_id" json:"-"`
+	ProjectId       bson.ObjectId         `bson:"project_id" json:"project_id"`
 }
 
 func (p *Product) SetBSON(raw bson.Raw) error {
@@ -53,6 +54,7 @@ func (p *Product) SetBSON(raw bson.Raw) error {
 	p.Metadata = decoded.Metadata
 	p.Deleted = decoded.Deleted
 	p.MerchantId = decoded.MerchantId.Hex()
+	p.ProjectId = decoded.ProjectId.Hex()
 
 	p.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 
@@ -100,14 +102,24 @@ func (p *Product) GetBSON() (interface{}, error) {
 		st.Id = bson.ObjectIdHex(p.Id)
 	}
 
-	if len(p.Id) <= 0 {
+	if len(p.MerchantId) <= 0 {
 		return nil, errors.New(errorInvalidObjectId)
 	} else {
-		if bson.IsObjectIdHex(p.Id) == false {
+		if bson.IsObjectIdHex(p.MerchantId) == false {
 			return nil, errors.New(errorInvalidObjectId)
 		}
 
 		st.MerchantId = bson.ObjectIdHex(p.MerchantId)
+	}
+
+	if len(p.ProjectId) <= 0 {
+		return nil, errors.New(errorInvalidObjectId)
+	} else {
+		if bson.IsObjectIdHex(p.ProjectId) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.ProjectId = bson.ObjectIdHex(p.ProjectId)
 	}
 
 	if p.CreatedAt != nil {

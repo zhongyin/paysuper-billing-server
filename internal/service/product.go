@@ -26,6 +26,17 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 			s.logError("Product that requested to change is not found", []interface{}{"err", err.Error(), "data", req})
 			return err
 		}
+
+		if req.MerchantId != product.MerchantId {
+			s.logError("MerchantId mismatch", []interface{}{"data", req})
+			return errors.New("merchantId mismatch")
+		}
+
+		if req.ProjectId != product.ProjectId {
+			s.logError("ProjectId mismatch", []interface{}{"data", req})
+			return errors.New("projectId mismatch")
+		}
+
 		req.CreatedAt = product.CreatedAt
 	}
 	req.UpdatedAt = now
@@ -34,6 +45,22 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 	if !req.IsPricesContainDefaultCurrency() {
 		s.logError("No price in default currency", []interface{}{"data", req})
 		return errors.New("no price in default currency")
+	}
+
+	// Prevent duplicated products (by projectId+sku)
+	dupQuery := bson.M{"project_id": bson.ObjectIdHex(req.ProjectId), "sku": req.Sku, "deleted": false}
+	found, err := s.db.Collection(pkg.CollectionProduct).Find(dupQuery).Count()
+	if err != nil {
+		s.logError("Query to find duplicates failed", []interface{}{"err", err.Error(), "req", req})
+		return err
+	}
+	allowed := 1
+	if isNew {
+		allowed = 0
+	}
+	if found > allowed {
+		s.logError("Pair projectId+Sku already exists", []interface{}{"data", req})
+		return errors.New("pair projectId+Sku already exists")
 	}
 
 	if isNew {
@@ -64,6 +91,7 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 	res.UpdatedAt = req.UpdatedAt
 	res.Deleted = req.Deleted
 	res.MerchantId = req.MerchantId
+	res.ProjectId = req.ProjectId
 
 	return nil
 }
@@ -71,6 +99,10 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 func (s *Service) ListProducts(ctx context.Context, req *grpc.ListProductsRequest, res *grpc.ListProductsResponse) error {
 
 	query := bson.M{"merchant_id": bson.ObjectIdHex(req.MerchantId), "deleted": false}
+
+	if req.ProjectId != "" {
+		query["project_id"] = bson.ObjectIdHex(req.ProjectId)
+	}
 
 	if req.Sku != "" {
 		query["sku"] = bson.RegEx{req.Sku, "i"}
