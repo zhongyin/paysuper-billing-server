@@ -51,6 +51,8 @@ It has these top-level messages:
 	MerchantPaymentMethod
 	RefundPayerData
 	Refund
+	CustomerHistory
+	Customer
 */
 package billing
 

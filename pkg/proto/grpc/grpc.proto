@@ -39,6 +39,8 @@ service BillingService {
     rpc PaymentFormLanguageChanged (PaymentFormUserChangeLangRequest) returns (PaymentFormDataChangeResponse) {}
     rpc PaymentFormPaymentAccountChanged (PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
     rpc ProcessBillingAddress (ProcessBillingAddressRequest) returns (ProcessBillingAddressResponse) {}
+
+    rpc ChangeCustomer(billing.Customer) returns (billing.Customer) {}
 }
 
 message EmptyRequest {

@@ -71,7 +71,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.MerchantPaymentMethod{}
+var _ = billing.Customer{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -114,6 +114,7 @@ type BillingService interface {
 	PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error)
+	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error)
 }
 
 type billingService struct {
@@ -404,6 +405,16 @@ func (c *billingService) ProcessBillingAddress(ctx context.Context, in *ProcessB
 	return out, nil
 }
 
+func (c *billingService) ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ChangeCustomer", in)
+	out := new(billing.Customer)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -434,6 +445,7 @@ type BillingServiceHandler interface {
 	PaymentFormLanguageChanged(context.Context, *PaymentFormUserChangeLangRequest, *PaymentFormDataChangeResponse) error
 	PaymentFormPaymentAccountChanged(context.Context, *PaymentFormUserChangePaymentAccountRequest, *PaymentFormDataChangeResponse) error
 	ProcessBillingAddress(context.Context, *ProcessBillingAddressRequest, *ProcessBillingAddressResponse) error
+	ChangeCustomer(context.Context, *billing.Customer, *billing.Customer) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -465,6 +477,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, out *PaymentFormDataChangeResponse) error
 		PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, out *PaymentFormDataChangeResponse) error
 		ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error
+		ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error
 	}
 	type BillingService struct {
 		billingService
@@ -583,4 +596,8 @@ func (h *billingServiceHandler) PaymentFormPaymentAccountChanged(ctx context.Con
 
 func (h *billingServiceHandler) ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error {
 	return h.BillingServiceHandler.ProcessBillingAddress(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error {
+	return h.BillingServiceHandler.ChangeCustomer(ctx, in, out)
 }

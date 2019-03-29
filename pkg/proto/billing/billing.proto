@@ -716,3 +716,46 @@ message Refund {
     RefundPayerData payer_data = 11;
     float sales_tax = 12;
 }
+
+message CustomerHistory {
+    string id = 1;
+    string user_id = 2;
+    map<string, string> changes = 3;
+    google.protobuf.Timestamp created_at = 4;
+}
+
+message Customer {
+    string id = 1;
+    // @inject_tag: json:"token"
+    string token = 2;
+    // @inject_tag: json:"-"
+    string project_id = 3;
+    // @inject_tag: json:"-"
+    string merchant_id = 4;
+    // @inject_tag: json:"external_id"
+    string external_id = 5;
+    // @inject_tag: json:"name"
+    string name = 6;
+    // @inject_tag: json:"email"
+    string email = 7;
+    // @inject_tag: json:"email_verified"
+    bool email_verified = 8;
+    // @inject_tag: json:"phone"
+    string phone = 9;
+    // @inject_tag: json:"phone_verified"
+    bool phone_verified = 10;
+    // @inject_tag: json:"ip"
+    string ip = 11;
+    // @inject_tag: json:"locale"
+    string locale = 12;
+    // @inject_tag: json:"address"
+    OrderBillingAddress address = 13;
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 14;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp expire_at = 15;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp created_at = 16;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp updated_at = 17;
+}
