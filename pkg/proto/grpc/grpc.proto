@@ -21,6 +21,7 @@ service BillingService {
     rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
+    rpc ProcessMerchantAgreement (SignMerchantRequest) returns (ChangeMerchantAgreementTypeResponse) {}
 
     rpc CreateNotification (NotificationRequest) returns (billing.Notification) {}
     rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {}
@@ -366,4 +367,13 @@ message ChangeMerchantAgreementTypeResponse {
     int32 status = 1;
     string message = 2;
     billing.Merchant item = 3;
+}
+
+message SignMerchantRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    bool has_merchant_signature = 2;
+    bool has_psp_signature = 3;
+    bool agreement_sent_via_mail = 4;
+    string mail_tracking_link = 5;
 }

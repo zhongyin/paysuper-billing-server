@@ -232,9 +232,9 @@ message Merchant {
     bool is_vat_enabled = 21;
     // @inject_tag: json:"-"
     bool is_commission_to_user_enabled = 22;
-    // @inject_tag: json:"has_merchant_signature"
+    // @inject_tag: json:"-"
     bool has_merchant_signature = 23;
-    // @inject_tag: json:"has_psp_signature"
+    // @inject_tag: json:"-"
     bool has_psp_signature = 24;
     // @inject_tag: json:"last_payout"
     MerchantLastPayout last_payout = 25;
@@ -244,6 +244,10 @@ message Merchant {
     map<string, MerchantPaymentMethod> payment_methods = 28;
     // @inject_tag: json:"agreement_type"
     int32 agreement_type = 29;
+    // @inject_tag: json:"agreement_sent_via_mail"
+    bool agreement_sent_via_mail = 30;
+    // @inject_tag: json:"mail_tracking_link"
+    string mail_tracking_link = 31;
 }
 
 message Notification {

@@ -84,6 +84,8 @@ const (
 	PaymentSystemErrorCreateRefundRejected = "refund create request rejected"
 
 	PaymentSystemHandlerCardPay = "cardpay"
+
+	MerchantAgreementTypeESign = 2
 )
 
 var (
