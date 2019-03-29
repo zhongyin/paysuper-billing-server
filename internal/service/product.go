@@ -63,11 +63,7 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 		return errors.New("pair projectId+Sku already exists")
 	}
 
-	if isNew {
-		err = s.db.Collection(pkg.CollectionProduct).Insert(req)
-	} else {
-		err = s.db.Collection(pkg.CollectionProduct).UpdateId(bson.ObjectIdHex(req.Id), req)
-	}
+	_, err = s.db.Collection(pkg.CollectionProduct).UpsertId(bson.ObjectIdHex(req.Id), req)
 
 	if err != nil {
 		s.logError("Query to create/update product failed", []interface{}{"err", err.Error(), "data", req})

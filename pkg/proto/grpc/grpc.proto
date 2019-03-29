@@ -377,40 +377,41 @@ message ChangeMerchantAgreementTypeResponse {
 message Product {
     //@inject_tag: validate:"omitempty,hexadecimal,len=24" json:"id" bson:"_id"
     string id = 1;
-    //@inject_tag: validate:"required" json:"object"
-    string object = 2;
-    //@inject_tag: validate:"required" json:"type"
-    string type = 3;
-    //@inject_tag: validate:"required" json:"sku" bson:"sku"
-    string sku = 4;
-    //@inject_tag: validate:"required" json:"name"
-    map<string, string> name = 5;
-    //@inject_tag: validate:"required,alpha,len=3" json:"default_currency"
-    string default_currency = 6;
-    //@inject_tag: validate:"required" json:"enabled"
-    bool enabled = 7;
-    //@inject_tag: validate:"required,min=1,dive" json:"prices"
-    repeated ProductPrice prices = 8;
-    //@inject_tag: validate:"required" json:"description"
-    map<string, string> description = 9;
-    //@inject_tag: validate:"omitempty" json:"long_description"
-    map<string, string> long_description = 10;
-    //@inject_tag: json:"created_at"
-    google.protobuf.Timestamp created_at = 11;
-    //@inject_tag: json:"updated_at"
-    google.protobuf.Timestamp updated_at = 12;
-    //@inject_tag: validate:"dive,omitempty,uri" json:"images"
-    repeated string images = 13;
-    //@inject_tag: validate:"omitempty,url" json:"url"
-    string url = 14;
-    //@inject_tag: json:"metadata"
-    map<string, string> metadata = 15;
-    //@inject_tag: json:"-" bson:"deleted"
-    bool deleted = 16;
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"-" bson:"merchant_id"
-    string merchant_id = 17;
+    string merchant_id = 2;
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"project_id" bson:"project_id"
-    string project_id = 18;
+    string project_id = 3;
+    //@inject_tag: validate:"required" json:"object"
+    string object = 4;
+    //@inject_tag: validate:"required" json:"type"
+    string type = 5;
+    //@inject_tag: validate:"required" json:"sku" bson:"sku"
+    string sku = 6;
+    //@inject_tag: validate:"required" json:"name"
+    map<string, string> name = 7;
+    //@inject_tag: validate:"required,alpha,len=3" json:"default_currency"
+    string default_currency = 8;
+    //@inject_tag: validate:"required" json:"enabled"
+    bool enabled = 9;
+    //@inject_tag: validate:"required,min=1,dive" json:"prices"
+    repeated ProductPrice prices = 10;
+    //@inject_tag: validate:"required" json:"description"
+    map<string, string> description = 11;
+    //@inject_tag: validate:"omitempty" json:"long_description"
+    map<string, string> long_description = 12;
+    //@inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 13;
+    //@inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 14;
+    //@inject_tag: validate:"dive,omitempty,uri" json:"images"
+    repeated string images = 15;
+    //@inject_tag: validate:"omitempty,url" json:"url"
+    string url = 16;
+    //@inject_tag: json:"metadata"
+    map<string, string> metadata = 17;
+    //@inject_tag: json:"-" bson:"deleted"
+    bool deleted = 18;
+
 }
 
 message ProductPrice {
