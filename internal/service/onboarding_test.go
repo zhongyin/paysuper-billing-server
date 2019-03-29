@@ -202,7 +202,11 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Generate merchant date failed")
 
 	merchantAgreement := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
+		Id: bson.NewObjectId().Hex(),
+		User: &billing.MerchantUser{
+			Id:    uuid.New().String(),
+			Email: "test_agreement@unit.test",
+		},
 		Name:    "Unit test status Agreement",
 		Country: country,
 		Zip:     "190000",
@@ -234,7 +238,11 @@ func (suite *OnboardingTestSuite) SetupTest() {
 		IsSigned: true,
 	}
 	merchant1 := &billing.Merchant{
-		Id:      bson.NewObjectId().Hex(),
+		Id: bson.NewObjectId().Hex(),
+		User: &billing.MerchantUser{
+			Id:    uuid.New().String(),
+			Email: "test_merchant1@unit.test",
+		},
 		Name:    "merchant1",
 		Country: country,
 		Zip:     "190000",
@@ -662,6 +670,19 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_NameQuery_Ok() {
 	assert.Nil(suite.T(), err)
 	assert.Len(suite.T(), rsp.Merchants, 2)
 	assert.Equal(suite.T(), suite.merchant.Id, rsp.Merchants[0].Id)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_QuickSearchQuery_Ok() {
+	req := &grpc.MerchantListingRequest{
+		QuickSearch: "test_agreement",
+	}
+	rsp := &grpc.Merchants{}
+
+	err := suite.service.ListMerchants(context.TODO(), req, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.Len(suite.T(), rsp.Merchants, 1)
+	assert.Equal(suite.T(), suite.merchantAgreement.Id, rsp.Merchants[0].Id)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_PayoutDateFromQuery_Ok() {

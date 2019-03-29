@@ -89,37 +89,43 @@ func (s *Service) GetMerchantBy(
 
 func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRequest, rsp *grpc.Merchants) error {
 	var merchants []*billing.Merchant
-
 	query := make(bson.M)
 
-	if req.Name != "" {
-		query["name"] = bson.RegEx{Pattern: ".*" + req.Name + ".*", Options: "i"}
-	}
-
-	if req.LastPayoutDateFrom > 0 || req.LastPayoutDateTo > 0 {
-		payoutDates := make(bson.M)
-
-		if req.LastPayoutDateFrom > 0 {
-			payoutDates["$gte"] = time.Unix(req.LastPayoutDateFrom, 0)
+	if req.QuickSearch != "" {
+		query["$or"] = []bson.M{
+			{"name": bson.RegEx{Pattern: ".*" + req.QuickSearch + ".*", Options: "i"}},
+			{"user.email": bson.RegEx{Pattern: ".*" + req.QuickSearch + ".*", Options: "i"}},
+		}
+	} else {
+		if req.Name != "" {
+			query["name"] = bson.RegEx{Pattern: ".*" + req.Name + ".*", Options: "i"}
 		}
 
-		if req.LastPayoutDateTo > 0 {
-			payoutDates["$lte"] = time.Unix(req.LastPayoutDateTo, 0)
+		if req.LastPayoutDateFrom > 0 || req.LastPayoutDateTo > 0 {
+			payoutDates := make(bson.M)
+
+			if req.LastPayoutDateFrom > 0 {
+				payoutDates["$gte"] = time.Unix(req.LastPayoutDateFrom, 0)
+			}
+
+			if req.LastPayoutDateTo > 0 {
+				payoutDates["$lte"] = time.Unix(req.LastPayoutDateTo, 0)
+			}
+
+			query["last_payout.date"] = payoutDates
 		}
 
-		query["last_payout.date"] = payoutDates
-	}
-
-	if req.IsSigned > 0 {
-		if req.IsSigned == 1 {
-			query["is_signed"] = false
-		} else {
-			query["is_signed"] = true
+		if req.IsSigned > 0 {
+			if req.IsSigned == 1 {
+				query["is_signed"] = false
+			} else {
+				query["is_signed"] = true
+			}
 		}
-	}
 
-	if req.LastPayoutAmount > 0 {
-		query["last_payout.amount"] = req.LastPayoutAmount
+		if req.LastPayoutAmount > 0 {
+			query["last_payout.amount"] = req.LastPayoutAmount
+		}
 	}
 
 	err := s.db.Collection(pkg.CollectionMerchant).Find(query).Sort(req.Sort...).Limit(int(req.Limit)).
