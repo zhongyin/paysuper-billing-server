@@ -1789,7 +1789,7 @@ type Order struct {
 	ToPayerFeeAmount *OrderFee `protobuf:"bytes,34,opt,name=to_payer_fee_amount,json=toPayerFeeAmount,proto3" json:"to_payer_fee_amount,omitempty" bson:"to_payer_fee_amount" structure:"to_payer_fee_amount"`
 	// @inject_tag: bson:"vat_amount" structure:"vat_amount"
 	// @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
-	PaymentSystemFeeAmount *OrderFeePaymentSystem `protobuf:"bytes,36,opt,name=payment_system_fee_amount,json=paymentSystemFeeAmount,proto3" json:"payment_system_fee_amount,omitempty" bson:"ps_fee_amount" structure:"ps_fee_amount"`
+	PaymentSystemFeeAmount *OrderFeePaymentSystem `protobuf:"bytes,36,opt,name=payment_system_fee_amount,json=paymentSystemFeeAmount,proto3" json:"payment_system_fee_amount,omitempty" bson:"vat_amount" structure:"vat_amount"`
 	Tax                    *OrderTax              `protobuf:"bytes,37,opt,name=tax,proto3" json:"tax,omitempty"`
 	// @inject_tag: json:"-"
 	Uuid string `protobuf:"bytes,38,opt,name=uuid,proto3" json:"-"`
