@@ -17,7 +17,7 @@ service BillingService {
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
     rpc GetMerchantBy (GetMerchantByRequest) returns (MerchantGetMerchantResponse) {}
-    rpc ListMerchants (MerchantListingRequest) returns (Merchants) {}
+    rpc ListMerchants (MerchantListingRequest) returns (MerchantListingResponse) {}
     rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
@@ -161,8 +161,9 @@ message MerchantListingRequest {
     string quick_search = 9;
 }
 
-message Merchants {
-    repeated billing.Merchant merchants = 1;
+message MerchantListingResponse {
+    int32 count = 1;
+    repeated billing.Merchant items = 2;
 }
 
 message MerchantChangeStatusRequest {

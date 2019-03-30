@@ -88,7 +88,11 @@ func (s *Service) GetMerchantBy(
 	return nil
 }
 
-func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRequest, rsp *grpc.Merchants) error {
+func (s *Service) ListMerchants(
+	ctx context.Context,
+	req *grpc.MerchantListingRequest,
+	rsp *grpc.MerchantListingResponse,
+) error {
 	var merchants []*billing.Merchant
 	query := make(bson.M)
 
@@ -129,7 +133,14 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 		}
 	}
 
-	err := s.db.Collection(pkg.CollectionMerchant).Find(query).Sort(req.Sort...).Limit(int(req.Limit)).
+	count, err := s.db.Collection(pkg.CollectionMerchant).Find(query).Count()
+
+	if err != nil {
+		s.logError("Query to count merchants failed", []interface{}{"err", err.Error(), "query", query})
+		return errors.New(merchantErrorUnknown)
+	}
+
+	err = s.db.Collection(pkg.CollectionMerchant).Find(query).Sort(req.Sort...).Limit(int(req.Limit)).
 		Skip(int(req.Offset)).All(&merchants)
 
 	if err != nil {
@@ -137,8 +148,11 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 		return errors.New(merchantErrorUnknown)
 	}
 
+	rsp.Count = int32(count)
+	rsp.Items = []*billing.Merchant{}
+
 	if len(merchants) > 0 {
-		rsp.Merchants = merchants
+		rsp.Items = merchants
 	}
 
 	return nil
