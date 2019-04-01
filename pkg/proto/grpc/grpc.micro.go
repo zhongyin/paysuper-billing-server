@@ -55,12 +55,19 @@ It has these top-level messages:
 	ChangeMerchantAgreementTypeResponse
 	SignMerchantRequest
 	SetMerchantS3AgreementRequest
+	Product
+	ProductPrice
+	ListProductsRequest
+	ListProductsResponse
+	RequestProduct
+	I18NTextSearchable
 */
 package grpc
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import _ "github.com/golang/protobuf/ptypes/timestamp"
 import billing "github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 
 import (
@@ -118,6 +125,10 @@ type BillingService interface {
 	PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error)
+	CreateOrUpdateProduct(ctx context.Context, in *Product, opts ...client.CallOption) (*Product, error)
+	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error)
+	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
+	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
 type billingService struct {
@@ -428,6 +439,46 @@ func (c *billingService) ProcessBillingAddress(ctx context.Context, in *ProcessB
 	return out, nil
 }
 
+func (c *billingService) CreateOrUpdateProduct(ctx context.Context, in *Product, opts ...client.CallOption) (*Product, error) {
+	req := c.c.NewRequest(c.name, "BillingService.CreateOrUpdateProduct", in)
+	out := new(Product)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ListProducts", in)
+	out := new(ListProductsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetProduct", in)
+	out := new(Product)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.DeleteProduct", in)
+	out := new(EmptyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -460,6 +511,10 @@ type BillingServiceHandler interface {
 	PaymentFormLanguageChanged(context.Context, *PaymentFormUserChangeLangRequest, *PaymentFormDataChangeResponse) error
 	PaymentFormPaymentAccountChanged(context.Context, *PaymentFormUserChangePaymentAccountRequest, *PaymentFormDataChangeResponse) error
 	ProcessBillingAddress(context.Context, *ProcessBillingAddressRequest, *ProcessBillingAddressResponse) error
+	CreateOrUpdateProduct(context.Context, *Product, *Product) error
+	ListProducts(context.Context, *ListProductsRequest, *ListProductsResponse) error
+	GetProduct(context.Context, *RequestProduct, *Product) error
+	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -493,6 +548,10 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, out *PaymentFormDataChangeResponse) error
 		PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, out *PaymentFormDataChangeResponse) error
 		ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error
+		CreateOrUpdateProduct(ctx context.Context, in *Product, out *Product) error
+		ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error
+		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
+		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -619,4 +678,20 @@ func (h *billingServiceHandler) PaymentFormPaymentAccountChanged(ctx context.Con
 
 func (h *billingServiceHandler) ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error {
 	return h.BillingServiceHandler.ProcessBillingAddress(ctx, in, out)
+}
+
+func (h *billingServiceHandler) CreateOrUpdateProduct(ctx context.Context, in *Product, out *Product) error {
+	return h.BillingServiceHandler.CreateOrUpdateProduct(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error {
+	return h.BillingServiceHandler.ListProducts(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetProduct(ctx context.Context, in *RequestProduct, out *Product) error {
+	return h.BillingServiceHandler.GetProduct(ctx, in, out)
+}
+
+func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error {
+	return h.BillingServiceHandler.DeleteProduct(ctx, in, out)
 }
