@@ -2407,3 +2407,78 @@ func (suite *OnboardingTestSuite) TestOnboarding_ProcessMerchantAgreement_NotCor
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp1.Status)
 	assert.Equal(suite.T(), merchantErrorNotHaveAgreementType, rsp1.Message)
 }
+
+func (suite *OnboardingTestSuite) TestOnboarding_SetMerchantS3Agreement_Ok() {
+	req := &grpc.OnboardingRequest{
+		User: &billing.MerchantUser{
+			Id:    bson.NewObjectId().Hex(),
+			Email: "test@unit.test",
+		},
+		Name:               "Change status test",
+		AlternativeName:    "",
+		Website:            "https://unit.test",
+		Country:            "RU",
+		State:              "St.Petersburg",
+		Zip:                "190000",
+		City:               "St.Petersburg",
+		Address:            "",
+		AddressAdditional:  "",
+		RegistrationNumber: "",
+		TaxId:              "",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "1234567890",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "1234567890",
+			},
+		},
+		Banking: &grpc.OnboardingBanking{
+			Currency:      "RUB",
+			Name:          "Bank name",
+			Address:       "Unknown",
+			AccountNumber: "1234567890",
+			Swift:         "TEST",
+			Details:       "",
+		},
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
+	assert.Empty(suite.T(), rsp.S3AgreementName)
+
+	req1 := &grpc.SetMerchantS3AgreementRequest{
+		MerchantId:      rsp.Id,
+		S3AgreementName: "agreement_" + rsp.Id + ".pdf",
+	}
+	rsp1 := &grpc.ChangeMerchantAgreementTypeResponse{}
+	err = suite.service.SetMerchantS3Agreement(context.TODO(), req1, rsp1)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp1.Status)
+	assert.Empty(suite.T(), rsp1.Message)
+	assert.Equal(suite.T(), req1.S3AgreementName, rsp1.Item.S3AgreementName)
+
+	merchant1, err := suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), merchant1)
+	assert.Equal(suite.T(), req1.S3AgreementName, merchant1.S3AgreementName)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_SetMerchantS3Agreement_MerchantNotFound_Error() {
+	req1 := &grpc.SetMerchantS3AgreementRequest{
+		MerchantId:      bson.NewObjectId().Hex(),
+		S3AgreementName: "agreement_" + bson.NewObjectId().Hex() + ".pdf",
+	}
+	rsp1 := &grpc.ChangeMerchantAgreementTypeResponse{}
+	err := suite.service.SetMerchantS3Agreement(context.TODO(), req1, rsp1)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp1.Status)
+	assert.Equal(suite.T(), merchantErrorNotFound, rsp1.Message)
+}
