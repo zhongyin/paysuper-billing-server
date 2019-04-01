@@ -248,7 +248,6 @@ func (s *Service) ChangeMerchant(
 	merchant.Banking.Swift = req.Banking.Swift
 	merchant.Banking.Details = req.Banking.Details
 	merchant.UpdatedAt = ptypes.TimestampNow()
-	merchant.S3AgreementName = req.S3AgreementName
 
 	if isNew {
 		err = s.db.Collection(pkg.CollectionMerchant).Insert(merchant)
@@ -396,6 +395,35 @@ func (s *Service) ProcessMerchantAgreement(
 	if merchant.NeedMarkESignAgreementAsSigned() == true {
 		merchant.Status = pkg.MerchantStatusAgreementSigned
 	}
+
+	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
+
+	if err != nil {
+		s.logError("Query to change merchant data failed", []interface{}{"err", err.Error(), "data", merchant})
+		return errors.New(merchantErrorUnknown)
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = merchant
+
+	return nil
+}
+
+func (s *Service) SetMerchantS3Agreement(
+	ctx context.Context,
+	req *grpc.SetMerchantS3AgreementRequest,
+	rsp *grpc.ChangeMerchantAgreementTypeResponse,
+) error {
+	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = merchantErrorNotFound
+
+		return nil
+	}
+
+	merchant.S3AgreementName = req.S3AgreementName
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
 

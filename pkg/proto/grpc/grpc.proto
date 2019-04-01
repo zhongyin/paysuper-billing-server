@@ -23,6 +23,7 @@ service BillingService {
     rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
     rpc ProcessMerchantAgreement (SignMerchantRequest) returns (ChangeMerchantAgreementTypeResponse) {}
+    rpc SetMerchantS3Agreement (SetMerchantS3AgreementRequest) returns (ChangeMerchantAgreementTypeResponse) {}
 
     rpc CreateNotification (NotificationRequest) returns (billing.Notification) {}
     rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {}
@@ -149,8 +150,6 @@ message OnboardingRequest {
     billing.MerchantContact contacts = 14;
     // @inject_tag: validate:"required"
     OnboardingBanking banking = 15;
-    // @inject_tag: json:"-"
-    string s3_agreement_name = 32;
 }
 
 message FindByIdRequest {
@@ -385,6 +384,13 @@ message SignMerchantRequest {
     bool has_psp_signature = 3;
     bool agreement_sent_via_mail = 4;
     string mail_tracking_link = 5;
+}
+
+message SetMerchantS3AgreementRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: json:"-"
+    string s3_agreement_name = 2;
 }
 
 message Product {
