@@ -244,6 +244,12 @@ message Merchant {
     map<string, MerchantPaymentMethod> payment_methods = 28;
     // @inject_tag: json:"agreement_type"
     int32 agreement_type = 29;
+    // @inject_tag: json:"agreement_sent_via_mail"
+    bool agreement_sent_via_mail = 30;
+    // @inject_tag: json:"mail_tracking_link"
+    string mail_tracking_link = 31;
+    // @inject_tag: json:"-"
+    string s3_agreement_name = 32;
 }
 
 message Notification {

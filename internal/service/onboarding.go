@@ -26,6 +26,7 @@ const (
 	merchantErrorNotFound                    = "merchant with specified identifier not found"
 	merchantErrorBadData                     = "request data is incorrect"
 	merchantErrorAgreementTypeSelectNotAllow = "merchant status not allow select agreement type"
+	merchantErrorNotHaveAgreementType        = "merchant agreement can't be signing, because agreement type not selected"
 	notificationErrorMerchantIdIncorrect     = "merchant identifier incorrect, notification can't be saved"
 	notificationErrorUserIdIncorrect         = "user identifier incorrect, notification can't be saved"
 	notificationErrorMessageIsEmpty          = "notification message can't be empty"
@@ -87,7 +88,11 @@ func (s *Service) GetMerchantBy(
 	return nil
 }
 
-func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRequest, rsp *grpc.Merchants) error {
+func (s *Service) ListMerchants(
+	ctx context.Context,
+	req *grpc.MerchantListingRequest,
+	rsp *grpc.MerchantListingResponse,
+) error {
 	var merchants []*billing.Merchant
 	query := make(bson.M)
 
@@ -128,7 +133,14 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 		}
 	}
 
-	err := s.db.Collection(pkg.CollectionMerchant).Find(query).Sort(req.Sort...).Limit(int(req.Limit)).
+	count, err := s.db.Collection(pkg.CollectionMerchant).Find(query).Count()
+
+	if err != nil {
+		s.logError("Query to count merchants failed", []interface{}{"err", err.Error(), "query", query})
+		return errors.New(merchantErrorUnknown)
+	}
+
+	err = s.db.Collection(pkg.CollectionMerchant).Find(query).Sort(req.Sort...).Limit(int(req.Limit)).
 		Skip(int(req.Offset)).All(&merchants)
 
 	if err != nil {
@@ -136,8 +148,11 @@ func (s *Service) ListMerchants(ctx context.Context, req *grpc.MerchantListingRe
 		return errors.New(merchantErrorUnknown)
 	}
 
+	rsp.Count = int32(count)
+	rsp.Items = []*billing.Merchant{}
+
 	if len(merchants) > 0 {
-		rsp.Merchants = merchants
+		rsp.Items = merchants
 	}
 
 	return nil
@@ -233,6 +248,7 @@ func (s *Service) ChangeMerchant(
 	merchant.Banking.Swift = req.Banking.Swift
 	merchant.Banking.Details = req.Banking.Details
 	merchant.UpdatedAt = ptypes.TimestampNow()
+	merchant.S3AgreementName = req.S3AgreementName
 
 	if isNew {
 		err = s.db.Collection(pkg.CollectionMerchant).Insert(merchant)
@@ -337,6 +353,49 @@ func (s *Service) ChangeMerchantAgreementType(
 
 	merchant.Status = pkg.MerchantStatusAgreementSigning
 	merchant.AgreementType = req.AgreementType
+
+	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
+
+	if err != nil {
+		s.logError("Query to change merchant data failed", []interface{}{"err", err.Error(), "data", merchant})
+		return errors.New(merchantErrorUnknown)
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+	rsp.Item = merchant
+
+	return nil
+}
+
+func (s *Service) ProcessMerchantAgreement(
+	ctx context.Context,
+	req *grpc.SignMerchantRequest,
+	rsp *grpc.ChangeMerchantAgreementTypeResponse,
+) error {
+	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = merchantErrorNotFound
+
+		return nil
+	}
+
+	if merchant.Status != pkg.MerchantStatusAgreementSigning {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = merchantErrorNotHaveAgreementType
+
+		return nil
+	}
+
+	merchant.HasPspSignature = req.HasPspSignature
+	merchant.HasMerchantSignature = req.HasMerchantSignature
+	merchant.AgreementSentViaMail = req.AgreementSentViaMail
+	merchant.MailTrackingLink = req.MailTrackingLink
+
+	if merchant.NeedMarkESignAgreementAsSigned() == true {
+		merchant.Status = pkg.MerchantStatusAgreementSigned
+	}
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
 
@@ -667,6 +726,7 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.IsSigned = merchant.IsSigned
 	rsp.CreatedAt = merchant.CreatedAt
 	rsp.UpdatedAt = merchant.UpdatedAt
+	rsp.S3AgreementName = merchant.S3AgreementName
 }
 
 func (s *Service) addNotification(title, msg, merchantId, userId string) (*billing.Notification, error) {

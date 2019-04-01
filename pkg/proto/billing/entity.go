@@ -33,6 +33,11 @@ func (m *Merchant) SelectAgreementTypeAllow() bool {
 		m.HasMerchantSignature == false && m.IsSigned == false
 }
 
+func (m *Merchant) NeedMarkESignAgreementAsSigned() bool {
+	return m.HasMerchantSignature == true && m.HasPspSignature == true &&
+		m.AgreementType == pkg.MerchantAgreementTypeESign && m.Status != pkg.MerchantStatusAgreementSigned
+}
+
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
 	return m.PaymentSystem.AccountingCurrency
 }
