@@ -1622,10 +1622,10 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_NewM
 	for _, v := range rspListMerchantPaymentMethods.PaymentMethods {
 		assert.True(suite.T(), v.PaymentMethod.Id != "")
 		assert.True(suite.T(), v.PaymentMethod.Name != "")
-		assert.True(suite.T(), v.Commission.Fee == 0)
+		assert.Equal(suite.T(), DefaultPaymentMethodFee, v.Commission.Fee)
 		assert.NotNil(suite.T(), v.Commission.PerTransaction)
-		assert.True(suite.T(), v.Commission.PerTransaction.Fee == 0)
-		assert.True(suite.T(), v.Commission.PerTransaction.Currency == "")
+		assert.Equal(suite.T(), DefaultPaymentMethodPerTransactionFee, v.Commission.PerTransaction.Fee)
+		assert.Equal(suite.T(), DefaultPaymentMethodCurrency, v.Commission.PerTransaction.Currency)
 		assert.True(suite.T(), v.Integration.TerminalId == "")
 		assert.True(suite.T(), v.Integration.TerminalPassword == "")
 		assert.False(suite.T(), v.Integration.Integrated)

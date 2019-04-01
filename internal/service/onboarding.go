@@ -582,7 +582,11 @@ func (s *Service) GetMerchantPaymentMethod(
 		Name: pm.Name,
 	}
 	rsp.Commission = &billing.MerchantPaymentMethodCommissions{
-		PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{},
+		Fee: DefaultPaymentMethodFee,
+		PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+			Fee:      DefaultPaymentMethodPerTransactionFee,
+			Currency: DefaultPaymentMethodCurrency,
+		},
 	}
 	rsp.Integration = &billing.MerchantPaymentMethodIntegration{}
 	rsp.IsActive = true
@@ -625,7 +629,11 @@ func (s *Service) ListMerchantPaymentMethods(
 				Name: pm.Name,
 			},
 			Commission: &billing.MerchantPaymentMethodCommissions{
-				PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{},
+				Fee: DefaultPaymentMethodFee,
+				PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+					Fee:      DefaultPaymentMethodPerTransactionFee,
+					Currency: DefaultPaymentMethodCurrency,
+				},
 			},
 			Integration: &billing.MerchantPaymentMethodIntegration{},
 			IsActive:    true,
