@@ -98,6 +98,7 @@ type MgoMerchant struct {
 	AgreementType             int32                                `bson:"agreement_type"`
 	AgreementSentViaMail      bool                                 `bson:"agreement_sent_via_mail"`
 	MailTrackingLink          string                               `bson:"mail_tracking_link"`
+	S3AgreementName           string                               `bson:"s3_agreement_name"`
 }
 
 type MgoCurrencyRate struct {
@@ -1288,6 +1289,7 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		AgreementType:             m.AgreementType,
 		AgreementSentViaMail:      m.AgreementSentViaMail,
 		MailTrackingLink:          m.MailTrackingLink,
+		S3AgreementName:           m.S3AgreementName,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1399,6 +1401,7 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	m.AgreementType = decoded.AgreementType
 	m.AgreementSentViaMail = decoded.AgreementSentViaMail
 	m.MailTrackingLink = decoded.MailTrackingLink
+	m.S3AgreementName = decoded.S3AgreementName
 
 	m.FirstPaymentAt, err = ptypes.TimestampProto(decoded.FirstPaymentAt)
 

@@ -248,6 +248,8 @@ message Merchant {
     bool agreement_sent_via_mail = 30;
     // @inject_tag: json:"mail_tracking_link"
     string mail_tracking_link = 31;
+    // @inject_tag: json:"-"
+    string s3_agreement_name = 32;
 }
 
 message Notification {
