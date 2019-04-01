@@ -189,12 +189,36 @@ func (h *Merchant) setCache(recs []interface{}) {
 			h.svc.merchantPaymentMethods[m.Id] = make(map[string]*billing.MerchantPaymentMethod)
 		}
 
-		if len(m.PaymentMethods) <= 0 {
-			continue
+		if len(m.PaymentMethods) > 0 {
+			for k, v := range m.PaymentMethods {
+				h.svc.merchantPaymentMethods[m.Id][k] = v
+			}
 		}
 
-		for k, v := range m.PaymentMethods {
-			h.svc.merchantPaymentMethods[m.Id][k] = v
+		if len(h.svc.merchantPaymentMethods[m.Id]) != len(h.svc.paymentMethodIdCache) {
+			for k, v := range h.svc.paymentMethodIdCache {
+				_, ok := h.svc.merchantPaymentMethods[m.Id][k]
+
+				if ok {
+					continue
+				}
+
+				h.svc.merchantPaymentMethods[m.Id][k] = &billing.MerchantPaymentMethod{
+					PaymentMethod: &billing.MerchantPaymentMethodIdentification{
+						Id:   k,
+						Name: v.Name,
+					},
+					Commission: &billing.MerchantPaymentMethodCommissions{
+						Fee: DefaultPaymentMethodFee,
+						PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+							Fee:      DefaultPaymentMethodPerTransactionFee,
+							Currency: DefaultPaymentMethodCurrency,
+						},
+					},
+					Integration: &billing.MerchantPaymentMethodIntegration{},
+					IsActive:    true,
+				}
+			}
 		}
 	}
 }
