@@ -143,6 +143,8 @@ message OnboardingRequest {
     billing.MerchantContact contacts = 14;
     // @inject_tag: validate:"required"
     OnboardingBanking banking = 15;
+    // @inject_tag: json:"-"
+    string s3_agreement_name = 32;
 }
 
 message FindByIdRequest {

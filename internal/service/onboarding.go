@@ -248,6 +248,7 @@ func (s *Service) ChangeMerchant(
 	merchant.Banking.Swift = req.Banking.Swift
 	merchant.Banking.Details = req.Banking.Details
 	merchant.UpdatedAt = ptypes.TimestampNow()
+	merchant.S3AgreementName = req.S3AgreementName
 
 	if isNew {
 		err = s.db.Collection(pkg.CollectionMerchant).Insert(merchant)
