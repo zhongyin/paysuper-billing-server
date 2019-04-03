@@ -36,9 +36,9 @@ const (
 	MIMEApplicationForm = "application/x-www-form-urlencoded"
 	MIMEApplicationJSON = "application/json"
 
-	DefaultPaymentMethodFee               = 3
-	DefaultPaymentMethodPerTransactionFee = 2
-	DefaultPaymentMethodCurrency          = "RUB"
+	DefaultPaymentMethodFee               = float64(5)
+	DefaultPaymentMethodPerTransactionFee = float64(0)
+	DefaultPaymentMethodCurrency          = ""
 
 	CountryCodeUSA = "US"
 )

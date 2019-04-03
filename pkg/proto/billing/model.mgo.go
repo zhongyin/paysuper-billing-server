@@ -95,6 +95,10 @@ type MgoMerchant struct {
 	LastPayout                *MgoMerchantLastPayout               `bson:"last_payout"`
 	IsSigned                  bool                                 `bson:"is_signed"`
 	PaymentMethods            map[string]*MgoMerchantPaymentMethod `bson:"payment_methods"`
+	AgreementType             int32                                `bson:"agreement_type"`
+	AgreementSentViaMail      bool                                 `bson:"agreement_sent_via_mail"`
+	MailTrackingLink          string                               `bson:"mail_tracking_link"`
+	S3AgreementName           string                               `bson:"s3_agreement_name"`
 }
 
 type MgoCurrencyRate struct {
@@ -1282,6 +1286,10 @@ func (m *Merchant) GetBSON() (interface{}, error) {
 		HasMerchantSignature:      m.HasMerchantSignature,
 		HasPspSignature:           m.HasPspSignature,
 		IsSigned:                  m.IsSigned,
+		AgreementType:             m.AgreementType,
+		AgreementSentViaMail:      m.AgreementSentViaMail,
+		MailTrackingLink:          m.MailTrackingLink,
+		S3AgreementName:           m.S3AgreementName,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1390,6 +1398,10 @@ func (m *Merchant) SetBSON(raw bson.Raw) error {
 	m.HasMerchantSignature = decoded.HasMerchantSignature
 	m.HasPspSignature = decoded.HasPspSignature
 	m.IsSigned = decoded.IsSigned
+	m.AgreementType = decoded.AgreementType
+	m.AgreementSentViaMail = decoded.AgreementSentViaMail
+	m.MailTrackingLink = decoded.MailTrackingLink
+	m.S3AgreementName = decoded.S3AgreementName
 
 	m.FirstPaymentAt, err = ptypes.TimestampProto(decoded.FirstPaymentAt)
 

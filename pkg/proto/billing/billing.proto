@@ -244,6 +244,12 @@ message Merchant {
     map<string, MerchantPaymentMethod> payment_methods = 28;
     // @inject_tag: json:"agreement_type"
     int32 agreement_type = 29;
+    // @inject_tag: json:"agreement_sent_via_mail"
+    bool agreement_sent_via_mail = 30;
+    // @inject_tag: json:"mail_tracking_link"
+    string mail_tracking_link = 31;
+    // @inject_tag: json:"-"
+    string s3_agreement_name = 32;
 }
 
 message Notification {
@@ -371,7 +377,6 @@ message Order {
     OrderFee project_fee_amount = 33; // fee is charged with the project for the operation
     // @inject_tag: bson:"to_payer_fee_amount" structure:"to_payer_fee_amount"
     OrderFee to_payer_fee_amount = 34; // value of fee which added to payer amount
-    // @inject_tag: bson:"vat_amount" structure:"vat_amount"
     // @inject_tag: bson:"ps_fee_amount" structure:"ps_fee_amount"
     OrderFeePaymentSystem payment_system_fee_amount = 36; // payment system fee for payment operation
 

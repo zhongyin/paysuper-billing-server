@@ -23,7 +23,7 @@ It has these top-level messages:
 	OnboardingRequest
 	FindByIdRequest
 	MerchantListingRequest
-	Merchants
+	MerchantListingResponse
 	MerchantChangeStatusRequest
 	NotificationRequest
 	Notifications
@@ -53,12 +53,21 @@ It has these top-level messages:
 	GetMerchantByRequest
 	ChangeMerchantAgreementTypeRequest
 	ChangeMerchantAgreementTypeResponse
+	SignMerchantRequest
+	SetMerchantS3AgreementRequest
+	Product
+	ProductPrice
+	ListProductsRequest
+	ListProductsResponse
+	RequestProduct
+	I18NTextSearchable
 */
 package grpc
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import _ "github.com/golang/protobuf/ptypes/timestamp"
 import billing "github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 
 import (
@@ -71,7 +80,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.Customer{}
+var _ = billing.MerchantPaymentMethod{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -96,10 +105,12 @@ type BillingService interface {
 	UpdateMerchant(ctx context.Context, in *billing.Merchant, opts ...client.CallOption) (*EmptyResponse, error)
 	GetConvertRate(ctx context.Context, in *ConvertRateRequest, opts ...client.CallOption) (*ConvertRateResponse, error)
 	GetMerchantBy(ctx context.Context, in *GetMerchantByRequest, opts ...client.CallOption) (*MerchantGetMerchantResponse, error)
-	ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*Merchants, error)
+	ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*MerchantListingResponse, error)
 	ChangeMerchant(ctx context.Context, in *OnboardingRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, opts ...client.CallOption) (*billing.Merchant, error)
 	ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error)
+	ProcessMerchantAgreement(ctx context.Context, in *SignMerchantRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error)
+	SetMerchantS3Agreement(ctx context.Context, in *SetMerchantS3AgreementRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error)
 	CreateNotification(ctx context.Context, in *NotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	GetNotification(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	ListNotifications(ctx context.Context, in *ListingNotificationRequest, opts ...client.CallOption) (*Notifications, error)
@@ -114,7 +125,10 @@ type BillingService interface {
 	PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, opts ...client.CallOption) (*PaymentFormDataChangeResponse, error)
 	ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, opts ...client.CallOption) (*ProcessBillingAddressResponse, error)
-	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error)
+	CreateOrUpdateProduct(ctx context.Context, in *Product, opts ...client.CallOption) (*Product, error)
+	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error)
+	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
+	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
 }
 
 type billingService struct {
@@ -225,9 +239,9 @@ func (c *billingService) GetMerchantBy(ctx context.Context, in *GetMerchantByReq
 	return out, nil
 }
 
-func (c *billingService) ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*Merchants, error) {
+func (c *billingService) ListMerchants(ctx context.Context, in *MerchantListingRequest, opts ...client.CallOption) (*MerchantListingResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.ListMerchants", in)
-	out := new(Merchants)
+	out := new(MerchantListingResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -257,6 +271,26 @@ func (c *billingService) ChangeMerchantStatus(ctx context.Context, in *MerchantC
 
 func (c *billingService) ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.ChangeMerchantAgreementType", in)
+	out := new(ChangeMerchantAgreementTypeResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ProcessMerchantAgreement(ctx context.Context, in *SignMerchantRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ProcessMerchantAgreement", in)
+	out := new(ChangeMerchantAgreementTypeResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) SetMerchantS3Agreement(ctx context.Context, in *SetMerchantS3AgreementRequest, opts ...client.CallOption) (*ChangeMerchantAgreementTypeResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.SetMerchantS3Agreement", in)
 	out := new(ChangeMerchantAgreementTypeResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -405,9 +439,39 @@ func (c *billingService) ProcessBillingAddress(ctx context.Context, in *ProcessB
 	return out, nil
 }
 
-func (c *billingService) ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error) {
-	req := c.c.NewRequest(c.name, "BillingService.ChangeCustomer", in)
-	out := new(billing.Customer)
+func (c *billingService) CreateOrUpdateProduct(ctx context.Context, in *Product, opts ...client.CallOption) (*Product, error) {
+	req := c.c.NewRequest(c.name, "BillingService.CreateOrUpdateProduct", in)
+	out := new(Product)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ListProducts", in)
+	out := new(ListProductsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetProduct", in)
+	out := new(Product)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.DeleteProduct", in)
+	out := new(EmptyResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -427,10 +491,12 @@ type BillingServiceHandler interface {
 	UpdateMerchant(context.Context, *billing.Merchant, *EmptyResponse) error
 	GetConvertRate(context.Context, *ConvertRateRequest, *ConvertRateResponse) error
 	GetMerchantBy(context.Context, *GetMerchantByRequest, *MerchantGetMerchantResponse) error
-	ListMerchants(context.Context, *MerchantListingRequest, *Merchants) error
+	ListMerchants(context.Context, *MerchantListingRequest, *MerchantListingResponse) error
 	ChangeMerchant(context.Context, *OnboardingRequest, *billing.Merchant) error
 	ChangeMerchantStatus(context.Context, *MerchantChangeStatusRequest, *billing.Merchant) error
 	ChangeMerchantAgreementType(context.Context, *ChangeMerchantAgreementTypeRequest, *ChangeMerchantAgreementTypeResponse) error
+	ProcessMerchantAgreement(context.Context, *SignMerchantRequest, *ChangeMerchantAgreementTypeResponse) error
+	SetMerchantS3Agreement(context.Context, *SetMerchantS3AgreementRequest, *ChangeMerchantAgreementTypeResponse) error
 	CreateNotification(context.Context, *NotificationRequest, *billing.Notification) error
 	GetNotification(context.Context, *GetNotificationRequest, *billing.Notification) error
 	ListNotifications(context.Context, *ListingNotificationRequest, *Notifications) error
@@ -445,7 +511,10 @@ type BillingServiceHandler interface {
 	PaymentFormLanguageChanged(context.Context, *PaymentFormUserChangeLangRequest, *PaymentFormDataChangeResponse) error
 	PaymentFormPaymentAccountChanged(context.Context, *PaymentFormUserChangePaymentAccountRequest, *PaymentFormDataChangeResponse) error
 	ProcessBillingAddress(context.Context, *ProcessBillingAddressRequest, *ProcessBillingAddressResponse) error
-	ChangeCustomer(context.Context, *billing.Customer, *billing.Customer) error
+	CreateOrUpdateProduct(context.Context, *Product, *Product) error
+	ListProducts(context.Context, *ListProductsRequest, *ListProductsResponse) error
+	GetProduct(context.Context, *RequestProduct, *Product) error
+	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -459,10 +528,12 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		UpdateMerchant(ctx context.Context, in *billing.Merchant, out *EmptyResponse) error
 		GetConvertRate(ctx context.Context, in *ConvertRateRequest, out *ConvertRateResponse) error
 		GetMerchantBy(ctx context.Context, in *GetMerchantByRequest, out *MerchantGetMerchantResponse) error
-		ListMerchants(ctx context.Context, in *MerchantListingRequest, out *Merchants) error
+		ListMerchants(ctx context.Context, in *MerchantListingRequest, out *MerchantListingResponse) error
 		ChangeMerchant(ctx context.Context, in *OnboardingRequest, out *billing.Merchant) error
 		ChangeMerchantStatus(ctx context.Context, in *MerchantChangeStatusRequest, out *billing.Merchant) error
 		ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, out *ChangeMerchantAgreementTypeResponse) error
+		ProcessMerchantAgreement(ctx context.Context, in *SignMerchantRequest, out *ChangeMerchantAgreementTypeResponse) error
+		SetMerchantS3Agreement(ctx context.Context, in *SetMerchantS3AgreementRequest, out *ChangeMerchantAgreementTypeResponse) error
 		CreateNotification(ctx context.Context, in *NotificationRequest, out *billing.Notification) error
 		GetNotification(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error
 		ListNotifications(ctx context.Context, in *ListingNotificationRequest, out *Notifications) error
@@ -477,7 +548,10 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		PaymentFormLanguageChanged(ctx context.Context, in *PaymentFormUserChangeLangRequest, out *PaymentFormDataChangeResponse) error
 		PaymentFormPaymentAccountChanged(ctx context.Context, in *PaymentFormUserChangePaymentAccountRequest, out *PaymentFormDataChangeResponse) error
 		ProcessBillingAddress(ctx context.Context, in *ProcessBillingAddressRequest, out *ProcessBillingAddressResponse) error
-		ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error
+		CreateOrUpdateProduct(ctx context.Context, in *Product, out *Product) error
+		ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error
+		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
+		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -526,7 +600,7 @@ func (h *billingServiceHandler) GetMerchantBy(ctx context.Context, in *GetMercha
 	return h.BillingServiceHandler.GetMerchantBy(ctx, in, out)
 }
 
-func (h *billingServiceHandler) ListMerchants(ctx context.Context, in *MerchantListingRequest, out *Merchants) error {
+func (h *billingServiceHandler) ListMerchants(ctx context.Context, in *MerchantListingRequest, out *MerchantListingResponse) error {
 	return h.BillingServiceHandler.ListMerchants(ctx, in, out)
 }
 
@@ -540,6 +614,14 @@ func (h *billingServiceHandler) ChangeMerchantStatus(ctx context.Context, in *Me
 
 func (h *billingServiceHandler) ChangeMerchantAgreementType(ctx context.Context, in *ChangeMerchantAgreementTypeRequest, out *ChangeMerchantAgreementTypeResponse) error {
 	return h.BillingServiceHandler.ChangeMerchantAgreementType(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ProcessMerchantAgreement(ctx context.Context, in *SignMerchantRequest, out *ChangeMerchantAgreementTypeResponse) error {
+	return h.BillingServiceHandler.ProcessMerchantAgreement(ctx, in, out)
+}
+
+func (h *billingServiceHandler) SetMerchantS3Agreement(ctx context.Context, in *SetMerchantS3AgreementRequest, out *ChangeMerchantAgreementTypeResponse) error {
+	return h.BillingServiceHandler.SetMerchantS3Agreement(ctx, in, out)
 }
 
 func (h *billingServiceHandler) CreateNotification(ctx context.Context, in *NotificationRequest, out *billing.Notification) error {
@@ -598,6 +680,18 @@ func (h *billingServiceHandler) ProcessBillingAddress(ctx context.Context, in *P
 	return h.BillingServiceHandler.ProcessBillingAddress(ctx, in, out)
 }
 
-func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error {
-	return h.BillingServiceHandler.ChangeCustomer(ctx, in, out)
+func (h *billingServiceHandler) CreateOrUpdateProduct(ctx context.Context, in *Product, out *Product) error {
+	return h.BillingServiceHandler.CreateOrUpdateProduct(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error {
+	return h.BillingServiceHandler.ListProducts(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetProduct(ctx context.Context, in *RequestProduct, out *Product) error {
+	return h.BillingServiceHandler.GetProduct(ctx, in, out)
+}
+
+func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error {
+	return h.BillingServiceHandler.DeleteProduct(ctx, in, out)
 }

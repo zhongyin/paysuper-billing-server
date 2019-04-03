@@ -16,6 +16,7 @@ require (
 	github.com/paysuper/paysuper-recurring-repository v1.0.99
 	github.com/paysuper/paysuper-tax-service v0.0.0-20190308105725-016a09c27fbd
 	github.com/prometheus/client_golang v0.9.2
+	github.com/stoewer/go-strcase v1.0.2
 	github.com/streadway/amqp v0.0.0-20181205114330-a314942b2fd9
 	github.com/stretchr/testify v1.3.0
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
@@ -23,5 +24,7 @@ require (
 	go.uber.org/zap v1.9.1
 	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	google.golang.org/grpc v1.18.0
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+	gopkg.in/go-playground/validator.v9 v9.26.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )

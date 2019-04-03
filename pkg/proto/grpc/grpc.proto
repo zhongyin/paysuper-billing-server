@@ -3,6 +3,7 @@ syntax = "proto3";
 option go_package = "github.com/paysuper/paysuper-billing-server/pkg/proto/grpc";
 package grpc;
 
+import "google/protobuf/timestamp.proto";
 import "billing/billing.proto";
 
 service BillingService {
@@ -17,10 +18,12 @@ service BillingService {
     rpc GetConvertRate (ConvertRateRequest) returns (ConvertRateResponse) {}
 
     rpc GetMerchantBy (GetMerchantByRequest) returns (MerchantGetMerchantResponse) {}
-    rpc ListMerchants (MerchantListingRequest) returns (Merchants) {}
+    rpc ListMerchants (MerchantListingRequest) returns (MerchantListingResponse) {}
     rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
+    rpc ProcessMerchantAgreement (SignMerchantRequest) returns (ChangeMerchantAgreementTypeResponse) {}
+    rpc SetMerchantS3Agreement (SetMerchantS3AgreementRequest) returns (ChangeMerchantAgreementTypeResponse) {}
 
     rpc CreateNotification (NotificationRequest) returns (billing.Notification) {}
     rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {}
@@ -40,7 +43,10 @@ service BillingService {
     rpc PaymentFormPaymentAccountChanged (PaymentFormUserChangePaymentAccountRequest) returns (PaymentFormDataChangeResponse) {}
     rpc ProcessBillingAddress (ProcessBillingAddressRequest) returns (ProcessBillingAddressResponse) {}
 
-    rpc ChangeCustomer(billing.Customer) returns (billing.Customer) {}
+    rpc CreateOrUpdateProduct(Product) returns (Product) {}
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
+    rpc GetProduct(RequestProduct) returns (Product) {}
+    rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
 }
 
 message EmptyRequest {
@@ -159,10 +165,12 @@ message MerchantListingRequest {
     repeated string sort = 6;
     int32 limit = 7;
     int32 offset = 8;
+    string quick_search = 9;
 }
 
-message Merchants {
-    repeated billing.Merchant merchants = 1;
+message MerchantListingResponse {
+    int32 count = 1;
+    repeated billing.Merchant items = 2;
 }
 
 message MerchantChangeStatusRequest {
@@ -367,4 +375,106 @@ message ChangeMerchantAgreementTypeResponse {
     int32 status = 1;
     string message = 2;
     billing.Merchant item = 3;
+}
+
+message SignMerchantRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    bool has_merchant_signature = 2;
+    bool has_psp_signature = 3;
+    bool agreement_sent_via_mail = 4;
+    string mail_tracking_link = 5;
+}
+
+message SetMerchantS3AgreementRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: json:"-"
+    string s3_agreement_name = 2;
+}
+
+message Product {
+    //@inject_tag: validate:"omitempty,hexadecimal,len=24" json:"id" bson:"_id"
+    string id = 1;
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"-" bson:"merchant_id"
+    string merchant_id = 2;
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"project_id" bson:"project_id"
+    string project_id = 3;
+    //@inject_tag: validate:"required" json:"object"
+    string object = 4;
+    //@inject_tag: validate:"required" json:"type"
+    string type = 5;
+    //@inject_tag: validate:"required" json:"sku" bson:"sku"
+    string sku = 6;
+    //@inject_tag: validate:"required" json:"name"
+    map<string, string> name = 7;
+    //@inject_tag: validate:"required,alpha,len=3" json:"default_currency"
+    string default_currency = 8;
+    //@inject_tag: validate:"required" json:"enabled"
+    bool enabled = 9;
+    //@inject_tag: validate:"required,min=1,dive" json:"prices"
+    repeated ProductPrice prices = 10;
+    //@inject_tag: validate:"required" json:"description"
+    map<string, string> description = 11;
+    //@inject_tag: validate:"omitempty" json:"long_description"
+    map<string, string> long_description = 12;
+    //@inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 13;
+    //@inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 14;
+    //@inject_tag: validate:"dive,omitempty,uri" json:"images"
+    repeated string images = 15;
+    //@inject_tag: validate:"omitempty,url" json:"url"
+    string url = 16;
+    //@inject_tag: json:"metadata"
+    map<string, string> metadata = 17;
+    //@inject_tag: json:"-" bson:"deleted"
+    bool deleted = 18;
+
+}
+
+message ProductPrice {
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    float amount = 1;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 2;
+}
+
+message ListProductsRequest {
+    //@inject_tag: json:"name"
+    string name = 1;
+    //@inject_tag: json:"sku"
+    string sku = 2;
+    // @inject_tag: validate:"required,numeric,gt=0" json:"limit"
+    int32 limit = 3;
+    // @inject_tag: validate:"omitempty,numeric,gte=0" json:"offset"
+    int32 offset = 4;
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"merchant_id" bson:"merchant_id"
+    string merchant_id = 5;
+    //@inject_tag: validate:"omitempty,hexadecimal,len=24" json:"project_id" bson:"project_id"
+    string project_id = 6;
+}
+message ListProductsResponse {
+    // @inject_tag: json:"limit"
+    int32 limit = 1;
+    // @inject_tag: json:"offset"
+    int32 offset = 2;
+    // @inject_tag: json:"total"
+    int32 total = 3;
+    // @inject_tag: json:"products"
+    repeated Product products = 5;
+}
+
+message RequestProduct {
+    //@inject_tag: validate:"required,hexadecimal,len=24"
+    string id = 1;
+    //@inject_tag: validate:"hexadecimal,len=24" json:"merchant_id" bson:"merchant_id"
+    string merchant_id = 2;
+}
+
+message I18NTextSearchable {
+    //@inject_tag: validate:"required,alpha,len=2" json:"lang"
+    string lang = 1;
+    //@inject_tag: validate:"required" json:"value"
+    string value = 2;
 }
