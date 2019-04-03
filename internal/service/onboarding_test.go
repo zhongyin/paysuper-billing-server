@@ -2198,7 +2198,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantAgreementType_Ok(
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.Equal(suite.T(), req1.MerchantId, rsp1.Item.Id)
 	assert.Equal(suite.T(), req1.AgreementType, rsp1.Item.AgreementType)
-	assert.Equal(suite.T(), pkg.MerchantStatusAgreementSigning, rsp1.Item.Status)
+	assert.Equal(suite.T(), pkg.MerchantStatusAgreementRequested, rsp1.Item.Status)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantAgreementType_MerchantNotFound_Error() {
