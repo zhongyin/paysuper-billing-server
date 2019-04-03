@@ -577,6 +577,18 @@ func (h *cardPay) getToken(pmKey string) *cardPayToken {
 }
 
 func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]string) (*CardPayOrder, error) {
+
+	items := []*CardPayItem{}
+
+	for _, it := range order.Items {
+		items = append(items, &CardPayItem{
+			Name:        it.Name,
+			Description: it.Description,
+			Count:       1,
+			Price:       it.Amount,
+		})
+	}
+
 	cardPayOrder := &CardPayOrder{
 		Request: &CardPayRequest{
 			Id:   order.Id,
@@ -585,14 +597,7 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 		MerchantOrder: &CardPayMerchantOrder{
 			Id:          order.Id,
 			Description: order.Description,
-			Items: []*CardPayItem{
-				{
-					Name:        order.FixedPackage.Name,
-					Description: order.FixedPackage.Name,
-					Count:       1,
-					Price:       order.FixedPackage.Price,
-				},
-			},
+			Items:       items,
 		},
 		Description:   order.Description,
 		PaymentMethod: order.PaymentMethod.Params.ExternalId,

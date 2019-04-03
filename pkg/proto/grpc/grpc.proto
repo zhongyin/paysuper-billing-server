@@ -46,6 +46,7 @@ service BillingService {
     rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
     rpc GetProduct(RequestProduct) returns (Product) {}
     rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
+    rpc GetProductsForOrder(GetProductsForOrderRequest) returns (ListProductsResponse) {}
 }
 
 message EmptyRequest {
@@ -450,7 +451,7 @@ message Product {
 
 message ProductPrice {
     // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
-    float amount = 1;
+    double amount = 1;
     //@inject_tag: validate:"required,alpha,len=3" json:"currency"
     string currency = 2;
 }
@@ -469,6 +470,14 @@ message ListProductsRequest {
     //@inject_tag: validate:"omitempty,hexadecimal,len=24" json:"project_id" bson:"project_id"
     string project_id = 6;
 }
+
+message GetProductsForOrderRequest {
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"project_id" bson:"project_id"
+    string project_id = 6;
+    //@inject_tag: validate:"required,dive,hexadecimal,len=24" json:"ids" bson:"ids"
+    repeated string ids = 8;
+}
+
 message ListProductsResponse {
     // @inject_tag: json:"limit"
     int32 limit = 1;

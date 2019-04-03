@@ -197,6 +197,10 @@ type MgoOrder struct {
 	UrlFail                                 string                 `bson:"url_fail"`
 	CreatedAt                               time.Time              `bson:"created_at"`
 	UpdatedAt                               time.Time              `bson:"updated_at"`
+	Products                                []string               `bson:"products"`
+	Items                                   []*OrderItem           `bson:"items"`
+	Amount                                  float64                `bson:"amount"`
+	Currency                                string                 `bson:"currency"`
 
 	Uuid                    string               `bson:"uuid"`
 	ExpireDateToFormInput   time.Time            `bson:"expire_date_to_form_input"`
@@ -774,7 +778,10 @@ func (m *Order) GetBSON() (interface{}, error) {
 		AmountInPaymentSystemAccountingCurrency: m.AmountInPaymentSystemAccountingCurrency,
 		PaymentMethodPayerAccount:               m.PaymentMethodPayerAccount,
 		PaymentMethodTxnParams:                  m.PaymentMethodTxnParams,
-		FixedPackage:                            m.FixedPackage,
+		Products:                                m.Products,
+		Items:                                   m.Items,
+		Amount:                                  m.Amount,
+		Currency:                                m.Currency,
 		PaymentRequisites:                       m.PaymentRequisites,
 		PspFeeAmount:                            m.PspFeeAmount,
 		ProjectFeeAmount:                        m.ProjectFeeAmount,
@@ -978,7 +985,10 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.AmountInPaymentSystemAccountingCurrency = decoded.AmountInPaymentSystemAccountingCurrency
 	m.PaymentMethodPayerAccount = decoded.PaymentMethodPayerAccount
 	m.PaymentMethodTxnParams = decoded.PaymentMethodTxnParams
-	m.FixedPackage = decoded.FixedPackage
+	m.Products = decoded.Products
+	m.Items = decoded.Items
+	m.Amount = decoded.Amount
+	m.Currency = decoded.Currency
 	m.PaymentRequisites = decoded.PaymentRequisites
 	m.PspFeeAmount = decoded.PspFeeAmount
 	m.ProjectFeeAmount = decoded.ProjectFeeAmount

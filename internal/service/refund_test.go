@@ -178,7 +178,7 @@ func (suite *RefundTestSuite) SetupTest() {
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
 		Name:                     "test project 1",
-		OnlyFixedAmounts:         true,
+		OnlyFixedAmounts:         false,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
 		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
@@ -188,48 +188,6 @@ func (suite *RefundTestSuite) SetupTest() {
 				Password:  "password",
 				CreatedAt: ptypes.TimestampNow(),
 			},
-		},
-		FixedPackage: map[string]*billing.FixedPackages{
-			"RU": {
-				FixedPackage: []*billing.FixedPackage{
-					{
-						Id:       "id_0",
-						Name:     "package 0",
-						Currency: rub,
-						Price:    10,
-						IsActive: true,
-					},
-					{
-						Id:       "id_1",
-						Name:     "package 1",
-						Currency: rub,
-						Price:    100,
-						IsActive: true,
-					},
-					{
-						Id:       "id_2",
-						Name:     "package 2",
-						Currency: rub,
-						Price:    300,
-						IsActive: false,
-					},
-					{
-						Id:       "id_3",
-						Name:     "package 3",
-						Currency: rub,
-						Price:    500,
-						IsActive: true,
-					},
-					{
-						Id:       "id_4",
-						Name:     "package 4",
-						Currency: rub,
-						Price:    1000,
-						IsActive: true,
-					},
-				},
-			},
-			"US": {FixedPackage: []*billing.FixedPackage{}},
 		},
 		IsActive: true,
 		Merchant: merchant,

@@ -12,6 +12,7 @@ type CacheConfig struct {
 	PaymentMethodTimeout        int64 `envconfig:"CACHE_PAYMENT_METHOD_TIMEOUT" default:"2592000"`
 	CommissionTimeout           int64 `envconfig:"CACHE_COMMISSION_TIMEOUT" default:"86400"`
 	ProjectPaymentMethodTimeout int64 `envconfig:"CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT" default:"86400"`
+	OrderProductsTimeout        int64 `envconfig:"CACHE_ORDER_PRODUCTS_TIMEOUT" default:"86400"`
 }
 
 type PaymentSystemConfig struct {

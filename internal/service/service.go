@@ -41,6 +41,9 @@ const (
 	DefaultPaymentMethodCurrency          = ""
 
 	CountryCodeUSA = "US"
+
+	DefaultCurrency = "USD"
+	DefaultLanguage = "en"
 )
 
 var (
