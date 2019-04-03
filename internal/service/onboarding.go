@@ -350,7 +350,7 @@ func (s *Service) ChangeMerchantAgreementType(
 		return nil
 	}
 
-	merchant.Status = pkg.MerchantStatusAgreementSigning
+	merchant.Status = pkg.MerchantStatusAgreementRequested
 	merchant.AgreementType = req.AgreementType
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
