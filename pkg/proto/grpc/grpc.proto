@@ -47,6 +47,8 @@ service BillingService {
     rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
     rpc GetProduct(RequestProduct) returns (Product) {}
     rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
+
+    rpc ChangeCustomer(billing.Customer) returns (billing.Customer) {}
 }
 
 message EmptyRequest {

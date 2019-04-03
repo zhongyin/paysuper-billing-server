@@ -16,6 +16,7 @@ const (
 	CollectionNotification  = "notification"
 	CollectionRefund        = "refund"
 	CollectionProduct       = "product"
+	CollectionCustomer      = "customer"
 
 	CardPayPaymentResponseStatusInProgress = "IN_PROGRESS"
 	CardPayPaymentResponseStatusPending    = "PENDING"

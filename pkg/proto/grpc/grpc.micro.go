@@ -80,7 +80,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.MerchantPaymentMethod{}
+var _ = billing.Customer{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -129,6 +129,7 @@ type BillingService interface {
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error)
 	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
 	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
+	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error)
 }
 
 type billingService struct {
@@ -479,6 +480,16 @@ func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProduct, 
 	return out, nil
 }
 
+func (c *billingService) ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ChangeCustomer", in)
+	out := new(billing.Customer)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -515,6 +526,7 @@ type BillingServiceHandler interface {
 	ListProducts(context.Context, *ListProductsRequest, *ListProductsResponse) error
 	GetProduct(context.Context, *RequestProduct, *Product) error
 	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
+	ChangeCustomer(context.Context, *billing.Customer, *billing.Customer) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -552,6 +564,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error
 		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
 		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
+		ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error
 	}
 	type BillingService struct {
 		billingService
@@ -694,4 +707,8 @@ func (h *billingServiceHandler) GetProduct(ctx context.Context, in *RequestProdu
 
 func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error {
 	return h.BillingServiceHandler.DeleteProduct(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error {
+	return h.BillingServiceHandler.ChangeCustomer(ctx, in, out)
 }
