@@ -299,6 +299,11 @@ func (s *Service) PaymentFormJsonDataProcess(
 		rsp.UserAddressDataRequired = order.UserAddressDataRequired
 	}
 
+	err = s.ProcessOrderProducts(order, ctr, loc)
+	if err != nil {
+		return err
+	}
+
 	p1.processOrderVat(order)
 	err = s.updateOrder(order)
 
@@ -330,6 +335,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
+	rsp.Items = order.Items
 
 	return nil
 }
@@ -814,7 +820,7 @@ func (s *Service) getBinData(pan string) (data *BinData) {
 
 func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	id := bson.NewObjectId().Hex()
-	amount := tools.FormatAmount(v.request.Amount)
+	amount := tools.FormatAmount(v.checked.amount)
 	merAccAmount := amount
 	merchantPayoutCurrency := v.checked.project.Merchant.GetPayoutCurrency()
 
@@ -827,13 +833,13 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	}
 
 	if merchantPayoutCurrency != nil && v.checked.currency.CodeInt != merchantPayoutCurrency.CodeInt {
-		amount, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, v.checked.amount)
+		amnt, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, amount)
 
 		if err != nil {
 			return nil, err
 		}
 
-		merAccAmount = amount
+		merAccAmount = amnt
 	}
 
 	order := &billing.Order{
@@ -881,7 +887,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 				State:      v.checked.payerData.State,
 			},
 		},
-		Amount:   v.checked.amount,
+		Amount:   amount,
 		Currency: v.checked.currency.CodeA3,
 		Products: v.checked.products,
 		Items:    v.checked.items,
@@ -1726,4 +1732,83 @@ func (s *Service) GetOrderProductsItems(products []*grpc.Product, language strin
 	}
 
 	return result, nil
+}
+
+func (s *Service) ProcessOrderProducts(order *billing.Order, cntry string, loc string) error {
+	project, err := s.GetProjectById(order.Project.Id)
+
+	if err != nil {
+		return err
+	}
+	if project.IsActive == false {
+		return errors.New(orderErrorProjectInactive)
+	}
+
+	if project.OnlyFixedAmounts == true {
+		var (
+			country  string
+			currency string
+			ok       bool
+		)
+
+		if order.BillingAddress != nil && order.BillingAddress.Country != "" {
+			cntry = order.BillingAddress.Country
+		} else if order.User.Address != nil && order.User.Address.Country != "" {
+			country = order.User.Address.Country
+		} else {
+			country = cntry
+		}
+
+		currency, ok = CountryToCurrency[country]
+		if !ok {
+			currency = DefaultCurrency
+		}
+
+		orderProducts, err := s.ValidateOrderProducts(project.Id, order.Products)
+		if err != nil {
+			return err
+		}
+
+		amount, currencyA3Code, err := s.GetOrderProductsAmount(orderProducts, currency)
+		if err != nil {
+			return err
+		}
+
+		curr, err := s.GetCurrencyByCodeA3(currencyA3Code)
+		if err != nil {
+			return err
+		}
+
+		items, err := s.GetOrderProductsItems(orderProducts, loc, currencyA3Code)
+		if err != nil {
+			return err
+		}
+
+		var merAccAmount = amount
+		merchantPayoutCurrency := project.Merchant.GetPayoutCurrency()
+		if merchantPayoutCurrency != nil && curr.CodeInt != merchantPayoutCurrency.CodeInt {
+			amount, err := s.Convert(curr.CodeInt, merchantPayoutCurrency.CodeInt, amount)
+
+			if err != nil {
+				return err
+			}
+
+			merAccAmount = amount
+		}
+
+		order.Currency = currencyA3Code
+		order.ProjectIncomeCurrency = curr
+		order.PaymentMethodOutcomeCurrency = curr
+		order.PaymentMethodIncomeCurrency = curr
+
+		order.Amount = amount
+		order.ProjectIncomeAmount = amount
+		order.ProjectOutcomeAmount = merAccAmount
+		order.PaymentMethodOutcomeAmount = amount
+		order.PaymentMethodIncomeAmount = amount
+
+		order.Items = items
+	}
+
+	return nil
 }

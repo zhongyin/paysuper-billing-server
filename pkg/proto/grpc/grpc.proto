@@ -97,6 +97,8 @@ message PaymentFormJsonDataResponse {
     string token = 11; // access token to websocket private chanel
     // @inject_tag: json:"user_address_data_required"
     bool user_address_data_required = 12;
+    // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
+    repeated billing.OrderItem items = 13;
 }
 
 message PaymentNotifyRequest {

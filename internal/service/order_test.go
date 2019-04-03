@@ -906,7 +906,7 @@ func (suite *OrderTestSuite) SetupTest() {
 			ProjectId:       projectFixedAmount.Id,
 		}
 
-		baseAmount := 2.00 * float64(i+1) // base amount in product's default currency
+		baseAmount := 37.00 * float64(i+1) // base amount in product's default currency
 
 		req.Prices = append(req.Prices, &grpc.ProductPrice{
 			Currency: "USD",
@@ -1188,7 +1188,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_Ok() {
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), currencyA3Code, "USD")
-	assert.Equal(suite.T(), amount, float64(6))
+	assert.Equal(suite.T(), amount, float64(111))
 }
 
 func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_WithFallbackToDefaultCurrency_Ok() {
@@ -1199,7 +1199,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_WithFallbackToDefa
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), currencyA3Code, "USD")
-	assert.Equal(suite.T(), amount, float64(6))
+	assert.Equal(suite.T(), amount, float64(111))
 }
 
 func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_EmptyProducts_Fail() {
@@ -3549,6 +3549,35 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Ok() {
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.PaymentMethods) > 0)
 	assert.True(suite.T(), len(rsp.PaymentMethods[0].Id) > 0)
+	assert.Equal(suite.T(), len(rsp.Items), 0)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcessWithProducts_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.projectFixedAmount.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+		Products:      suite.productIds,
+	}
+
+	order := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
+	assert.Nil(suite.T(), err)
+
+	req1 := &grpc.PaymentFormJsonDataRequest{OrderId: order.Id, Scheme: "https", Host: "unit.test"}
+	rsp := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp)
+
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.PaymentMethods) > 0)
+	assert.True(suite.T(), len(rsp.PaymentMethods[0].Id) > 0)
+	assert.Equal(suite.T(), len(rsp.Items), 2)
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCard_Ok() {
