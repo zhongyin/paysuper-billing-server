@@ -194,7 +194,7 @@ message NotificationRequest {
 
 message Notifications {
     int32 count = 1;
-    repeated billing.Notification notifications = 2;
+    repeated billing.Notification items = 2;
 }
 
 message ListingNotificationRequest {

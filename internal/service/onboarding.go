@@ -537,10 +537,10 @@ func (s *Service) ListNotifications(
 	}
 
 	rsp.Count = int32(count)
-	rsp.Notifications = []*billing.Notification{}
+	rsp.Items = []*billing.Notification{}
 
 	if len(notifications) > 0 {
-		rsp.Notifications = notifications
+		rsp.Items = notifications
 	}
 
 	return nil
