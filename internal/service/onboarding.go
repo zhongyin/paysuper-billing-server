@@ -303,6 +303,7 @@ func (s *Service) ChangeMerchantStatus(
 		return errors.New(merchantErrorSigned)
 	}
 
+	nStatuses := &billing.SystemNotificationStatuses{From: merchant.Status, To: req.Status}
 	merchant.Status = req.Status
 
 	if req.Status == pkg.MerchantStatusAgreementSigned {
@@ -310,7 +311,7 @@ func (s *Service) ChangeMerchantStatus(
 	}
 
 	if title, ok := NotificationStatusChangeTitles[req.Status]; ok {
-		_, err = s.addNotification(title, req.Message, merchant.Id, "")
+		_, err = s.addNotification(title, req.Message, merchant.Id, "", nStatuses)
 
 		if err != nil {
 			return err
@@ -343,13 +344,14 @@ func (s *Service) ChangeMerchantAgreementType(
 		return nil
 	}
 
-	if merchant.SelectAgreementTypeAllow() == false {
+	if merchant.ChangesAllowed() == false {
 		rsp.Status = pkg.ResponseStatusBadData
 		rsp.Message = merchantErrorAgreementTypeSelectNotAllow
 
 		return nil
 	}
 
+	nStatuses := &billing.SystemNotificationStatuses{From: merchant.Status, To: pkg.MerchantStatusAgreementRequested}
 	merchant.Status = pkg.MerchantStatusAgreementRequested
 	merchant.AgreementType = req.AgreementType
 
@@ -358,6 +360,12 @@ func (s *Service) ChangeMerchantAgreementType(
 	if err != nil {
 		s.logError("Query to change merchant data failed", []interface{}{"err", err.Error(), "data", merchant})
 		return errors.New(merchantErrorUnknown)
+	}
+
+	_, err = s.addNotification(NotificationStatusChangeTitles[merchant.Status], "", merchant.Id, "", nStatuses)
+
+	if err != nil {
+		s.logError("Add notification failed", []interface{}{"err", err.Error(), "data", merchant})
 	}
 
 	rsp.Status = pkg.ResponseStatusOk
@@ -451,7 +459,7 @@ func (s *Service) CreateNotification(
 		return errors.New(notificationErrorMessageIsEmpty)
 	}
 
-	n, err := s.addNotification(req.Title, req.Message, req.MerchantId, req.UserId)
+	n, err := s.addNotification(req.Title, req.Message, req.MerchantId, req.UserId, nil)
 
 	if err != nil {
 		return err
@@ -501,16 +509,35 @@ func (s *Service) ListNotifications(
 		query["user_id"] = bson.ObjectIdHex(req.UserId)
 	}
 
-	err := s.db.Collection(pkg.CollectionNotification).Find(query).
+	if req.IsSystem > 0 {
+		if req.IsSystem == 1 {
+			query["is_system"] = false
+		} else {
+			query["is_system"] = true
+		}
+	}
+
+	count, err := s.db.Collection(pkg.CollectionNotification).Find(query).Count()
+
+	if err != nil {
+		s.logError("Query to count merchant notifications failed", []interface{}{"err", err.Error(), "query", query})
+		return errors.New(orderErrorUnknown)
+	}
+
+	err = s.db.Collection(pkg.CollectionNotification).Find(query).
 		Limit(int(req.Limit)).Skip(int(req.Offset)).All(&notifications)
 
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			s.logError("Query to find notifications failed", []interface{}{"err", err.Error(), "query", query})
+			return errors.New(orderErrorUnknown)
 		}
 
 		return nil
 	}
+
+	rsp.Count = int32(count)
+	rsp.Notifications = []*billing.Notification{}
 
 	if len(notifications) > 0 {
 		rsp.Notifications = notifications
@@ -765,7 +792,10 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.S3AgreementName = merchant.S3AgreementName
 }
 
-func (s *Service) addNotification(title, msg, merchantId, userId string) (*billing.Notification, error) {
+func (s *Service) addNotification(
+	title, msg, merchantId, userId string,
+	nStatuses *billing.SystemNotificationStatuses,
+) (*billing.Notification, error) {
 	if merchantId == "" || bson.IsObjectIdHex(merchantId) == false {
 		return nil, errors.New(notificationErrorMerchantIdIncorrect)
 	}
@@ -776,6 +806,7 @@ func (s *Service) addNotification(title, msg, merchantId, userId string) (*billi
 		Message:    msg,
 		MerchantId: merchantId,
 		IsRead:     false,
+		Statuses:   nStatuses,
 	}
 
 	if userId == "" || bson.IsObjectIdHex(userId) == false {

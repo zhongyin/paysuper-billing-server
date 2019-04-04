@@ -193,14 +193,16 @@ message NotificationRequest {
 }
 
 message Notifications {
-    repeated billing.Notification notifications = 1;
+    int32 count = 1;
+    repeated billing.Notification notifications = 2;
 }
 
 message ListingNotificationRequest {
     string merchant_id = 1;
     string user_id = 2;
-    int32 limit = 7;
-    int32 offset = 8;
+    int32 is_system = 3;
+    int32 limit = 4;
+    int32 offset = 5;
 }
 
 message ListingMerchantPaymentMethod {

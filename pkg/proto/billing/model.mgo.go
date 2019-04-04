@@ -237,15 +237,16 @@ type MgoPaymentMethod struct {
 }
 
 type MgoNotification struct {
-	Id         bson.ObjectId `bson:"_id"`
-	Title      string        `bson:"title"`
-	Message    string        `bson:"message"`
-	MerchantId bson.ObjectId `bson:"merchant_id"`
-	UserId     bson.ObjectId `bson:"user_id"`
-	IsSystem   bool          `bson:"is_system"`
-	IsRead     bool          `bson:"is_read"`
-	CreatedAt  time.Time     `bson:"created_at"`
-	UpdatedAt  time.Time     `bson:"updated_at"`
+	Id         bson.ObjectId               `bson:"_id"`
+	Title      string                      `bson:"title"`
+	Message    string                      `bson:"message"`
+	MerchantId bson.ObjectId               `bson:"merchant_id"`
+	UserId     bson.ObjectId               `bson:"user_id"`
+	IsSystem   bool                        `bson:"is_system"`
+	IsRead     bool                        `bson:"is_read"`
+	CreatedAt  time.Time                   `bson:"created_at"`
+	UpdatedAt  time.Time                   `bson:"updated_at"`
+	Statuses   *SystemNotificationStatuses `bson:"statuses"`
 }
 
 type MgoRefund struct {
@@ -1462,6 +1463,7 @@ func (m *Notification) GetBSON() (interface{}, error) {
 		IsRead:     m.IsRead,
 		MerchantId: bson.ObjectIdHex(m.MerchantId),
 		UserId:     bson.ObjectIdHex(m.UserId),
+		Statuses:   m.Statuses,
 	}
 
 	if len(m.Id) <= 0 {
@@ -1516,6 +1518,7 @@ func (m *Notification) SetBSON(raw bson.Raw) error {
 	m.IsRead = decoded.IsRead
 	m.MerchantId = decoded.MerchantId.Hex()
 	m.UserId = decoded.UserId.Hex()
+	m.Statuses = decoded.Statuses
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 
