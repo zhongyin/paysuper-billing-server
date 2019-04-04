@@ -299,7 +299,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 		rsp.UserAddressDataRequired = order.UserAddressDataRequired
 	}
 
-	err = s.ProcessOrderProducts(order, ctr, loc)
+	err = s.ProcessOrderProducts(order)
 	if err != nil {
 		return err
 	}
@@ -356,6 +356,15 @@ func (s *Service) PaymentCreateProcess(
 	}
 
 	order := processor.checked.order
+
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		rsp.Error = err.Error()
+		rsp.Status = pkg.StatusErrorValidation
+
+		return nil
+	}
+
 	order.PaymentMethod = &billing.PaymentMethodOrder{
 		Id:            processor.checked.paymentMethod.Id,
 		Name:          processor.checked.paymentMethod.Name,
@@ -550,6 +559,14 @@ func (s *Service) PaymentFormLanguageChanged(
 	order.User.Locale = req.Lang
 	order.UserAddressDataRequired = true
 
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
 	err = s.updateOrder(order)
 
 	if err != nil {
@@ -687,6 +704,11 @@ func (s *Service) ProcessBillingAddress(
 		Country:    req.Country,
 		City:       req.City,
 		PostalCode: req.Zip,
+	}
+
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		return err
 	}
 
 	processor := &OrderCreateRequestProcessor{Service: s}
@@ -1734,7 +1756,7 @@ func (s *Service) GetOrderProductsItems(products []*grpc.Product, language strin
 	return result, nil
 }
 
-func (s *Service) ProcessOrderProducts(order *billing.Order, cntry string, loc string) error {
+func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 	project, err := s.GetProjectById(order.Project.Id)
 
 	if err != nil {
@@ -1748,19 +1770,22 @@ func (s *Service) ProcessOrderProducts(order *billing.Order, cntry string, loc s
 		var (
 			country  string
 			currency string
+			locale   string
 			ok       bool
 		)
 
 		if order.BillingAddress != nil && order.BillingAddress.Country != "" {
-			cntry = order.BillingAddress.Country
+			country = order.BillingAddress.Country
 		} else if order.User.Address != nil && order.User.Address.Country != "" {
 			country = order.User.Address.Country
-		} else {
-			country = cntry
 		}
 
-		currency, ok = CountryToCurrency[country]
-		if !ok {
+		if country != "" {
+			currency, ok = CountryToCurrency[country]
+			if !ok {
+				currency = DefaultCurrency
+			}
+		} else {
 			currency = DefaultCurrency
 		}
 
@@ -1779,7 +1804,13 @@ func (s *Service) ProcessOrderProducts(order *billing.Order, cntry string, loc s
 			return err
 		}
 
-		items, err := s.GetOrderProductsItems(orderProducts, loc, currencyA3Code)
+		if order.User != nil && order.User.Locale != "" {
+			locale = order.User.Locale
+		} else {
+			locale = DefaultLanguage
+		}
+
+		items, err := s.GetOrderProductsItems(orderProducts, locale, currencyA3Code)
 		if err != nil {
 			return err
 		}
