@@ -106,6 +106,7 @@ type orderCreateRequestProcessorChecked struct {
 	paymentMethod *billing.PaymentMethod
 	products      []string
 	items         []*billing.OrderItem
+	metadata      map[string]string
 }
 
 type OrderCreateRequestProcessor struct {
@@ -167,6 +168,9 @@ func (s *Service) OrderCreateProcess(
 
 	if processor.checked.project.OnlyFixedAmounts == true {
 		if err := processor.processProducts(); err != nil {
+			if req.Metadata["PaylinkId"] != "" {
+				s.notifyPaylinkError(req.Metadata["PaylinkId"], err, req, nil)
+			}
 			return err
 		}
 	} else {
@@ -206,6 +210,10 @@ func (s *Service) OrderCreateProcess(
 	}
 
 	if err := processor.processLimitAmounts(); err != nil {
+		return err
+	}
+
+	if err := processor.processMetadata(); err != nil {
 		return err
 	}
 
@@ -254,6 +262,7 @@ func (s *Service) OrderCreateProcess(
 	rsp.Items = order.Items
 	rsp.Amount = order.Amount
 	rsp.Currency = order.Currency
+	rsp.Metadata = order.Metadata
 
 	return nil
 }
@@ -301,6 +310,9 @@ func (s *Service) PaymentFormJsonDataProcess(
 
 	err = s.ProcessOrderProducts(order)
 	if err != nil {
+		if order.Metadata["PaylinkId"] != "" {
+			s.notifyPaylinkError(order.Metadata["PaylinkId"], err, req, order)
+		}
 		return err
 	}
 
@@ -359,6 +371,9 @@ func (s *Service) PaymentCreateProcess(
 
 	err = s.ProcessOrderProducts(order)
 	if err != nil {
+		if order.Metadata["PaylinkId"] != "" {
+			s.notifyPaylinkError(order.Metadata["PaylinkId"], err, req, order)
+		}
 		rsp.Error = err.Error()
 		rsp.Status = pkg.StatusErrorValidation
 
@@ -561,6 +576,9 @@ func (s *Service) PaymentFormLanguageChanged(
 
 	err = s.ProcessOrderProducts(order)
 	if err != nil {
+		if order.Metadata["PaylinkId"] != "" {
+			s.notifyPaylinkError(order.Metadata["PaylinkId"], err, req, order)
+		}
 		rsp.Status = pkg.ResponseStatusBadData
 		rsp.Message = err.Error()
 
@@ -708,6 +726,9 @@ func (s *Service) ProcessBillingAddress(
 
 	err = s.ProcessOrderProducts(order)
 	if err != nil {
+		if order.Metadata["PaylinkId"] != "" {
+			s.notifyPaylinkError(order.Metadata["PaylinkId"], err, req, order)
+		}
 		return err
 	}
 
@@ -913,6 +934,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		Currency: v.checked.currency.CodeA3,
 		Products: v.checked.products,
 		Items:    v.checked.items,
+		Metadata: v.checked.metadata,
 	}
 
 	v.processOrderVat(order)
@@ -980,6 +1002,11 @@ func (v *OrderCreateRequestProcessor) processCurrency() error {
 
 func (v *OrderCreateRequestProcessor) processAmount() error {
 	v.checked.amount = v.request.Amount
+	return nil
+}
+
+func (v *OrderCreateRequestProcessor) processMetadata() error {
+	v.checked.metadata = v.request.Metadata
 	return nil
 }
 
@@ -1842,4 +1869,8 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 	}
 
 	return nil
+}
+
+func (s *Service) notifyPaylinkError(PaylinkId string, err error, req interface{}, order interface{}) {
+	// todo send notify about invalid paylink to centrifugo
 }

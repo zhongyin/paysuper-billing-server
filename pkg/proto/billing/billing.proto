@@ -410,6 +410,9 @@ message Order {
     double amount = 49;
     //@inject_tag: validate:"required,alpha,len=3" json:"currency"
     string currency = 50;
+
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 51;
 }
 
 message OrderItem {
