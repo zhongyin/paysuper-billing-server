@@ -21,9 +21,8 @@ service BillingService {
     rpc ListMerchants (MerchantListingRequest) returns (MerchantListingResponse) {}
     rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
-    rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
-    rpc ProcessMerchantAgreement (SignMerchantRequest) returns (ChangeMerchantAgreementTypeResponse) {}
-    rpc SetMerchantS3Agreement (SetMerchantS3AgreementRequest) returns (ChangeMerchantAgreementTypeResponse) {}
+    rpc ChangeMerchantData (ChangeMerchantDataRequest) returns (ChangeMerchantDataResponse) {}
+    rpc SetMerchantS3Agreement (SetMerchantS3AgreementRequest) returns (ChangeMerchantDataResponse) {}
 
     rpc CreateNotification (NotificationRequest) returns (billing.Notification) {}
     rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {}
@@ -366,26 +365,21 @@ message GetMerchantByRequest {
     string user_id = 2;
 }
 
-message ChangeMerchantAgreementTypeRequest {
+message ChangeMerchantDataRequest {
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
-    // @inject_tag: validate:"required,numeric,oneof=1 2"
+    // @inject_tag: validate:"omitempty,numeric,oneof=1 2"
     int32 agreement_type = 2;
+    bool has_merchant_signature = 3;
+    bool has_psp_signature = 4;
+    bool agreement_sent_via_mail = 5;
+    string mail_tracking_link = 6;
 }
 
-message ChangeMerchantAgreementTypeResponse {
+message ChangeMerchantDataResponse {
     int32 status = 1;
     string message = 2;
     billing.Merchant item = 3;
-}
-
-message SignMerchantRequest {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
-    string merchant_id = 1;
-    bool has_merchant_signature = 2;
-    bool has_psp_signature = 3;
-    bool agreement_sent_via_mail = 4;
-    string mail_tracking_link = 5;
 }
 
 message SetMerchantS3AgreementRequest {

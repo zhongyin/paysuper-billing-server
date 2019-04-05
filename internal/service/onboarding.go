@@ -26,7 +26,6 @@ const (
 	merchantErrorNotFound                    = "merchant with specified identifier not found"
 	merchantErrorBadData                     = "request data is incorrect"
 	merchantErrorAgreementTypeSelectNotAllow = "merchant status not allow select agreement type"
-	merchantErrorNotHaveAgreementType        = "merchant agreement can't be signing, because agreement type not selected"
 	notificationErrorMerchantIdIncorrect     = "merchant identifier incorrect, notification can't be saved"
 	notificationErrorUserIdIncorrect         = "user identifier incorrect, notification can't be saved"
 	notificationErrorMessageIsEmpty          = "notification message can't be empty"
@@ -330,10 +329,10 @@ func (s *Service) ChangeMerchantStatus(
 	return nil
 }
 
-func (s *Service) ChangeMerchantAgreementType(
+func (s *Service) ChangeMerchantData(
 	ctx context.Context,
-	req *grpc.ChangeMerchantAgreementTypeRequest,
-	rsp *grpc.ChangeMerchantAgreementTypeResponse,
+	req *grpc.ChangeMerchantDataRequest,
+	rsp *grpc.ChangeMerchantDataResponse,
 ) error {
 	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
 
@@ -344,55 +343,23 @@ func (s *Service) ChangeMerchantAgreementType(
 		return nil
 	}
 
-	if merchant.ChangesAllowed() == false {
-		rsp.Status = pkg.ResponseStatusBadData
-		rsp.Message = merchantErrorAgreementTypeSelectNotAllow
+	if req.AgreementType > 0 && merchant.AgreementType != req.AgreementType {
+		if merchant.ChangesAllowed() == false {
+			rsp.Status = pkg.ResponseStatusBadData
+			rsp.Message = merchantErrorAgreementTypeSelectNotAllow
 
-		return nil
-	}
+			return nil
+		}
 
-	nStatuses := &billing.SystemNotificationStatuses{From: merchant.Status, To: pkg.MerchantStatusAgreementRequested}
-	merchant.Status = pkg.MerchantStatusAgreementRequested
-	merchant.AgreementType = req.AgreementType
+		nStatuses := &billing.SystemNotificationStatuses{From: merchant.Status, To: pkg.MerchantStatusAgreementRequested}
+		_, err = s.addNotification(NotificationStatusChangeTitles[merchant.Status], "", merchant.Id, "", nStatuses)
 
-	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
+		if err != nil {
+			s.logError("Add notification failed", []interface{}{"err", err.Error(), "data", merchant})
+		}
 
-	if err != nil {
-		s.logError("Query to change merchant data failed", []interface{}{"err", err.Error(), "data", merchant})
-		return errors.New(merchantErrorUnknown)
-	}
-
-	_, err = s.addNotification(NotificationStatusChangeTitles[merchant.Status], "", merchant.Id, "", nStatuses)
-
-	if err != nil {
-		s.logError("Add notification failed", []interface{}{"err", err.Error(), "data", merchant})
-	}
-
-	rsp.Status = pkg.ResponseStatusOk
-	rsp.Item = merchant
-
-	return nil
-}
-
-func (s *Service) ProcessMerchantAgreement(
-	ctx context.Context,
-	req *grpc.SignMerchantRequest,
-	rsp *grpc.ChangeMerchantAgreementTypeResponse,
-) error {
-	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
-
-	if err != nil {
-		rsp.Status = pkg.ResponseStatusNotFound
-		rsp.Message = merchantErrorNotFound
-
-		return nil
-	}
-
-	if merchant.Status != pkg.MerchantStatusAgreementSigning {
-		rsp.Status = pkg.ResponseStatusBadData
-		rsp.Message = merchantErrorNotHaveAgreementType
-
-		return nil
+		merchant.Status = pkg.MerchantStatusAgreementRequested
+		merchant.AgreementType = req.AgreementType
 	}
 
 	merchant.HasPspSignature = req.HasPspSignature
@@ -420,7 +387,7 @@ func (s *Service) ProcessMerchantAgreement(
 func (s *Service) SetMerchantS3Agreement(
 	ctx context.Context,
 	req *grpc.SetMerchantS3AgreementRequest,
-	rsp *grpc.ChangeMerchantAgreementTypeResponse,
+	rsp *grpc.ChangeMerchantDataResponse,
 ) error {
 	merchant, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
 
