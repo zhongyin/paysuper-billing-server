@@ -749,6 +749,9 @@ func (s *Service) mapMerchantData(rsp *billing.Merchant, merchant *billing.Merch
 	rsp.CreatedAt = merchant.CreatedAt
 	rsp.UpdatedAt = merchant.UpdatedAt
 	rsp.S3AgreementName = merchant.S3AgreementName
+	rsp.AgreementType = merchant.AgreementType
+	rsp.AgreementSentViaMail = merchant.AgreementSentViaMail
+	rsp.MailTrackingLink = merchant.MailTrackingLink
 }
 
 func (s *Service) addNotification(
