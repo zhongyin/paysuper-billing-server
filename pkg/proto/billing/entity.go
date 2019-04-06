@@ -37,10 +37,6 @@ func (m *Merchant) CanGenerateAgreement() bool {
 	return m.Status == pkg.MerchantStatusOnReview
 }
 
-func (m *Merchant) CanBeSetToDraft() bool {
-	return m.Status == pkg.MerchantStatusAgreementRequested || m.Status == pkg.MerchantStatusOnReview
-}
-
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
 	return m.PaymentSystem.AccountingCurrency
 }

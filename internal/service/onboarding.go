@@ -16,7 +16,6 @@ const (
 	merchantErrorChangeNotAllowed            = "merchant data changing not allowed"
 	merchantErrorCountryNotFound             = "merchant country not found"
 	merchantErrorCurrencyNotFound            = "merchant bank accounting currency not found"
-	merchantErrorStatusDraft                 = "merchant status can't be set to draft"
 	merchantErrorAgreementRequested          = "agreement for merchant can't be requested"
 	merchantErrorOnReview                    = "merchant hasn't allowed status for review"
 	merchantErrorSigning                     = "signing unapproved merchant is impossible"
@@ -270,10 +269,6 @@ func (s *Service) ChangeMerchantStatus(
 
 	if err != nil {
 		return err
-	}
-
-	if req.Status == pkg.MerchantStatusDraft && merchant.CanBeSetToDraft() != true {
-		return errors.New(merchantErrorStatusDraft)
 	}
 
 	if req.Status == pkg.MerchantStatusAgreementRequested && merchant.Status != pkg.MerchantStatusDraft {

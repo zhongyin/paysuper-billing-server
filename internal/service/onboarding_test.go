@@ -877,63 +877,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Ok() {
 	assert.Equal(suite.T(), pkg.MerchantStatusAgreementRequested, rspChangeStatus.Status)
 }
 
-func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_SignedToDraft_Error() {
-	req := &grpc.OnboardingRequest{
-		Name:               "Change status test",
-		AlternativeName:    "",
-		Website:            "https://unit.test",
-		Country:            "RU",
-		State:              "St.Petersburg",
-		Zip:                "190000",
-		City:               "St.Petersburg",
-		Address:            "",
-		AddressAdditional:  "",
-		RegistrationNumber: "",
-		TaxId:              "",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "1234567890",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "1234567890",
-			},
-		},
-		Banking: &grpc.OnboardingBanking{
-			Currency:      "RUB",
-			Name:          "Bank name",
-			Address:       "Unknown",
-			AccountNumber: "1234567890",
-			Swift:         "TEST",
-			Details:       "",
-		},
-	}
-
-	rsp := &billing.Merchant{}
-	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
-	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
-
-	merchant, err := suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
-	assert.NoError(suite.T(), err)
-	merchant.Status = pkg.MerchantStatusAgreementSigning
-	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), merchant)
-
-	req1 := &grpc.MerchantChangeStatusRequest{
-		MerchantId: rsp.Id,
-		Status:     pkg.MerchantStatusDraft,
-	}
-	rsp1 := &billing.Merchant{}
-	err = suite.service.ChangeMerchantStatus(context.TODO(), req1, rsp1)
-
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), merchantErrorStatusDraft, err.Error())
-}
-
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementRequested_Error() {
 	req := &grpc.OnboardingRequest{
 		Name:               "Change status test",
