@@ -272,7 +272,7 @@ func (s *Service) ChangeMerchantStatus(
 		return err
 	}
 
-	if req.Status == pkg.MerchantStatusDraft && merchant.Status != pkg.MerchantStatusOnReview {
+	if req.Status == pkg.MerchantStatusDraft && merchant.CanBeSetToDraft() != true {
 		return errors.New(merchantErrorStatusDraft)
 	}
 

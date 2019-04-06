@@ -877,7 +877,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Ok() {
 	assert.Equal(suite.T(), pkg.MerchantStatusAgreementRequested, rspChangeStatus.Status)
 }
 
-func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_DraftToDraft_Error() {
+func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_SignedToDraft_Error() {
 	req := &grpc.OnboardingRequest{
 		Name:               "Change status test",
 		AlternativeName:    "",
@@ -915,17 +915,20 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_DraftToDra
 
 	rsp := &billing.Merchant{}
 	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
-
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
-	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
+	merchant, err := suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
+	assert.NoError(suite.T(), err)
+	merchant.Status = pkg.MerchantStatusAgreementSigning
+	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), merchant)
+
+	req1 := &grpc.MerchantChangeStatusRequest{
 		MerchantId: rsp.Id,
 		Status:     pkg.MerchantStatusDraft,
 	}
-
-	rspChangeStatus := &billing.Merchant{}
-	err = suite.service.ChangeMerchantStatus(context.TODO(), reqChangeStatus, rspChangeStatus)
+	rsp1 := &billing.Merchant{}
+	err = suite.service.ChangeMerchantStatus(context.TODO(), req1, rsp1)
 
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), merchantErrorStatusDraft, err.Error())
