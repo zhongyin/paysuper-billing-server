@@ -391,7 +391,6 @@ func (s *Service) SetMerchantS3Agreement(
 	}
 
 	merchant.S3AgreementName = req.S3AgreementName
-	merchant.Status = pkg.MerchantStatusAgreementSigning
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
 
