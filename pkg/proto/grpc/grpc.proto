@@ -176,7 +176,7 @@ message MerchantChangeStatusRequest {
     // @inject_tag: validate:"required,hexadecimal"
     string merchant_id = 1;
     string user_id = 2;
-    // @inject_tag: validate:"required,numeric"
+    // @inject_tag: validate:"omitempty,numeric"
     int32 status = 3;
     string message = 4;
 }
