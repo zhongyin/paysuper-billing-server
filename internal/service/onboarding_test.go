@@ -1030,7 +1030,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_OnReview_E
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
-	rsp.Status = pkg.MerchantStatusApproved
+	rsp.Status = pkg.MerchantStatusAgreementSigning
 	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
 
 	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
@@ -1043,114 +1043,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_OnReview_E
 
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), merchantErrorOnReview, err.Error())
-}
-
-func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Approved_Error() {
-	req := &grpc.OnboardingRequest{
-		Name:               "Change status test",
-		AlternativeName:    "",
-		Website:            "https://unit.test",
-		Country:            "RU",
-		State:              "St.Petersburg",
-		Zip:                "190000",
-		City:               "St.Petersburg",
-		Address:            "",
-		AddressAdditional:  "",
-		RegistrationNumber: "",
-		TaxId:              "",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "1234567890",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "1234567890",
-			},
-		},
-		Banking: &grpc.OnboardingBanking{
-			Currency:      "RUB",
-			Name:          "Bank name",
-			Address:       "Unknown",
-			AccountNumber: "1234567890",
-			Swift:         "TEST",
-			Details:       "",
-		},
-	}
-
-	rsp := &billing.Merchant{}
-	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
-
-	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
-
-	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		MerchantId: rsp.Id,
-		Status:     pkg.MerchantStatusApproved,
-	}
-
-	rspChangeStatus := &billing.Merchant{}
-	err = suite.service.ChangeMerchantStatus(context.TODO(), reqChangeStatus, rspChangeStatus)
-
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), merchantErrorReturnFromReview, err.Error())
-}
-
-func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_Rejected_Error() {
-	req := &grpc.OnboardingRequest{
-		Name:               "Change status test",
-		AlternativeName:    "",
-		Website:            "https://unit.test",
-		Country:            "RU",
-		State:              "St.Petersburg",
-		Zip:                "190000",
-		City:               "St.Petersburg",
-		Address:            "",
-		AddressAdditional:  "",
-		RegistrationNumber: "",
-		TaxId:              "",
-		Contacts: &billing.MerchantContact{
-			Authorized: &billing.MerchantContactAuthorized{
-				Name:     "Unit Test",
-				Email:    "test@unit.test",
-				Phone:    "1234567890",
-				Position: "Unit Test",
-			},
-			Technical: &billing.MerchantContactTechnical{
-				Name:  "Unit Test",
-				Email: "test@unit.test",
-				Phone: "1234567890",
-			},
-		},
-		Banking: &grpc.OnboardingBanking{
-			Currency:      "RUB",
-			Name:          "Bank name",
-			Address:       "Unknown",
-			AccountNumber: "1234567890",
-			Swift:         "TEST",
-			Details:       "",
-		},
-	}
-
-	rsp := &billing.Merchant{}
-	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
-
-	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
-
-	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
-		MerchantId: rsp.Id,
-		Status:     pkg.MerchantStatusRejected,
-	}
-
-	rspChangeStatus := &billing.Merchant{}
-	err = suite.service.ChangeMerchantStatus(context.TODO(), reqChangeStatus, rspChangeStatus)
-
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), merchantErrorReturnFromReview, err.Error())
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementSigning_Error() {
@@ -1191,20 +1083,15 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_AgreementS
 
 	rsp := &billing.Merchant{}
 	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
-
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), pkg.MerchantStatusDraft, rsp.Status)
 
-	rsp.Status = pkg.MerchantStatusRejected
-	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), rsp)
-
-	reqChangeStatus := &grpc.MerchantChangeStatusRequest{
+	req1 := &grpc.MerchantChangeStatusRequest{
 		MerchantId: rsp.Id,
 		Status:     pkg.MerchantStatusAgreementSigning,
 	}
-
-	rspChangeStatus := &billing.Merchant{}
-	err = suite.service.ChangeMerchantStatus(context.TODO(), reqChangeStatus, rspChangeStatus)
+	rsp1 := &billing.Merchant{}
+	err = suite.service.ChangeMerchantStatus(context.TODO(), req1, rsp1)
 
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), merchantErrorSigning, err.Error())
@@ -2430,10 +2317,10 @@ func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantStatus_SystemNoti
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.MerchantStatusOnReview, rsp4.Status)
 
-	req4.Status = pkg.MerchantStatusApproved
+	req4.Status = pkg.MerchantStatusAgreementSigning
 	err = suite.service.ChangeMerchantStatus(context.TODO(), req4, rsp4)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), pkg.MerchantStatusApproved, rsp4.Status)
+	assert.Equal(suite.T(), pkg.MerchantStatusAgreementSigning, rsp4.Status)
 
 	err = suite.service.ListNotifications(context.TODO(), req2, rsp2)
 	assert.NoError(suite.T(), err)

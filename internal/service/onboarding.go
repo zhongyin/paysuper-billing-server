@@ -39,8 +39,6 @@ var (
 		pkg.MerchantStatusDraft:              "New merchant created",
 		pkg.MerchantStatusAgreementRequested: "Merchant asked for agreement",
 		pkg.MerchantStatusOnReview:           "Merchant on KYC review",
-		pkg.MerchantStatusApproved:           "Merchant approved",
-		pkg.MerchantStatusRejected:           "Merchant rejected",
 		pkg.MerchantStatusAgreementSigning:   "Agreement signing",
 		pkg.MerchantStatusAgreementSigned:    "Agreement signed",
 	}
@@ -279,8 +277,7 @@ func (s *Service) ChangeMerchantStatus(
 		return errors.New(merchantErrorStatusDraft)
 	}
 
-	if req.Status == pkg.MerchantStatusAgreementRequested && merchant.Status != pkg.MerchantStatusDraft &&
-		merchant.Status != pkg.MerchantStatusRejected {
+	if req.Status == pkg.MerchantStatusAgreementRequested && merchant.Status != pkg.MerchantStatusDraft {
 		return errors.New(merchantErrorAgreementRequested)
 	}
 
@@ -288,12 +285,7 @@ func (s *Service) ChangeMerchantStatus(
 		return errors.New(merchantErrorOnReview)
 	}
 
-	if (req.Status == pkg.MerchantStatusApproved || req.Status == pkg.MerchantStatusRejected) &&
-		merchant.Status != pkg.MerchantStatusOnReview {
-		return errors.New(merchantErrorReturnFromReview)
-	}
-
-	if req.Status == pkg.MerchantStatusAgreementSigning && merchant.Status != pkg.MerchantStatusApproved {
+	if req.Status == pkg.MerchantStatusAgreementSigning && merchant.Status != pkg.MerchantStatusOnReview {
 		return errors.New(merchantErrorSigning)
 	}
 
@@ -399,6 +391,7 @@ func (s *Service) SetMerchantS3Agreement(
 	}
 
 	merchant.S3AgreementName = req.S3AgreementName
+	merchant.Status = pkg.MerchantStatusAgreementSigning
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)
 

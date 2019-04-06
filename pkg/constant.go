@@ -61,10 +61,8 @@ const (
 	MerchantStatusDraft              = int32(0)
 	MerchantStatusAgreementRequested = int32(1)
 	MerchantStatusOnReview           = int32(2)
-	MerchantStatusApproved           = int32(3)
-	MerchantStatusRejected           = int32(4)
-	MerchantStatusAgreementSigning   = int32(5)
-	MerchantStatusAgreementSigned    = int32(6)
+	MerchantStatusAgreementSigning   = int32(3)
+	MerchantStatusAgreementSigned    = int32(4)
 
 	ResponseStatusOk          = int32(200)
 	ResponseStatusBadData     = int32(400)

@@ -17,7 +17,7 @@ var (
 )
 
 func (m *Merchant) ChangesAllowed() bool {
-	return m.Status == pkg.MerchantStatusDraft || m.Status == pkg.MerchantStatusRejected
+	return m.Status == pkg.MerchantStatusDraft
 }
 
 func (m *Merchant) GetPayoutCurrency() *Currency {
@@ -34,8 +34,7 @@ func (m *Merchant) NeedMarkESignAgreementAsSigned() bool {
 }
 
 func (m *Merchant) CanGenerateAgreement() bool {
-	return m.Status == pkg.MerchantStatusApproved || m.Status == pkg.MerchantStatusAgreementSigning ||
-		m.Status == pkg.MerchantStatusAgreementSigned
+	return m.Status == pkg.MerchantStatusOnReview
 }
 
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
