@@ -295,6 +295,13 @@ func (s *Service) ChangeMerchantStatus(
 		merchant.IsSigned = true
 	}
 
+	if req.Status == pkg.MerchantStatusDraft {
+		merchant.AgreementType = 0
+		merchant.HasPspSignature = false
+		merchant.HasMerchantSignature = false
+		merchant.IsSigned = false
+	}
+
 	if title, ok := NotificationStatusChangeTitles[req.Status]; ok {
 		_, err = s.addNotification(title, req.Message, merchant.Id, "", nStatuses)
 
