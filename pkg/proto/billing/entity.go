@@ -34,8 +34,9 @@ func (m *Merchant) NeedMarkESignAgreementAsSigned() bool {
 }
 
 func (m *Merchant) CanGenerateAgreement() bool {
-	return m.Status == pkg.MerchantStatusOnReview || m.Status == pkg.MerchantStatusAgreementSigning ||
-		m.Status == pkg.MerchantStatusAgreementSigned
+	return (m.Status == pkg.MerchantStatusOnReview || m.Status == pkg.MerchantStatusAgreementSigning ||
+		m.Status == pkg.MerchantStatusAgreementSigned) && m.Banking != nil && m.Country != nil &&
+		m.Contacts != nil && m.Contacts.Authorized != nil
 }
 
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
