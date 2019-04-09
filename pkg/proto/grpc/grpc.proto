@@ -156,6 +156,7 @@ message FindByIdRequest {
 }
 
 message MerchantListingRequest {
+    // @inject_tag: query:"omitempty,name"
     string name = 1;
     int32 is_signed = 2;
     int64 last_payout_date_from = 3;
