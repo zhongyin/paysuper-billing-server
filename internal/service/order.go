@@ -166,7 +166,7 @@ func (s *Service) OrderCreateProcess(
 		return err
 	}
 
-	if processor.checked.project.OnlyFixedAmounts == true {
+	if processor.checked.project.IsProductsCheckout == true {
 		if err := processor.processProducts(); err != nil {
 			if pid := req.PrivateMetadata["PaylinkId"]; pid != "" {
 				s.notifyPaylinkError(pid, err, req, nil)
@@ -1769,7 +1769,7 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		return errors.New(orderErrorProjectInactive)
 	}
 
-	if project.OnlyFixedAmounts == false {
+	if project.IsProductsCheckout == false {
 		return nil
 	}
 

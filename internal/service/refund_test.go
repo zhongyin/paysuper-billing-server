@@ -37,9 +37,8 @@ func Test_Refund(t *testing.T) {
 
 func (suite *RefundTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
-
 	assert.NoError(suite.T(), err, "Config load failed")
+	cfg.AccountingCurrency = "RUB"
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -178,7 +177,7 @@ func (suite *RefundTestSuite) SetupTest() {
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
 		Name:                     "test project 1",
-		OnlyFixedAmounts:         false,
+		IsProductsCheckout:       false,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
 		PaymentMethods: map[string]*billing.ProjectPaymentMethod{

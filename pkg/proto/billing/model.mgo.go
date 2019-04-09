@@ -37,7 +37,7 @@ type MgoProject struct {
 	MinPaymentAmount         float64                          `bson:"min_payment_amount" json:"min_payment_amount"`
 	Name                     string                           `bson:"name" json:"name"`
 	NotifyEmails             []string                         `bson:"notify_emails" json:"notify_emails"`
-	OnlyFixedAmounts         bool                             `bson:"only_fixed_amounts" json:"only_fixed_amounts"`
+	IsProductsCheckout       bool                             `bson:"is_products_checkout" json:"is_products_checkout"`
 	SecretKey                string                           `bson:"secret_key" json:"secret_key"`
 	SendNotifyEmail          bool                             `bson:"send_notify_email" json:"send_notify_email"`
 	UrlCheckAccount          string                           `bson:"url_check_account" json:"url_check_account"`
@@ -352,7 +352,7 @@ func (m *Project) GetBSON() (interface{}, error) {
 		MinPaymentAmount:         m.MinPaymentAmount,
 		Name:                     m.Name,
 		NotifyEmails:             m.NotifyEmails,
-		OnlyFixedAmounts:         m.OnlyFixedAmounts,
+		IsProductsCheckout:       m.IsProductsCheckout,
 		SecretKey:                m.SecretKey,
 		SendNotifyEmail:          m.SendNotifyEmail,
 		UrlCheckAccount:          m.UrlCheckAccount,
@@ -532,7 +532,7 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	m.MinPaymentAmount = decoded.MinPaymentAmount
 	m.Name = decoded.Name
 	m.NotifyEmails = decoded.NotifyEmails
-	m.OnlyFixedAmounts = decoded.OnlyFixedAmounts
+	m.IsProductsCheckout = decoded.IsProductsCheckout
 	m.SecretKey = decoded.SecretKey
 	m.SendNotifyEmail = decoded.SendNotifyEmail
 	m.UrlCheckAccount = decoded.UrlCheckAccount
