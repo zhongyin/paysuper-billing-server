@@ -159,7 +159,9 @@ message MerchantListingRequest {
     // @inject_tag: query:"omitempty,name"
     string name = 1;
     int32 is_signed = 2;
+    // @inject_tag: query:"omitempty,last_payout_date_from" validate:"omitempty,numeric,gt=0"
     int64 last_payout_date_from = 3;
+    // @inject_tag: query:"omitempty,last_payout_date_to" validate:"omitempty,numeric,gt=0"
     int64 last_payout_date_to = 4;
     // @inject_tag: query:"omitempty,last_payout_amount" validate:"omitempty,numeric"
     double last_payout_amount = 5;
