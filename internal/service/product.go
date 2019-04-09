@@ -47,6 +47,16 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 		return errors.New("no price in default currency")
 	}
 
+	if _, err := req.GetLocalizedName(DefaultLanguage); err != nil {
+		s.logError("No name in default language", []interface{}{"data", req})
+		return err
+	}
+
+	if _, err := req.GetLocalizedDescription(DefaultLanguage); err != nil {
+		s.logError("No description in default language", []interface{}{"data", req})
+		return err
+	}
+
 	// Prevent duplicated products (by projectId+sku)
 	dupQuery := bson.M{"project_id": bson.ObjectIdHex(req.ProjectId), "sku": req.Sku, "deleted": false}
 	found, err := s.db.Collection(pkg.CollectionProduct).Find(dupQuery).Count()

@@ -1709,7 +1709,6 @@ func (s *Service) GetOrderProductsItems(products []*grpc.Product, language strin
 			name        string
 			description string
 			err         error
-			ok          bool
 		)
 
 		amount, err = p.GetPriceInCurrency(currency)
@@ -1717,24 +1716,24 @@ func (s *Service) GetOrderProductsItems(products []*grpc.Product, language strin
 			return nil, err
 		}
 
-		name, ok = p.Name[language]
-		if !ok {
+		name, err = p.GetLocalizedName(language)
+		if err != nil {
 			if isDefaultLanguage {
 				return nil, errors.New(fmt.Sprintf(orderErrorNoNameInRequiredLanguage, language))
 			}
-			name, ok = p.Name[DefaultLanguage]
-			if !ok {
+			name, err = p.GetLocalizedName(DefaultLanguage)
+			if err != nil {
 				return nil, errors.New(fmt.Sprintf(orderErrorNoNameInDefaultLanguage, DefaultLanguage))
 			}
 		}
 
-		description, ok = p.Description[language]
-		if !ok {
+		description, err = p.GetLocalizedDescription(language)
+		if err != nil {
 			if isDefaultLanguage {
 				return nil, errors.New(fmt.Sprintf(orderErrorNoDescriptionInRequiredLanguage, language))
 			}
-			description, ok = p.Description[DefaultLanguage]
-			if !ok {
+			description, err = p.GetLocalizedDescription(DefaultLanguage)
+			if err != nil {
 				return nil, errors.New(fmt.Sprintf(orderErrorNoDescriptionInDefaultLanguage, DefaultLanguage))
 			}
 		}
@@ -1774,9 +1773,10 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 	}
 
 	var (
-		country  string
-		currency *billing.Currency
-		locale   string
+		country       string
+		currency      *billing.Currency
+		itemsCurrency string
+		locale        string
 	)
 
 	if order.BillingAddress != nil && order.BillingAddress.Country != "" {
@@ -1808,6 +1808,8 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		return err
 	}
 
+	itemsCurrency = currency.CodeA3
+
 	// try to get order Amount in requested currency
 	amount, err := s.GetOrderProductsAmount(orderProducts, currency.CodeA3)
 	if err != nil {
@@ -1819,6 +1821,7 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		if err != nil {
 			return err
 		}
+		itemsCurrency = defaultCurrency.CodeA3
 		// converting Amount from default currency to requested
 		amount, err = s.Convert(defaultCurrency.CodeInt, currency.CodeInt, amount)
 		if err != nil {
@@ -1832,7 +1835,7 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		locale = DefaultLanguage
 	}
 
-	items, err := s.GetOrderProductsItems(orderProducts, locale, currency.CodeA3)
+	items, err := s.GetOrderProductsItems(orderProducts, locale, itemsCurrency)
 	if err != nil {
 		return err
 	}
