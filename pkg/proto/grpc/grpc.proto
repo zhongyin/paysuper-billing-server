@@ -165,6 +165,7 @@ message MerchantListingRequest {
     int32 limit = 7;
     int32 offset = 8;
     string quick_search = 9;
+    repeated int32 statuses = 10;
 }
 
 message MerchantListingResponse {

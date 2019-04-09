@@ -672,6 +672,120 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_NameQuery_Ok() {
 	assert.Equal(suite.T(), suite.merchant.Id, rsp.Items[0].Id)
 }
 
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_StatusesQuery_Ok() {
+	req := &grpc.OnboardingRequest{
+		Name:               "Change status test",
+		AlternativeName:    "",
+		Website:            "https://unit.test",
+		Country:            "RU",
+		State:              "St.Petersburg",
+		Zip:                "190000",
+		City:               "St.Petersburg",
+		Address:            "",
+		AddressAdditional:  "",
+		RegistrationNumber: "",
+		TaxId:              "",
+		Contacts: &billing.MerchantContact{
+			Authorized: &billing.MerchantContactAuthorized{
+				Name:     "Unit Test",
+				Email:    "test@unit.test",
+				Phone:    "1234567890",
+				Position: "Unit Test",
+			},
+			Technical: &billing.MerchantContactTechnical{
+				Name:  "Unit Test",
+				Email: "test@unit.test",
+				Phone: "1234567890",
+			},
+		},
+		Banking: &grpc.OnboardingBanking{
+			Currency:      "RUB",
+			Name:          "Bank name",
+			Address:       "Unknown",
+			AccountNumber: "1234567890",
+			Swift:         "TEST",
+			Details:       "",
+		},
+	}
+
+	rsp := &billing.Merchant{}
+	err := suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	req.Name = req.Name + "_1"
+	err = suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	merchant, err := suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), merchant)
+
+	merchant.Status = pkg.MerchantStatusAgreementSigned
+	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), merchant)
+
+	req.Name = req.Name + "_2"
+	err = suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	merchant, err = suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), merchant)
+
+	merchant.Status = pkg.MerchantStatusOnReview
+	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), merchant)
+
+	req.Name = req.Name + "_3"
+	err = suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	merchant, err = suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), merchant)
+
+	merchant.Status = pkg.MerchantStatusAgreementSigned
+	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), merchant)
+
+	req.Name = req.Name + "_4"
+	err = suite.service.ChangeMerchant(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	merchant, err = suite.service.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(rsp.Id)})
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), merchant)
+
+	merchant.Status = pkg.MerchantStatusAgreementSigned
+	err = suite.service.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(rsp.Id), merchant)
+
+	req1 := &grpc.MerchantListingRequest{Statuses: []int32{pkg.MerchantStatusDraft}}
+	rsp1 := &grpc.MerchantListingResponse{}
+	err = suite.service.ListMerchants(context.TODO(), req1, rsp1)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), int32(3), rsp1.Count)
+	assert.Equal(suite.T(), suite.merchant.Id, rsp1.Items[0].Id)
+
+	req1 = &grpc.MerchantListingRequest{Statuses: []int32{pkg.MerchantStatusOnReview}}
+	rsp1 = &grpc.MerchantListingResponse{}
+	err = suite.service.ListMerchants(context.TODO(), req1, rsp1)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), int32(1), rsp1.Count)
+
+	req1 = &grpc.MerchantListingRequest{Statuses: []int32{pkg.MerchantStatusAgreementSigned}}
+	rsp1 = &grpc.MerchantListingResponse{}
+	err = suite.service.ListMerchants(context.TODO(), req1, rsp1)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), int32(3), rsp1.Count)
+
+	req1 = &grpc.MerchantListingRequest{Statuses: []int32{pkg.MerchantStatusOnReview, pkg.MerchantStatusAgreementSigned}}
+	rsp1 = &grpc.MerchantListingResponse{}
+	err = suite.service.ListMerchants(context.TODO(), req1, rsp1)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), int32(4), rsp1.Count)
+}
+
 func (suite *OnboardingTestSuite) TestOnboarding_ListMerchants_QuickSearchQuery_Ok() {
 	req := &grpc.MerchantListingRequest{
 		QuickSearch: "test_agreement",
