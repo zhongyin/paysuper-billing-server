@@ -1867,5 +1867,18 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 }
 
 func (s *Service) notifyPaylinkError(PaylinkId string, err error, req interface{}, order interface{}) {
-	// todo send notify about invalid paylink to centrifugo
+	msg := map[string]interface{}{
+		"event":     "error",
+		"paylinkId": PaylinkId,
+		"message":   "Invalid paylink",
+		"error":     err,
+		"request":   req,
+		"order":     order,
+	}
+	sErr := s.sendCentrifugoMessage(msg)
+	if sErr != nil {
+		s.logError("Cannot send centrifugo message about Paylink Error", []interface{}{
+			"error", sErr.Error(), "PaylinkId", PaylinkId, "originalError", err.Error(), "request", req, "order", order,
+		})
+	}
 }

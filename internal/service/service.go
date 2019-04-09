@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	"github.com/ProtocolONE/rabbitmq/pkg"
+	"github.com/centrifugal/gocent"
 	"github.com/globalsign/mgo/bson"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
@@ -13,6 +15,7 @@ import (
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/proto/repository"
+	"github.com/paysuper/paysuper-recurring-repository/tools"
 	"github.com/paysuper/paysuper-tax-service/proto"
 	"go.uber.org/zap"
 	"strings"
@@ -43,6 +46,8 @@ const (
 	CountryCodeUSA = "US"
 
 	DefaultLanguage = "en"
+
+	centrifugoChannel = "paysuper-billing-server"
 )
 
 var (
@@ -58,15 +63,16 @@ var (
 )
 
 type Service struct {
-	db     *database.Source
-	mx     sync.Mutex
-	cfg    *config.Config
-	exitCh chan bool
-	ctx    context.Context
-	geo    proto.GeoIpService
-	rep    repository.RepositoryService
-	tax    tax_service.TaxService
-	broker *rabbitmq.Broker
+	db               *database.Source
+	mx               sync.Mutex
+	cfg              *config.Config
+	exitCh           chan bool
+	ctx              context.Context
+	geo              proto.GeoIpService
+	rep              repository.RepositoryService
+	tax              tax_service.TaxService
+	broker           *rabbitmq.Broker
+	centrifugoClient *gocent.Client
 
 	accountingCurrency *billing.Currency
 
@@ -117,6 +123,14 @@ func (s *Service) Init() (err error) {
 	if err != nil {
 		return
 	}
+
+	s.centrifugoClient = gocent.New(
+		gocent.Config{
+			Addr:       s.cfg.CentrifugoURL,
+			Key:        s.cfg.CentrifugoSecret,
+			HTTPClient: tools.NewLoggedHttpClient(zap.S()),
+		},
+	)
 
 	s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
 	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.cfg.AccountingCurrency)
@@ -267,4 +281,18 @@ func (s *Service) getCountryFromAcceptLanguage(acceptLanguage string) (string, s
 	it = strings.Split(it[0], "-")
 
 	return strings.ToLower(it[0]), strings.ToUpper(it[1])
+}
+
+func (s *Service) sendCentrifugoMessage(msg map[string]interface{}) error {
+	b, err := json.Marshal(msg)
+
+	if err != nil {
+		return err
+	}
+
+	if err = s.centrifugoClient.Publish(context.Background(), centrifugoChannel, b); err != nil {
+		return err
+	}
+
+	return nil
 }
