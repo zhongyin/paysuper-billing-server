@@ -162,9 +162,9 @@ message MerchantListingRequest {
     int64 last_payout_date_to = 4;
     double last_payout_amount = 5;
     repeated string sort = 6;
-    // @inject_tag: query:"omitempty,limit"
+    // @inject_tag: query:"omitempty,limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 7;
-    // @inject_tag: query:"omitempty,limit"
+    // @inject_tag: query:"omitempty,offset" validate:"omitempty,numeric,gte=0"
     int32 offset = 8;
     // @inject_tag: query:"omitempty,quick_search"
     string quick_search = 9;
