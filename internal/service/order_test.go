@@ -47,6 +47,7 @@ type OrderTestSuite struct {
 	pmWebMoney                             *billing.PaymentMethod
 	pmBitcoin1                             *billing.PaymentMethod
 	productIds                             []string
+	merchantDefaultCurrency                string
 }
 
 func Test_Order(t *testing.T) {
@@ -55,12 +56,11 @@ func Test_Order(t *testing.T) {
 
 func (suite *OrderTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
-	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
-
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
 	}
+	cfg.AccountingCurrency = "RUB"
+	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -937,6 +937,8 @@ func (suite *OrderTestSuite) SetupTest() {
 	suite.pmWebMoney = pmWebMoney
 	suite.pmBitcoin1 = pmBitcoin1
 	suite.productIds = productIds
+	suite.merchantDefaultCurrency = "USD"
+
 }
 
 func (suite *OrderTestSuite) TearDownTest() {
@@ -1121,12 +1123,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_Error() {
 }
 
 func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_Ok() {
-	_, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
+	_, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
 	assert.Nil(suite.T(), err)
 }
 
 func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_AnotherProject_Fail() {
-	_, err := suite.service.ValidateOrderProducts(suite.project.Id, suite.productIds)
+	_, err := suite.service.GetOrderProducts(suite.project.Id, suite.productIds)
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorProductsInvalid, err.Error())
 }
@@ -1161,7 +1163,7 @@ func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_OneProductIsInac
 	inactiveProd := grpc.Product{}
 	if assert.NoError(suite.T(), suite.service.CreateOrUpdateProduct(context.TODO(), req, &inactiveProd)) {
 		products := []string{suite.productIds[0], inactiveProd.Id}
-		_, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, products)
+		_, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, products)
 		assert.Error(suite.T(), err)
 		assert.Equal(suite.T(), orderErrorProductsInvalid, err.Error())
 	}
@@ -1169,41 +1171,29 @@ func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_OneProductIsInac
 
 func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_SomeProductsIsNotFound_Fail() {
 	products := []string{suite.productIds[0], bson.NewObjectId().Hex()}
-	_, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, products)
+	_, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, products)
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorProductsInvalid, err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_EmptyProducts_Fail() {
-	_, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, []string{})
+	_, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, []string{})
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorProductsEmpty, err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_Ok() {
-	p, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
+	p, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
 	assert.Nil(suite.T(), err)
 
-	amount, currencyA3Code, err := suite.service.GetOrderProductsAmount(p, DefaultCurrency)
+	amount, err := suite.service.GetOrderProductsAmount(p, suite.merchantDefaultCurrency)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), currencyA3Code, "USD")
-	assert.Equal(suite.T(), amount, float64(111))
-}
-
-func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_WithFallbackToDefaultCurrency_Ok() {
-	p, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
-	assert.Nil(suite.T(), err)
-
-	amount, currencyA3Code, err := suite.service.GetOrderProductsAmount(p, "EUR")
-
-	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), currencyA3Code, "USD")
 	assert.Equal(suite.T(), amount, float64(111))
 }
 
 func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_EmptyProducts_Fail() {
-	_, _, err := suite.service.GetOrderProductsAmount([]*grpc.Product{}, DefaultCurrency)
+	_, err := suite.service.GetOrderProductsAmount([]*grpc.Product{}, suite.merchantDefaultCurrency)
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorProductsEmpty, err.Error())
 }
@@ -1263,7 +1253,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_DifferentCurrencie
 
 	p := []*grpc.Product{&prod1, &prod2}
 
-	_, _, err := suite.service.GetOrderProductsAmount(p, "RUB")
+	_, err := suite.service.GetOrderProductsAmount(p, "RUB")
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorNoProductsCommonCurrency, err.Error())
 }
@@ -1323,23 +1313,23 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_DifferentCurrencie
 
 	p := []*grpc.Product{&prod1, &prod2}
 
-	_, _, err := suite.service.GetOrderProductsAmount(p, "RUB")
+	_, err := suite.service.GetOrderProductsAmount(p, "RUB")
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorNoProductsCommonCurrency, err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_Ok() {
-	p, err := suite.service.ValidateOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
+	p, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, suite.productIds)
 	assert.Nil(suite.T(), err)
 
-	items, err := suite.service.GetOrderProductsItems(p, DefaultLanguage, DefaultCurrency)
+	items, err := suite.service.GetOrderProductsItems(p, DefaultLanguage, suite.merchantDefaultCurrency)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), len(items), 2)
 }
 
 func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_EmptyProducts_Fail() {
-	_, err := suite.service.GetOrderProductsItems([]*grpc.Product{}, DefaultLanguage, DefaultCurrency)
+	_, err := suite.service.GetOrderProductsItems([]*grpc.Product{}, DefaultLanguage, suite.merchantDefaultCurrency)
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorProductsEmpty, err.Error())
 }
@@ -1459,7 +1449,7 @@ func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_AtLeastOneProductHa
 
 	p := []*grpc.Product{&prod1, &prod2}
 
-	_, err := suite.service.GetOrderProductsItems(p, "en", DefaultCurrency)
+	_, err := suite.service.GetOrderProductsItems(p, "en", suite.merchantDefaultCurrency)
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), fmt.Sprintf(orderErrorNoNameInRequiredLanguage, "en"), err.Error())
 }
@@ -1493,7 +1483,7 @@ func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_ProductHasNoDescInS
 
 	p := []*grpc.Product{&prod1}
 
-	_, err := suite.service.GetOrderProductsItems(p, "en", DefaultCurrency)
+	_, err := suite.service.GetOrderProductsItems(p, "en", suite.merchantDefaultCurrency)
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), fmt.Sprintf(orderErrorNoDescriptionInRequiredLanguage, "en"), err.Error())
 }
@@ -1527,7 +1517,7 @@ func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_ProductHasNoDescInS
 
 	p := []*grpc.Product{&prod1}
 
-	items, err := suite.service.GetOrderProductsItems(p, "ru", DefaultCurrency)
+	items, err := suite.service.GetOrderProductsItems(p, "ru", suite.merchantDefaultCurrency)
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), len(items), 1)
 }
@@ -1848,8 +1838,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processAmount()
-	assert.Nil(suite.T(), err)
+	processor.processAmount()
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
 	assert.Nil(suite.T(), err)
@@ -1882,8 +1871,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ConvertAmount_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processAmount()
-	assert.Nil(suite.T(), err)
+	processor.processAmount()
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
 	assert.Nil(suite.T(), err)
@@ -1980,8 +1968,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ProjectMaxAmount_Erro
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processAmount()
-	assert.Nil(suite.T(), err)
+	processor.processAmount()
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
 	assert.Nil(suite.T(), err)
@@ -2015,8 +2002,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_PaymentMethodMinAmoun
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processAmount()
-	assert.Nil(suite.T(), err)
+	processor.processAmount()
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
 	assert.Nil(suite.T(), err)
@@ -2050,8 +2036,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_PaymentMethodMaxAmoun
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processAmount()
-	assert.Nil(suite.T(), err)
+	processor.processAmount()
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
 	assert.Nil(suite.T(), err)

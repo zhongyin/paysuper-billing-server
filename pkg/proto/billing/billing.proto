@@ -57,6 +57,8 @@ message OrderCreateRequest {
     repeated string products = 22;
     // @inject_tag: json:"-"
     map<string, string> metadata = 23;
+    // @inject_tag: json:"-"
+    map<string, string> private_metadata = 24;
 }
 
 message Project {
@@ -413,6 +415,9 @@ message Order {
 
     // @inject_tag: json:"metadata"
     map<string, string> metadata = 51;
+
+    // @inject_tag: json:"-"
+    map<string, string> private_metadata = 52;
 }
 
 message OrderItem {
@@ -426,20 +431,21 @@ message OrderItem {
     string name = 4;
     //@inject_tag: validate:"required" json:"description"
     string description = 5;
-    //@inject_tag: json:"created_at"
-    google.protobuf.Timestamp created_at = 6;
-    //@inject_tag: json:"updated_at"
-    google.protobuf.Timestamp updated_at = 7;
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 6;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 7;
     //@inject_tag: validate:"dive,omitempty,uri" json:"images"
     repeated string images = 8;
     //@inject_tag: validate:"omitempty,url" json:"url"
     string url = 9;
     //@inject_tag: json:"metadata"
     map<string, string> metadata = 10;
-    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
-    double amount = 11;
-    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
-    string currency = 12;
+    //@inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 11;
+    //@inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 12;
+
 }
 
 message Currency {

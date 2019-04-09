@@ -42,7 +42,6 @@ const (
 
 	CountryCodeUSA = "US"
 
-	DefaultCurrency = "USD"
 	DefaultLanguage = "en"
 )
 

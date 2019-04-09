@@ -475,9 +475,9 @@ message ListProductsRequest {
 
 message GetProductsForOrderRequest {
     //@inject_tag: validate:"required,hexadecimal,len=24" json:"project_id" bson:"project_id"
-    string project_id = 6;
+    string project_id = 1;
     //@inject_tag: validate:"required,dive,hexadecimal,len=24" json:"ids" bson:"ids"
-    repeated string ids = 8;
+    repeated string ids = 2;
 }
 
 message ListProductsResponse {
