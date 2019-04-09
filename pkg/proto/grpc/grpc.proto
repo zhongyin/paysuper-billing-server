@@ -165,7 +165,7 @@ message MerchantListingRequest {
     int64 last_payout_date_to = 4;
     // @inject_tag: query:"last_payout_amount" validate:"omitempty,numeric"
     double last_payout_amount = 5;
-    // @inject_tag: query:"sort"
+    // @inject_tag: query:"sort[]"
     repeated string sort = 6;
     // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 7;
@@ -173,7 +173,7 @@ message MerchantListingRequest {
     int32 offset = 8;
     // @inject_tag: query:"quick_search"
     string quick_search = 9;
-    // @inject_tag: query:"status"
+    // @inject_tag: query:"status[]"
     repeated int32 statuses = 10;
 }
 
