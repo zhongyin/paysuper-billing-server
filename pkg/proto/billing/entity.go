@@ -39,6 +39,11 @@ func (m *Merchant) CanGenerateAgreement() bool {
 		m.Contacts != nil && m.Contacts.Authorized != nil
 }
 
+func (m *Merchant) CanChangeStatusToSigning() bool {
+	return m.Status == pkg.MerchantStatusOnReview && m.Banking != nil && m.Country != nil &&
+		m.Contacts != nil && m.Contacts.Authorized != nil
+}
+
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
 	return m.PaymentSystem.AccountingCurrency
 }

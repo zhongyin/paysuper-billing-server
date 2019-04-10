@@ -18,7 +18,7 @@ const (
 	merchantErrorCurrencyNotFound            = "merchant bank accounting currency not found"
 	merchantErrorAgreementRequested          = "agreement for merchant can't be requested"
 	merchantErrorOnReview                    = "merchant hasn't allowed status for review"
-	merchantErrorSigning                     = "signing unapproved merchant is impossible"
+	merchantErrorSigning                     = "signing uncompleted merchant is impossible"
 	merchantErrorSigned                      = "document can't be mark as signed"
 	merchantErrorUnknown                     = "request processing failed. try request later"
 	merchantErrorNotFound                    = "merchant with specified identifier not found"
@@ -283,7 +283,7 @@ func (s *Service) ChangeMerchantStatus(
 		return errors.New(merchantErrorOnReview)
 	}
 
-	if req.Status == pkg.MerchantStatusAgreementSigning && merchant.Status != pkg.MerchantStatusOnReview {
+	if req.Status == pkg.MerchantStatusAgreementSigning && merchant.CanChangeStatusToSigning() == false {
 		return errors.New(merchantErrorSigning)
 	}
 
