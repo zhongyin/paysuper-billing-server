@@ -98,15 +98,16 @@ const (
 )
 
 type orderCreateRequestProcessorChecked struct {
-	id            string
-	project       *billing.Project
-	currency      *billing.Currency
-	amount        float64
-	payerData     *billing.PayerData
-	paymentMethod *billing.PaymentMethod
-	products      []string
-	items         []*billing.OrderItem
-	metadata      map[string]string
+	id              string
+	project         *billing.Project
+	currency        *billing.Currency
+	amount          float64
+	payerData       *billing.PayerData
+	paymentMethod   *billing.PaymentMethod
+	products        []string
+	items           []*billing.OrderItem
+	metadata        map[string]string
+	privateMetadata map[string]string
 }
 
 type OrderCreateRequestProcessor struct {
@@ -212,6 +213,7 @@ func (s *Service) OrderCreateProcess(
 	}
 
 	processor.processMetadata()
+	processor.processPrivateMetadata()
 
 	order, err := processor.prepareOrder()
 
@@ -927,11 +929,12 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 				State:      v.checked.payerData.State,
 			},
 		},
-		Amount:   amount,
-		Currency: v.checked.currency.CodeA3,
-		Products: v.checked.products,
-		Items:    v.checked.items,
-		Metadata: v.checked.metadata,
+		Amount:          amount,
+		Currency:        v.checked.currency.CodeA3,
+		Products:        v.checked.products,
+		Items:           v.checked.items,
+		Metadata:        v.checked.metadata,
+		PrivateMetadata: v.checked.privateMetadata,
 	}
 
 	v.processOrderVat(order)
@@ -1003,6 +1006,10 @@ func (v *OrderCreateRequestProcessor) processAmount() {
 
 func (v *OrderCreateRequestProcessor) processMetadata() {
 	v.checked.metadata = v.request.Metadata
+}
+
+func (v *OrderCreateRequestProcessor) processPrivateMetadata() {
+	v.checked.privateMetadata = v.request.PrivateMetadata
 }
 
 func (v *OrderCreateRequestProcessor) processPayerData() error {
