@@ -126,10 +126,10 @@ func (s *Service) ListMerchants(
 		if req.LastPayoutAmount > 0 {
 			query["last_payout.amount"] = req.LastPayoutAmount
 		}
+	}
 
-		if len(req.Statuses) > 0 {
-			query["status"] = bson.M{"$in": req.Statuses}
-		}
+	if len(req.Statuses) > 0 {
+		query["status"] = bson.M{"$in": req.Statuses}
 	}
 
 	count, err := s.db.Collection(pkg.CollectionMerchant).Find(query).Count()
