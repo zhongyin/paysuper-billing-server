@@ -207,11 +207,18 @@ message Notifications {
 }
 
 message ListingNotificationRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
+    // @inject_tag: validate:"omitempty,hexadecimal,len=24"
     string user_id = 2;
+    // @inject_tag: validate:"omitempty,numeric,oneof=1 2"
     int32 is_system = 3;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 4;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
     int32 offset = 5;
+    // @inject_tag: query:"sort[]"
+    repeated string sort = 6;
 }
 
 message ListingMerchantPaymentMethod {
@@ -230,6 +237,8 @@ message ListMerchantPaymentMethodsRequest {
     string merchant_id = 1;
     // @inject_tag: query:"payment_method_name"
     string payment_method_name = 2;
+    // @inject_tag: query:"sort[]"
+    repeated string sort = 3;
 }
 
 message MerchantPaymentMethodRequest {

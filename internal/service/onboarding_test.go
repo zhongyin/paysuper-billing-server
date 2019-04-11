@@ -1689,6 +1689,22 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_Filt
 	assert.True(suite.T(), pm.IsActive)
 }
 
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_Sort_Ok() {
+	req := &grpc.ListMerchantPaymentMethodsRequest{
+		MerchantId: suite.merchant.Id,
+		Sort:       []string{"-name"},
+	}
+	rsp := &grpc.ListingMerchantPaymentMethod{}
+	err := suite.service.ListMerchantPaymentMethods(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.Len(suite.T(), rsp.PaymentMethods, 2)
+
+	pm := rsp.PaymentMethods[0]
+
+	assert.Equal(suite.T(), suite.pmQiwi.Id, pm.PaymentMethod.Id)
+	assert.Equal(suite.T(), suite.pmQiwi.Name, pm.PaymentMethod.Name)
+}
+
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_ExistPaymentMethod_Ok() {
 	req := &grpc.GetMerchantPaymentMethodRequest{
 		MerchantId:      suite.merchant.Id,
@@ -1970,6 +1986,41 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Merchant_Ok()
 	assert.Len(suite.T(), rsp3.Items, 2)
 	assert.Equal(suite.T(), rsp1.Id, rsp3.Items[0].Id)
 	assert.Equal(suite.T(), rsp2.Id, rsp3.Items[1].Id)
+}
+
+func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Sort_Ok() {
+	req := &grpc.NotificationRequest{
+		MerchantId: suite.merchant.Id,
+		UserId:     bson.NewObjectId().Hex(),
+		Title:      "Unit test title 1",
+		Message:    "Unit test message 1",
+	}
+	rsp := &billing.Notification{}
+	err := suite.service.CreateNotification(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.Id) > 0)
+
+	req.Title = req.Title + "_1"
+	err = suite.service.CreateNotification(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.Id) > 0)
+
+	req.Title = req.Title + "_2"
+	err = suite.service.CreateNotification(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.True(suite.T(), len(rsp.Id) > 0)
+
+	req1 := &grpc.ListingNotificationRequest{
+		MerchantId: suite.merchant.Id,
+		Sort:       []string{"-created_at"},
+		Limit:      10,
+		Offset:     0,
+	}
+	rsp1 := &grpc.Notifications{}
+	err = suite.service.ListNotifications(context.TODO(), req1, rsp1)
+	assert.Nil(suite.T(), err)
+	assert.Len(suite.T(), rsp1.Items, 3)
+	assert.Equal(suite.T(), rsp.Id, rsp1.Items[0].Id)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {

@@ -489,7 +489,7 @@ func (s *Service) ListNotifications(
 		return errors.New(orderErrorUnknown)
 	}
 
-	err = s.db.Collection(pkg.CollectionNotification).Find(query).
+	err = s.db.Collection(pkg.CollectionNotification).Find(query).Sort(req.Sort...).
 		Limit(int(req.Limit)).Skip(int(req.Offset)).All(&notifications)
 
 	if err != nil {
@@ -599,7 +599,7 @@ func (s *Service) ListMerchantPaymentMethods(
 		query["name"] = bson.RegEx{Pattern: ".*" + req.PaymentMethodName + ".*", Options: "i"}
 	}
 
-	err := s.db.Collection(pkg.CollectionPaymentMethod).Find(query).All(&pms)
+	err := s.db.Collection(pkg.CollectionPaymentMethod).Find(query).Sort(req.Sort...).All(&pms)
 
 	if err != nil {
 		s.logError("Query to find payment methods failed", []interface{}{"error", err.Error(), "query", query})
