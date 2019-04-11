@@ -209,7 +209,7 @@ message Notifications {
 message ListingNotificationRequest {
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
-    // @inject_tag: query:"user_id" validate:"omitempty,hexadecimal,len=24"
+    // @inject_tag: query:"user" validate:"omitempty,hexadecimal,len=24"
     string user_id = 2;
     // @inject_tag: validate:"omitempty,numeric,oneof=1 2"
     int32 is_system = 3;
