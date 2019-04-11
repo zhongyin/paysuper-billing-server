@@ -781,3 +781,103 @@ message Refund {
     RefundPayerData payer_data = 11;
     float sales_tax = 12;
 }
+
+message SystemFee {
+    // @inject_tag: json:"percent" validate:"required,numeric,gte=0,lte=100"
+    double percent = 1;
+    // @inject_tag: json:"percent_currency" validate:"omitempty,alpha,len=3"
+    string percent_currency = 2;
+    // @inject_tag: json:"fix_amount" validate:"required,numeric,gte=0"
+    double fix_amount = 3;
+    // @inject_tag: json:"fix_currency" validate:"required,alpha,len=3"
+    string fix_currency = 4;
+}
+
+message MinAmount {
+    // @inject_tag: json:"amount" validate:"required,numeric,gte=0"
+    double amount = 3;
+    // @inject_tag: json:"currency" validate:"required,alpha,len=3"
+    string currency = 4;
+}
+
+message FeeSet {
+    // @inject_tag: json:"min_amounts" validate:"required"
+    map<string, double> min_amounts = 5;
+    // @inject_tag: json:"transaction_cost" validate:"required,deep"
+    SystemFee transaction_cost = 6;
+    // @inject_tag: json:"authorization_fee" validate:"required,deep"
+    SystemFee authorization_fee = 7;
+}
+
+message SystemFees {
+    // @inject_tag: json:"id" bson:"_id" validate:"required,hexadecimal,len=24"
+    string id = 1;
+    // @inject_tag: json:"method_id" validate:"required,hexadecimal,len=24"
+    string method_id = 2;
+    // @inject_tag: json:"region" validate:"omitempty,alpha,len=2"
+    string region = 3;
+    // @inject_tag: json:"card_brand" validate:"omitempty,alpha"
+    string card_brand = 4;
+    // @inject_tag: json:"fees" validate:"required,gte=1"
+    repeated FeeSet fees = 5;
+    // @inject_tag: json:"user_id" validate:"required,hexadecimal,len=24"
+    string user_id = 6;
+    // @inject_tag: json:"created_at" validate:"required"
+    google.protobuf.Timestamp created_at = 7;
+    // @inject_tag: json:"is_active" validate:"required"
+    bool is_active = 8;
+}
+
+message SystemFeesList {
+    // @inject_tag: json:"system_fees"
+    repeated SystemFees system_fees = 1;
+}
+
+message AddSystemFeesRequest {
+    // @inject_tag: json:"method_id" validate:"required,hexadecimal,len=24"
+    string method_id = 1;
+    // @inject_tag: json:"region" validate:"omitempty,alpha,len=2"
+    string region = 2;
+    // @inject_tag: json:"card_brand" validate:"omitempty,alpha"
+    string card_brand = 3;
+    // @inject_tag: json:"fees" validate:"required,gte=1"
+    repeated FeeSet fees = 5;
+    // @inject_tag: json:"user_id" validate:"required,hexadecimal,len=24"
+    string user_id = 6;
+}
+
+message GetSystemFeesRequest {
+    // @inject_tag: json:"method_id" validate:"required,hexadecimal,len=24"
+    string method_id = 1;
+    // @inject_tag: json:"region" validate:"omitempty,alpha,len=2"
+    string region = 2;
+    // @inject_tag: json:"card_brand" validate:"omitempty,alpha"
+    string card_brand = 3;
+    // @inject_tag: json:"amount" validate:"required,numeric,gt=0"
+    double amount = 4;
+    // @inject_tag: json:"currency" validate:"required,alpha,len=3"
+    string currency = 5;
+}
+
+message CalculatedFeeItem {
+    // @inject_tag: json:"fee_amount" validate:"required,numeric,gte=0"
+    double fee_amount = 1;
+    // @inject_tag: json:"fee_currency" validate:"required,alpha,len=3"
+    string fee_currency = 2;
+    // @inject_tag: json:"fee_name" validate:"omitempty"
+    string fee_name = 3;
+}
+
+
+message MerchantPaymentMethodHistory {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string id = 1;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string merchant_id = 2;
+    // @inject_tag: validate:"required"
+    MerchantPaymentMethod paymentMethod = 3;
+    // @inject_tag: json:"created_at" validate:"required"
+    google.protobuf.Timestamp created_at = 4;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string user_id = 5;
+}

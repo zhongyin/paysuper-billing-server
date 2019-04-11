@@ -24,9 +24,11 @@ import (
 )
 
 const (
-	errorNotFound                   = "[PAYONE_BILLING] %s not found"
-	errorQueryMask                  = "[PAYONE_BILLING] Query from collection \"%s\" failed"
-	errorAccountingCurrencyNotFound = "[PAYONE_BILLING] Accounting currency not found"
+	errorNotFound                          = "[PAYONE_BILLING] %s not found"
+	errorQueryMask                         = "[PAYONE_BILLING] Query from collection \"%s\" failed"
+	errorAccountingCurrencyNotFound        = "[PAYONE_BILLING] Accounting currency not found"
+	errorSystemFeeNotFound                 = "[PAYONE_BILLING] System fee not found"
+	errorSystemFeeMatchedMinAmountNotFound = "[PAYONE_BILLING] System fee matched min amount not found"
 
 	errorBbNotFoundMessage = "not found"
 
@@ -59,6 +61,7 @@ var (
 		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
 		pkg.CollectionCommission:    newCommissionHandler,
 		pkg.CollectionMerchant:      newMerchantHandler,
+		pkg.CollectionSystemFees:    newSystemFeeHandler,
 	}
 )
 
@@ -87,6 +90,7 @@ type Service struct {
 
 	commissionCache           map[string]map[string]*billing.MerchantPaymentMethodCommissions
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
+	systemFeesCache           map[string]map[string]map[string]*billing.SystemFees
 
 	rebuild      bool
 	rebuildError error
@@ -155,6 +159,7 @@ func (s *Service) reBuildCache() {
 	paymentMethodTicker := time.NewTicker(time.Second * time.Duration(s.cfg.PaymentMethodTimeout))
 	commissionTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CommissionTimeout))
 	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectPaymentMethodTimeout))
+	systemFeesTimer := time.NewTicker(time.Second * time.Duration(s.cfg.SystemFeesTimeout))
 
 	s.rebuild = true
 
@@ -181,6 +186,10 @@ func (s *Service) reBuildCache() {
 		case <-projectPaymentMethodTimer.C:
 			s.mx.Lock()
 			s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
+			s.mx.Unlock()
+		case <-systemFeesTimer.C:
+			s.mx.Lock()
+			s.systemFeesCache = make(map[string]map[string]map[string]*billing.SystemFees)
 			s.mx.Unlock()
 		case <-s.exitCh:
 			s.rebuild = false

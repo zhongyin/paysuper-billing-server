@@ -54,6 +54,15 @@ It has these top-level messages:
 	RefundPayerData
 	RefundOrder
 	Refund
+	SystemFee
+	MinAmount
+	FeeSet
+	SystemFees
+	SystemFeesList
+	AddSystemFeesRequest
+	GetSystemFeesRequest
+	CalculatedFeeItem
+	MerchantPaymentMethodHistory
 */
 package billing
 

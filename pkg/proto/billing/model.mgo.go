@@ -24,6 +24,30 @@ type MgoVat struct {
 	UpdatedAt   time.Time     `bson:"updated_at" json:"updated_at,omitempty"`
 }
 
+type MgoSystemFee struct {
+	Percent         float64 `bson:"percent" json:"percent"`
+	PercentCurrency string  `bson:"percent_currency" json:"percent_currency"`
+	FixAmount       float64 `bson:"fix_amount" json:"fix_amount"`
+	FixCurrency     string  `bson:"fix_currency" json:"fix_currency"`
+}
+
+type MgoFeeSet struct {
+	MinAmounts       []*MinAmount  `bson:"min_amounts" json:"min_amounts"`
+	TransactionCost  *MgoSystemFee `bson:"transaction_cost" json:"transaction_cost"`
+	AuthorizationFee *MgoSystemFee `bson:"authorization_fee" json:"authorization_fee"`
+}
+
+type MgoSystemFees struct {
+	Id        bson.ObjectId `bson:"_id" json:"id"`
+	MethodId  bson.ObjectId `bson:"method_id" json:"method_id"`
+	Region    string        `bson:"region" json:"region"`
+	CardBrand string        `bson:"card_brand" json:"card_brand"`
+	Fees      []*MgoFeeSet  `bson:"fees" json:"fees"`
+	UserId    bson.ObjectId `bson:"user_id" json:"user_id"`
+	CreatedAt time.Time     `bson:"created_at" json:"created_at"`
+	IsActive  bool          `bson:"is_active" json:"is_active"`
+}
+
 type MgoProject struct {
 	Id                       bson.ObjectId                    `bson:"_id" json:"id"`
 	CallbackCurrency         *Currency                        `bson:"callback_currency" json:"callback_currency"`
@@ -272,6 +296,14 @@ type MgoRefund struct {
 	SalesTax   float32          `bson:"sales_tax"`
 }
 
+type MgoMerchantPaymentMethodHistory struct {
+	Id            bson.ObjectId             `bson:"_id"`
+	MerchantId    bson.ObjectId             `bson:"merchant_id"`
+	PaymentMethod *MgoMerchantPaymentMethod `bson:"payment_method"`
+	CreatedAt     time.Time                 `bson:"created_at" json:"created_at"`
+	UserId        bson.ObjectId             `bson:"user_id"`
+}
+
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
@@ -343,6 +375,105 @@ func (m *Vat) SetBSON(raw bson.Raw) error {
 		return err
 	}
 
+	return nil
+}
+
+func (m *SystemFees) GetBSON() (interface{}, error) {
+	st := &MgoSystemFees{
+		Id:        bson.ObjectIdHex(m.Id),
+		MethodId:  bson.ObjectIdHex(m.MethodId),
+		Region:    m.Region,
+		CardBrand: m.CardBrand,
+		IsActive:  m.IsActive,
+		UserId:    bson.ObjectIdHex(m.UserId),
+	}
+
+	for _, f := range m.Fees {
+		fs := &MgoFeeSet{}
+
+		for c, a := range f.MinAmounts {
+			fs.MinAmounts = append(fs.MinAmounts, &MinAmount{Amount: a, Currency: c})
+		}
+
+		fs.TransactionCost = &MgoSystemFee{
+			Percent:         f.TransactionCost.Percent,
+			PercentCurrency: f.TransactionCost.PercentCurrency,
+			FixAmount:       f.TransactionCost.FixAmount,
+			FixCurrency:     f.TransactionCost.FixCurrency,
+		}
+
+		fs.AuthorizationFee = &MgoSystemFee{
+			Percent:         f.AuthorizationFee.Percent,
+			PercentCurrency: f.AuthorizationFee.PercentCurrency,
+			FixAmount:       f.AuthorizationFee.FixAmount,
+			FixCurrency:     f.AuthorizationFee.FixCurrency,
+		}
+
+		st.Fees = append(st.Fees, fs)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *SystemFees) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoSystemFees)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.MethodId = decoded.MethodId.Hex()
+	m.Region = decoded.Region
+	m.CardBrand = decoded.CardBrand
+	m.IsActive = decoded.IsActive
+
+	m.Fees = []*FeeSet{}
+
+	for _, f := range decoded.Fees {
+
+		fs := &FeeSet{}
+
+		fs.MinAmounts = make(map[string]float64)
+		for _, i := range f.MinAmounts {
+			fs.MinAmounts[i.Currency] = i.Amount
+		}
+
+		fs.TransactionCost = &SystemFee{
+			Percent:         f.TransactionCost.Percent,
+			PercentCurrency: f.TransactionCost.PercentCurrency,
+			FixAmount:       f.TransactionCost.FixAmount,
+			FixCurrency:     f.TransactionCost.FixCurrency,
+		}
+
+		fs.AuthorizationFee = &SystemFee{
+			Percent:         f.AuthorizationFee.Percent,
+			PercentCurrency: f.AuthorizationFee.PercentCurrency,
+			FixAmount:       f.AuthorizationFee.FixAmount,
+			FixCurrency:     f.AuthorizationFee.FixCurrency,
+		}
+
+		m.Fees = append(m.Fees, fs)
+	}
+
+	m.UserId = decoded.UserId.Hex()
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1648,4 +1779,91 @@ func (m *PaymentMethod) IsBankCard() bool {
 
 func (m *PaymentMethodOrder) IsBankCard() bool {
 	return m.Group == constant.PaymentSystemGroupAliasBankCard
+}
+
+func (m *MerchantPaymentMethodHistory) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoMerchantPaymentMethodHistory)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.MerchantId = decoded.MerchantId.Hex()
+	m.UserId = decoded.UserId.Hex()
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+	if err != nil {
+		return err
+	}
+
+	m.PaymentMethod = &MerchantPaymentMethod{
+		PaymentMethod: &MerchantPaymentMethodIdentification{
+			Id:   bson.ObjectId(decoded.PaymentMethod.PaymentMethod.Id).Hex(),
+			Name: decoded.PaymentMethod.PaymentMethod.Name,
+		},
+		Commission:  decoded.PaymentMethod.Commission,
+		Integration: decoded.PaymentMethod.Integration,
+		IsActive:    decoded.PaymentMethod.IsActive,
+	}
+
+	return nil
+}
+
+func (p *MerchantPaymentMethodHistory) GetBSON() (interface{}, error) {
+	st := &MgoMerchantPaymentMethodHistory{}
+
+	if len(p.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(p.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(p.Id)
+	}
+
+	if len(p.MerchantId) <= 0 {
+		return nil, errors.New(errorInvalidObjectId)
+	} else {
+		if bson.IsObjectIdHex(p.MerchantId) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.MerchantId = bson.ObjectIdHex(p.MerchantId)
+	}
+
+	if len(p.UserId) <= 0 {
+		return nil, errors.New(errorInvalidObjectId)
+	} else {
+		if bson.IsObjectIdHex(p.UserId) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.UserId = bson.ObjectIdHex(p.UserId)
+	}
+
+	if p.CreatedAt != nil {
+		t, err := ptypes.Timestamp(p.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	st.PaymentMethod = &MgoMerchantPaymentMethod{
+		PaymentMethod: &MgoMerchantPaymentMethodIdentification{
+			Id:   bson.ObjectIdHex(p.PaymentMethod.PaymentMethod.Id),
+			Name: p.PaymentMethod.PaymentMethod.Name,
+		},
+		Commission:  p.PaymentMethod.Commission,
+		Integration: p.PaymentMethod.Integration,
+		IsActive:    p.PaymentMethod.IsActive,
+	}
+
+	return st, nil
 }

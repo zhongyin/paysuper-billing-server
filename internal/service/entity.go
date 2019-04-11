@@ -1,16 +1,25 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 )
 
 type Project Currency
 type PaymentMethod Currency
 type Country Currency
 type Merchant Currency
+type SystemFee Currency
+
+type kv struct {
+	Key   int
+	Value float64
+}
 
 func newProjectHandler(svc *Service) Cacher {
 	c := &Project{svc: svc}
@@ -235,4 +244,52 @@ func (h *Merchant) getAll() (recs []interface{}, err error) {
 	}
 
 	return
+}
+
+func newSystemFeeHandler(svc *Service) Cacher {
+	c := &SystemFee{svc: svc}
+
+	return c
+}
+
+func (h *SystemFee) getAll() (recs []interface{}, err error) {
+	var list billing.SystemFeesList
+	e := h.svc.GetActualSystemFeesList(context.TODO(), &grpc.EmptyRequest{}, &list)
+	if e != nil {
+		h.svc.logError("Get System fees failed", []interface{}{"err", e.Error()})
+		return nil, e
+	}
+
+	for _, f := range list.SystemFees {
+		recs = append(recs, f)
+	}
+	return
+}
+
+func (h *SystemFee) setCache(recs []interface{}) {
+	h.svc.systemFeesCache = make(map[string]map[string]map[string]*billing.SystemFees)
+
+	if len(recs) <= 0 {
+		return
+	}
+
+	for _, r := range recs {
+		f := r.(*billing.SystemFees)
+
+		if _, ok := h.svc.systemFeesCache[f.MethodId]; !ok {
+			h.svc.systemFeesCache[f.MethodId] = make(map[string]map[string]*billing.SystemFees)
+		}
+
+		if _, ok := h.svc.systemFeesCache[f.MethodId][f.Region]; !ok {
+			h.svc.systemFeesCache[f.MethodId][f.Region] = make(map[string]*billing.SystemFees)
+		}
+
+		if ff, ok := h.svc.systemFeesCache[f.MethodId][f.Region][f.CardBrand]; ok && ff != nil {
+			e := errors.New("duplicate active system fee")
+			h.svc.logError("Get System fees failed", []interface{}{"err", e.Error(), "fee", ff})
+			return
+		}
+
+		h.svc.systemFeesCache[f.MethodId][f.Region][f.CardBrand] = f
+	}
 }

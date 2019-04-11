@@ -1599,6 +1599,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_NewM
 			Integrated:       true,
 		},
 		IsActive: true,
+		UserId:   bson.NewObjectId().Hex(),
 	}
 	rspMerchantPaymentMethodAdd := &grpc.MerchantPaymentMethodResponse{}
 	err = suite.service.ChangeMerchantPaymentMethod(context.TODO(), reqMerchantPaymentMethodAdd, rspMerchantPaymentMethodAdd)
