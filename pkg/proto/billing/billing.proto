@@ -252,6 +252,11 @@ message Merchant {
     string s3_agreement_name = 32;
 }
 
+message SystemNotificationStatuses {
+    int32 from = 1;
+    int32 to = 2;
+}
+
 message Notification {
     string id = 1;
     string title = 2;
@@ -260,8 +265,9 @@ message Notification {
     string user_id = 5;
     bool is_system = 6;
     bool is_read = 7;
-    google.protobuf.Timestamp created_at = 8;
-    google.protobuf.Timestamp updated_at = 9;
+    SystemNotificationStatuses statuses = 8;
+    google.protobuf.Timestamp created_at = 9;
+    google.protobuf.Timestamp updated_at = 10;
 }
 
 message OrderPlatformFee {

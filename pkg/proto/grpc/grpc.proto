@@ -21,9 +21,8 @@ service BillingService {
     rpc ListMerchants (MerchantListingRequest) returns (MerchantListingResponse) {}
     rpc ChangeMerchant (OnboardingRequest) returns (billing.Merchant) {}
     rpc ChangeMerchantStatus (MerchantChangeStatusRequest) returns (billing.Merchant) {}
-    rpc ChangeMerchantAgreementType (ChangeMerchantAgreementTypeRequest) returns (ChangeMerchantAgreementTypeResponse) {}
-    rpc ProcessMerchantAgreement (SignMerchantRequest) returns (ChangeMerchantAgreementTypeResponse) {}
-    rpc SetMerchantS3Agreement (SetMerchantS3AgreementRequest) returns (ChangeMerchantAgreementTypeResponse) {}
+    rpc ChangeMerchantData (ChangeMerchantDataRequest) returns (ChangeMerchantDataResponse) {}
+    rpc SetMerchantS3Agreement (SetMerchantS3AgreementRequest) returns (ChangeMerchantDataResponse) {}
 
     rpc CreateNotification (NotificationRequest) returns (billing.Notification) {}
     rpc GetNotification (GetNotificationRequest) returns (billing.Notification) {}
@@ -159,15 +158,25 @@ message FindByIdRequest {
 }
 
 message MerchantListingRequest {
+    // @inject_tag: query:"name"
     string name = 1;
     int32 is_signed = 2;
+    // @inject_tag: query:"last_payout_date_from" validate:"omitempty,numeric,gt=0"
     int64 last_payout_date_from = 3;
+    // @inject_tag: query:"last_payout_date_to" validate:"omitempty,numeric,gt=0"
     int64 last_payout_date_to = 4;
+    // @inject_tag: query:"last_payout_amount" validate:"omitempty,numeric"
     double last_payout_amount = 5;
+    // @inject_tag: query:"sort[]"
     repeated string sort = 6;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 7;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
     int32 offset = 8;
+    // @inject_tag: query:"quick_search"
     string quick_search = 9;
+    // @inject_tag: query:"status[]"
+    repeated int32 statuses = 10;
 }
 
 message MerchantListingResponse {
@@ -179,7 +188,7 @@ message MerchantChangeStatusRequest {
     // @inject_tag: validate:"required,hexadecimal"
     string merchant_id = 1;
     string user_id = 2;
-    // @inject_tag: validate:"required,numeric"
+    // @inject_tag: validate:"omitempty,numeric,oneof=0 1 2 3 4"
     int32 status = 3;
     string message = 4;
 }
@@ -195,14 +204,23 @@ message NotificationRequest {
 }
 
 message Notifications {
-    repeated billing.Notification notifications = 1;
+    int32 count = 1;
+    repeated billing.Notification items = 2;
 }
 
 message ListingNotificationRequest {
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
+    // @inject_tag: query:"user" validate:"omitempty,hexadecimal,len=24"
     string user_id = 2;
-    int32 limit = 7;
-    int32 offset = 8;
+    // @inject_tag: validate:"omitempty,numeric,oneof=1 2"
+    int32 is_system = 3;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
+    int32 limit = 4;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
+    int32 offset = 5;
+    // @inject_tag: query:"sort[]"
+    repeated string sort = 6;
 }
 
 message ListingMerchantPaymentMethod {
@@ -219,8 +237,10 @@ message GetMerchantPaymentMethodRequest {
 message ListMerchantPaymentMethodsRequest {
     // @inject_tag: query:"merchant_id", validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
-    // @inject_tag: query:"payment_method_name"
+    // @inject_tag: query:"method_name"
     string payment_method_name = 2;
+    // @inject_tag: query:"sort[]"
+    repeated string sort = 3;
 }
 
 message MerchantPaymentMethodRequest {
@@ -366,26 +386,21 @@ message GetMerchantByRequest {
     string user_id = 2;
 }
 
-message ChangeMerchantAgreementTypeRequest {
+message ChangeMerchantDataRequest {
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string merchant_id = 1;
-    // @inject_tag: validate:"required,numeric,oneof=1 2"
+    // @inject_tag: validate:"omitempty,numeric,oneof=1 2"
     int32 agreement_type = 2;
+    bool has_merchant_signature = 3;
+    bool has_psp_signature = 4;
+    bool agreement_sent_via_mail = 5;
+    string mail_tracking_link = 6;
 }
 
-message ChangeMerchantAgreementTypeResponse {
+message ChangeMerchantDataResponse {
     int32 status = 1;
     string message = 2;
     billing.Merchant item = 3;
-}
-
-message SignMerchantRequest {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
-    string merchant_id = 1;
-    bool has_merchant_signature = 2;
-    bool has_psp_signature = 3;
-    bool agreement_sent_via_mail = 4;
-    string mail_tracking_link = 5;
 }
 
 message SetMerchantS3AgreementRequest {

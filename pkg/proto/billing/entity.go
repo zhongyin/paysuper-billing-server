@@ -17,7 +17,7 @@ var (
 )
 
 func (m *Merchant) ChangesAllowed() bool {
-	return m.Status == pkg.MerchantStatusDraft || m.Status == pkg.MerchantStatusRejected
+	return m.Status == pkg.MerchantStatusDraft
 }
 
 func (m *Merchant) GetPayoutCurrency() *Currency {
@@ -28,19 +28,20 @@ func (m *Merchant) GetPayoutCurrency() *Currency {
 	return m.Banking.Currency
 }
 
-func (m *Merchant) SelectAgreementTypeAllow() bool {
-	return m.Status == pkg.MerchantStatusApproved && m.HasPspSignature == false &&
-		m.HasMerchantSignature == false && m.IsSigned == false
-}
-
 func (m *Merchant) NeedMarkESignAgreementAsSigned() bool {
 	return m.HasMerchantSignature == true && m.HasPspSignature == true &&
-		m.AgreementType == pkg.MerchantAgreementTypeESign && m.Status != pkg.MerchantStatusAgreementSigned
+		m.Status != pkg.MerchantStatusAgreementSigned
 }
 
 func (m *Merchant) CanGenerateAgreement() bool {
-	return m.Status == pkg.MerchantStatusApproved || m.Status == pkg.MerchantStatusAgreementSigning ||
-		m.Status == pkg.MerchantStatusAgreementSigned
+	return (m.Status == pkg.MerchantStatusOnReview || m.Status == pkg.MerchantStatusAgreementSigning ||
+		m.Status == pkg.MerchantStatusAgreementSigned) && m.Banking != nil && m.Country != nil &&
+		m.Contacts != nil && m.Contacts.Authorized != nil
+}
+
+func (m *Merchant) CanChangeStatusToSigning() bool {
+	return m.Status == pkg.MerchantStatusOnReview && m.Banking != nil && m.Country != nil &&
+		m.Contacts != nil && m.Contacts.Authorized != nil
 }
 
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {

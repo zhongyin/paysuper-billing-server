@@ -19,6 +19,7 @@ It has these top-level messages:
 	MerchantLastPayout
 	MerchantUser
 	Merchant
+	SystemNotificationStatuses
 	Notification
 	OrderPlatformFee
 	OrderTax
