@@ -65,8 +65,7 @@ func (s *Service) ChangeCustomer(
 		return nil
 	}
 
-	req.MerchantId = processor.checked.project.Merchant.Id
-	customer, err := s.changeCustomer(req)
+	customer, err := s.changeCustomer(req, processor.checked.project.Merchant.Id)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusSystemError
@@ -96,7 +95,7 @@ func (s *Service) getCustomerBy(query bson.M) (customer *billing.Customer, err e
 	return
 }
 
-func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, error) {
+func (s *Service) changeCustomer(req *billing.Customer, merchantId string) (*billing.Customer, error) {
 	var customer *billing.Customer
 	var isNew bool
 	var err error
@@ -139,7 +138,7 @@ func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, erro
 		customer = &billing.Customer{
 			Id:            bson.NewObjectId().Hex(),
 			ProjectId:     req.ProjectId,
-			MerchantId:    req.MerchantId,
+			MerchantId:    merchantId,
 			ExternalId:    req.ExternalId,
 			Name:          req.Name,
 			Email:         req.Email,
@@ -148,6 +147,7 @@ func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, erro
 			PhoneVerified: req.PhoneVerified,
 			Ip:            req.Ip,
 			Locale:        req.Locale,
+			Address:       req.Address,
 			Metadata:      req.Metadata,
 			CreatedAt:     ptypes.TimestampNow(),
 		}

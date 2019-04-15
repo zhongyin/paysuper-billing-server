@@ -195,7 +195,7 @@ func (suite *CustomerTestSuite) SetupTest() {
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
 		Name:                     "test project 1",
-		OnlyFixedAmounts:         true,
+		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
 		PaymentMethods: map[string]*billing.ProjectPaymentMethod{

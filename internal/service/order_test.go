@@ -867,6 +867,7 @@ func (suite *OrderTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
+	zap.ReplaceGlobals(suite.log)
 
 	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
 
@@ -889,7 +890,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Billing service initialization failed", "%v", err)
 	}
 
-	productIds := []string{}
+	var productIds []string
 
 	names := []string{"Madalin Stunt Cars M2", "Plants vs Zombies"}
 
@@ -1177,7 +1178,7 @@ func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_SomeProductsIsNo
 }
 
 func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_EmptyProducts_Fail() {
-	_, err := suite.service.GetOrderProducts(suite.projectFixedAmount.Id, []string{})
+	_, err := suite.service.GetOrderProducts("", []string{})
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorProductsEmpty, err.Error())
 }
@@ -2195,9 +2196,6 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
 	assert.True(suite.T(), order.PaymentSystemFeeAmount.AmountMerchantCurrency > 0)
 	assert.True(suite.T(), order.PaymentSystemFeeAmount.AmountPaymentSystemCurrency > 0)
 	assert.True(suite.T(), order.PaymentSystemFeeAmount.AmountPaymentMethodCurrency > 0)
-
-	assert.True(suite.T(), order.Tax.Amount > 0)
-	assert.NotEmpty(suite.T(), order.Tax.Currency)
 }
 
 func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlVerify_Error() {
@@ -3433,7 +3431,11 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_Ok() {
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	req1 := &grpc.PaymentFormJsonDataRequest{OrderId: order.Id, Scheme: "https", Host: "unit.test"}
+	req1 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "https",
+		Host:    "unit.test",
+	}
 	rsp := &grpc.PaymentFormJsonDataResponse{}
 	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp)
 
@@ -3461,7 +3463,11 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcessWithProducts_Ok
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
-	req1 := &grpc.PaymentFormJsonDataRequest{OrderId: order.Id, Scheme: "https", Host: "unit.test"}
+	req1 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "https",
+		Host:    "unit.test",
+	}
 	rsp := &grpc.PaymentFormJsonDataResponse{}
 	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp)
 
@@ -4010,6 +4016,17 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "ru-RU",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	suite.service.cfg.Environment = environmentProd
 	expireYear := time.Now().AddDate(1, 0, 0)
 
@@ -4100,6 +4117,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "ru-RU",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
 
 	expireYear := time.Now().AddDate(1, 0, 0)
 
@@ -4200,6 +4228,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_O
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "ru-RU",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
 
 	expireYear := time.Now().AddDate(1, 0, 0)
 
@@ -4326,6 +4365,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "ru-RU",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	expireYear := time.Now().AddDate(1, 0, 0)
 
 	createPaymentRequest := &grpc.PaymentCreateRequest{
@@ -4433,6 +4483,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Recurring_Ok() {
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 	assert.Nil(suite.T(), err)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: order.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "ru-RU",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
 
 	expireYear := time.Now().AddDate(1, 0, 0)
 
@@ -4546,9 +4607,20 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormLanguageChanged_Ok() {
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "en-US",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	req1 := &grpc.PaymentFormUserChangeLangRequest{
 		OrderId: rsp.Uuid,
-		Lang:    "en",
+		Lang:    "by",
 	}
 	rsp1 := &grpc.PaymentFormDataChangeResponse{}
 	err = suite.service.PaymentFormLanguageChanged(context.TODO(), req1, rsp1)
@@ -4608,7 +4680,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormLanguageChanged_NoChanges_Ok()
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
 	req2 := &grpc.PaymentFormJsonDataRequest{
-		OrderId: rsp.Id,
+		OrderId: rsp.Uuid,
 		Scheme:  "http",
 		Host:    "localhost",
 		Locale:  "en-US",
@@ -4648,6 +4720,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_BankCard
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "en-US",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
 		OrderId:  rsp.Uuid,
 		MethodId: suite.paymentMethod.Id,
@@ -4681,6 +4764,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Qiwi_Ok(
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "localhost",
+		Locale:  "en-US",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
 
 	req1 := &grpc.PaymentFormUserChangePaymentAccountRequest{
 		OrderId:  rsp.Uuid,
@@ -5041,6 +5135,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+		Locale:  "ru-Ru",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	order, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), order)
@@ -5104,6 +5209,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+		Locale:  "ru-Ru",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	order, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), order)
@@ -5160,6 +5276,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	rsp := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+		Locale:  "ru-Ru",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
 
 	order, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
@@ -5218,6 +5345,17 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	rsp := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+		Locale:  "ru-Ru",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
 
 	order, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
