@@ -37,7 +37,7 @@ type MgoProject struct {
 	MinPaymentAmount         float64                          `bson:"min_payment_amount" json:"min_payment_amount"`
 	Name                     string                           `bson:"name" json:"name"`
 	NotifyEmails             []string                         `bson:"notify_emails" json:"notify_emails"`
-	OnlyFixedAmounts         bool                             `bson:"only_fixed_amounts" json:"only_fixed_amounts"`
+	IsProductsCheckout       bool                             `bson:"is_products_checkout" json:"is_products_checkout"`
 	SecretKey                string                           `bson:"secret_key" json:"secret_key"`
 	SendNotifyEmail          bool                             `bson:"send_notify_email" json:"send_notify_email"`
 	UrlCheckAccount          string                           `bson:"url_check_account" json:"url_check_account"`
@@ -197,6 +197,10 @@ type MgoOrder struct {
 	UrlFail                                 string                 `bson:"url_fail"`
 	CreatedAt                               time.Time              `bson:"created_at"`
 	UpdatedAt                               time.Time              `bson:"updated_at"`
+	Products                                []string               `bson:"products"`
+	Items                                   []*OrderItem           `bson:"items"`
+	Amount                                  float64                `bson:"amount"`
+	Currency                                string                 `bson:"currency"`
 
 	Uuid                    string               `bson:"uuid"`
 	ExpireDateToFormInput   time.Time            `bson:"expire_date_to_form_input"`
@@ -375,7 +379,7 @@ func (m *Project) GetBSON() (interface{}, error) {
 		MinPaymentAmount:         m.MinPaymentAmount,
 		Name:                     m.Name,
 		NotifyEmails:             m.NotifyEmails,
-		OnlyFixedAmounts:         m.OnlyFixedAmounts,
+		IsProductsCheckout:       m.IsProductsCheckout,
 		SecretKey:                m.SecretKey,
 		SendNotifyEmail:          m.SendNotifyEmail,
 		UrlCheckAccount:          m.UrlCheckAccount,
@@ -555,7 +559,7 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 	m.MinPaymentAmount = decoded.MinPaymentAmount
 	m.Name = decoded.Name
 	m.NotifyEmails = decoded.NotifyEmails
-	m.OnlyFixedAmounts = decoded.OnlyFixedAmounts
+	m.IsProductsCheckout = decoded.IsProductsCheckout
 	m.SecretKey = decoded.SecretKey
 	m.SendNotifyEmail = decoded.SendNotifyEmail
 	m.UrlCheckAccount = decoded.UrlCheckAccount
@@ -801,7 +805,10 @@ func (m *Order) GetBSON() (interface{}, error) {
 		AmountInPaymentSystemAccountingCurrency: m.AmountInPaymentSystemAccountingCurrency,
 		PaymentMethodPayerAccount:               m.PaymentMethodPayerAccount,
 		PaymentMethodTxnParams:                  m.PaymentMethodTxnParams,
-		FixedPackage:                            m.FixedPackage,
+		Products:                                m.Products,
+		Items:                                   m.Items,
+		Amount:                                  m.Amount,
+		Currency:                                m.Currency,
 		PaymentRequisites:                       m.PaymentRequisites,
 		PspFeeAmount:                            m.PspFeeAmount,
 		ProjectFeeAmount:                        m.ProjectFeeAmount,
@@ -1027,7 +1034,10 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.AmountInPaymentSystemAccountingCurrency = decoded.AmountInPaymentSystemAccountingCurrency
 	m.PaymentMethodPayerAccount = decoded.PaymentMethodPayerAccount
 	m.PaymentMethodTxnParams = decoded.PaymentMethodTxnParams
-	m.FixedPackage = decoded.FixedPackage
+	m.Products = decoded.Products
+	m.Items = decoded.Items
+	m.Amount = decoded.Amount
+	m.Currency = decoded.Currency
 	m.PaymentRequisites = decoded.PaymentRequisites
 	m.PspFeeAmount = decoded.PspFeeAmount
 	m.ProjectFeeAmount = decoded.ProjectFeeAmount

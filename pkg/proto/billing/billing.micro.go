@@ -24,7 +24,9 @@ It has these top-level messages:
 	OrderPlatformFee
 	OrderTax
 	OrderBillingAddress
+	OrderUser
 	Order
+	OrderItem
 	Currency
 	PayerData
 	PaymentMethodOrder
@@ -51,7 +53,6 @@ It has these top-level messages:
 	MerchantPaymentMethod
 	RefundPayerData
 	Refund
-	Customer
 */
 package billing
 

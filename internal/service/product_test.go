@@ -334,7 +334,7 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 
 		req.Prices = append(req.Prices, &grpc.ProductPrice{
 			Currency: "USD",
-			Amount:   123.00 * float32(i+1),
+			Amount:   123.00 * float64(i+1),
 		})
 
 		assert.NoError(suite.T(), suite.service.CreateOrUpdateProduct(context.TODO(), req, &grpc.Product{}))
@@ -353,6 +353,11 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 	assert.Equal(suite.T(), res.Total, int32(6))
 	assert.Equal(suite.T(), res.Limit, int32(2))
 	assert.Equal(suite.T(), len(res.Products), 2)
+
+	ids := []string{
+		res.Products[0].Id,
+		res.Products[1].Id,
+	}
 
 	// get all with offset
 
@@ -433,4 +438,16 @@ func (suite *ProductTestSuite) TestProduct_ListProduct_Ok() {
 
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), res7.Total, int32(3))
+
+	// Get products for order
+
+	res8 := grpc.ListProductsResponse{}
+
+	err = suite.service.GetProductsForOrder(context.TODO(), &grpc.GetProductsForOrderRequest{
+		ProjectId: projectId,
+		Ids:       ids,
+	}, &res8)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), res8.Total, int32(2))
 }

@@ -53,6 +53,12 @@ message OrderCreateRequest {
     bool is_json = 20;
     // @inject_tag: json:"-"
     string language = 21;
+    // @inject_tag: json:"products" validate:"omitempty,gte=1,dive,hexadecimal,len=24"
+    repeated string products = 22;
+    // @inject_tag: json:"-"
+    map<string, string> metadata = 23;
+    // @inject_tag: json:"-"
+    map<string, string> private_metadata = 24;
 }
 
 message Project {
@@ -80,8 +86,8 @@ message Project {
     string name = 11; // project name
     // @inject_tag: bson:"notify_emails" structure:"notify_emails"
     repeated string notify_emails = 12; // list of emails to send notifications about successfully completed payment operations
-    // @inject_tag: bson:"only_fixed_amounts" structure:"only_fixed_amounts"
-    bool only_fixed_amounts = 13; // is allow create order only with amounts from fixed packages list
+    // @inject_tag: bson:"is_products_checkout" structure:"is_products_checkout"
+    bool is_products_checkout = 13; // is allow create order only with amounts from fixed packages list
     // @inject_tag: bson:"secret_key" structure:"secret_key"
     string secret_key = 14; // secret key for create check hash for request about order statuses changes
     // @inject_tag: bson:"signature_required"
@@ -290,6 +296,31 @@ message OrderBillingAddress {
     string state = 4;
 }
 
+message OrderUser {
+    // @inject_tag: bson:"uuid"
+    string id = 1;
+    // @inject_tag: bson:"object"
+    string object = 2;
+    // @inject_tag: bson:"name"
+    string name = 3;
+    // @inject_tag: bson:"email"
+    string email = 4;
+    // @inject_tag: bson:"email_verified"
+    bool email_verified = 5;
+    // @inject_tag: bson:"phone"
+    string phone = 6;
+    // @inject_tag: bson:"phone_verified"
+    bool phone_verified = 7;
+    // @inject_tag: bson:"ip"
+    string ip = 8;
+    // @inject_tag: bson:"locale"
+    string locale = 9;
+    // @inject_tag: bson:"address"
+    OrderBillingAddress address = 10;
+    // @inject_tag: bson:"metadata"
+    map<string, string> metadata = 11;
+}
+
 message Order {
     string id = 1; // unique order identifier in Protocol One
     // @inject_tag: bson:"project" structure:"project"
@@ -348,8 +379,6 @@ message Order {
     string payment_method_payer_account = 28; // account of payer in payment system
     // @inject_tag: bson:"pm_txn_params" structure:"pm_txn_params"
     map<string, string> payment_method_txn_params = 29; // any params received in request of payment system about payment
-    // @inject_tag: bson:"fixed_package" structure:"fixed_package"
-    FixedPackage fixed_package = 30; // fixed package which buy payer
     // @inject_tag: bson:"payment_requisites" json:"-" structure:"payment_requisites"
     map<string, string> payment_requisites = 31;
     // @inject_tag: bson:"psp_fee_amount" structure:"psp_fee_amount"
@@ -368,12 +397,55 @@ message Order {
     google.protobuf.Timestamp expire_date_to_form_input = 39;
     double total_payment_amount = 43; // total amount to payment with all commissions
     OrderBillingAddress billing_address = 44; // user billing address entered in payment form
-    Customer user = 45;
+    OrderUser user = 45;
 
     // @inject_tag: json:"-"
     bool user_address_data_required = 46;
+
+    // @inject_tag: json:"-" validate:"omitempty,gte=1,dive,hexadecimal,len=24"
+    repeated string products = 47;
+
+    // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
+    repeated OrderItem items = 48;
+
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 49;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 50;
+
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 51;
+
     // @inject_tag: json:"-"
-    string customer_token = 47;
+    map<string, string> private_metadata = 52;
+}
+
+message OrderItem {
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"id" bson:"_id"
+    string id = 1;
+    //@inject_tag: validate:"required" json:"object"
+    string object = 2;
+    //@inject_tag: validate:"required" json:"sku" bson:"sku"
+    string sku = 3;
+    //@inject_tag: validate:"required" json:"name"
+    string name = 4;
+    //@inject_tag: validate:"required" json:"description"
+    string description = 5;
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 6;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 7;
+    //@inject_tag: validate:"dive,omitempty,uri" json:"images"
+    repeated string images = 8;
+    //@inject_tag: validate:"omitempty,url" json:"url"
+    string url = 9;
+    //@inject_tag: json:"metadata"
+    map<string, string> metadata = 10;
+    //@inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 11;
+    //@inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 12;
+
 }
 
 message Currency {
@@ -703,40 +775,4 @@ message Refund {
     google.protobuf.Timestamp updated_at = 10;
     RefundPayerData payer_data = 11;
     float sales_tax = 12;
-}
-
-message Customer {
-    string id = 1;
-    // @inject_tag: json:"token"
-    string token = 2;
-    // @inject_tag: json:"-"
-    string project_id = 3;
-    // @inject_tag: json:"-"
-    string merchant_id = 4;
-    // @inject_tag: json:"external_id"
-    string external_id = 5;
-    // @inject_tag: json:"name"
-    string name = 6;
-    // @inject_tag: json:"email"
-    string email = 7;
-    // @inject_tag: json:"email_verified"
-    bool email_verified = 8;
-    // @inject_tag: json:"phone"
-    string phone = 9;
-    // @inject_tag: json:"phone_verified"
-    bool phone_verified = 10;
-    // @inject_tag: json:"ip"
-    string ip = 11;
-    // @inject_tag: json:"locale"
-    string locale = 12;
-    // @inject_tag: json:"address"
-    OrderBillingAddress address = 13;
-    // @inject_tag: json:"metadata"
-    map<string, string> metadata = 14;
-    // @inject_tag: json:"-"
-    google.protobuf.Timestamp expire_at = 15;
-    // @inject_tag: json:"-"
-    google.protobuf.Timestamp created_at = 16;
-    // @inject_tag: json:"-"
-    google.protobuf.Timestamp updated_at = 17;
 }
