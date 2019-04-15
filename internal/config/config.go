@@ -12,6 +12,7 @@ type CacheConfig struct {
 	PaymentMethodTimeout        int64 `envconfig:"CACHE_PAYMENT_METHOD_TIMEOUT" default:"2592000"`
 	CommissionTimeout           int64 `envconfig:"CACHE_COMMISSION_TIMEOUT" default:"86400"`
 	ProjectPaymentMethodTimeout int64 `envconfig:"CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT" default:"86400"`
+	OrderProductsTimeout        int64 `envconfig:"CACHE_ORDER_PRODUCTS_TIMEOUT" default:"86400"`
 }
 
 type PaymentSystemConfig struct {
@@ -28,6 +29,7 @@ type Config struct {
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 
 	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
+	CentrifugoURL    string `envconfig:"CENTRIFUGO_URL" required:"false" default:"http://127.0.0.1:8000"`
 	BrokerAddress    string `envconfig:"BROKER_ADDRESS" default:"amqp://127.0.0.1:5672"`
 
 	MicroRegistry string `envconfig:"MICRO_REGISTRY" required:"false"`

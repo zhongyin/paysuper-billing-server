@@ -26,6 +26,7 @@ It has these top-level messages:
 	OrderBillingAddress
 	OrderUser
 	Order
+	OrderItem
 	Currency
 	PayerData
 	PaymentMethodOrder

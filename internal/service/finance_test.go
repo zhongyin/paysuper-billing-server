@@ -30,11 +30,10 @@ func Test_Finance(t *testing.T) {
 
 func (suite *FinanceTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
-
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
 	}
+	cfg.AccountingCurrency = "RUB"
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -168,17 +167,17 @@ func (suite *FinanceTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Insert merchant test data failed")
 
 	project := &billing.Project{
-		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "default",
-		LimitsCurrency:   rub,
-		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 0,
-		Name:             "test project 1",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 1 secret key",
-		IsActive:         true,
-		Merchant:         merchant,
+		Id:                 bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub,
+		CallbackProtocol:   "default",
+		LimitsCurrency:     rub,
+		MaxPaymentAmount:   15000,
+		MinPaymentAmount:   0,
+		Name:               "test project 1",
+		IsProductsCheckout: true,
+		SecretKey:          "test project 1 secret key",
+		IsActive:           true,
+		Merchant:           merchant,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
