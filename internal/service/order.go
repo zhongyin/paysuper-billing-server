@@ -90,8 +90,6 @@ const (
 
 	taxTypeVat      = "vat"
 	taxTypeSalesTax = "sales_tax"
-
-	objectTypeUser = "user"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -269,15 +267,58 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 
 	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
+	cToken := req.Token
 
-	order.User.Ip = p1.checked.payerData.Ip
-	order.User.Locale = loc
-	order.User.Address = &billing.OrderBillingAddress{
-		Country:    p1.checked.payerData.Country,
-		City:       p1.checked.payerData.City.En,
-		PostalCode: p1.checked.payerData.Zip,
-		State:      p1.checked.payerData.State,
+	if cToken == "" && order.CustomerToken != "" {
+		cToken = order.CustomerToken
 	}
+
+	var customer *billing.Customer
+
+	if cToken != "" {
+		customer, err = s.getCustomerBy(bson.M{"token": req.Token})
+
+		if err != nil {
+			return err
+		}
+
+		if customer.Ip != req.Ip || customer.Locale != loc {
+			if customer.Ip != req.Ip {
+				customer.Ip = req.Ip
+
+				customer.Address = &billing.OrderBillingAddress{
+					Country:    p1.checked.payerData.Country,
+					City:       p1.checked.payerData.City.En,
+					PostalCode: p1.checked.payerData.Zip,
+					State:      p1.checked.payerData.State,
+				}
+			}
+
+			if customer.Locale != loc {
+				customer.Locale = loc
+			}
+		}
+	} else {
+		customer = &billing.Customer{
+			ProjectId: order.Project.Id,
+			Ip:        p1.checked.payerData.Ip,
+			Locale:    loc,
+			Address: &billing.OrderBillingAddress{
+				Country:    p1.checked.payerData.Country,
+				City:       p1.checked.payerData.City.En,
+				PostalCode: p1.checked.payerData.Zip,
+				State:      p1.checked.payerData.State,
+			},
+		}
+	}
+
+	customer, err = s.changeCustomer(customer)
+
+	if err != nil {
+		return err
+	}
+
+	order.User = customer
 
 	if ctr != order.User.Address.Country {
 		order.UserAddressDataRequired = true
@@ -856,20 +897,12 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PaymentMethodIncomeCurrency:        v.checked.currency,
 
 		Uuid: uuid.New().String(),
-		User: &billing.OrderUser{
-			Object: objectTypeUser,
-			Email:  v.checked.payerData.Email,
-			Phone:  v.checked.payerData.Phone,
-			Address: &billing.OrderBillingAddress{
-				Country:    v.checked.payerData.Country,
-				City:       v.checked.payerData.City.En,
-				PostalCode: v.checked.payerData.Zip,
-				State:      v.checked.payerData.State,
-			},
-		},
+		User: nil,
 	}
 
-	v.processOrderVat(order)
+	if order.User != nil {
+		v.processOrderVat(order)
+	}
 
 	if v.request.Description != "" {
 		order.Description = v.request.Description

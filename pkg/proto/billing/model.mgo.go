@@ -204,7 +204,7 @@ type MgoOrder struct {
 	TotalPaymentAmount      float64              `bson:"total_payment_amount"`
 	UserAddressDataRequired bool                 `bson:"user_address_data_required"`
 	BillingAddress          *OrderBillingAddress `bson:"billing_address"`
-	User                    *OrderUser           `bson:"user"`
+	User                    *MgoCustomer         `bson:"user"`
 }
 
 type MgoPaymentSystem struct {
@@ -813,7 +813,29 @@ func (m *Order) GetBSON() (interface{}, error) {
 		TotalPaymentAmount:      m.TotalPaymentAmount,
 		UserAddressDataRequired: m.UserAddressDataRequired,
 		BillingAddress:          m.BillingAddress,
-		User:                    m.User,
+	}
+
+	if m.User != nil {
+		st.User = &MgoCustomer{
+			Id:            bson.ObjectIdHex(m.User.Id),
+			Token:         m.User.Token,
+			ProjectId:     bson.ObjectIdHex(m.User.ProjectId),
+			MerchantId:    bson.ObjectIdHex(m.User.MerchantId),
+			ExternalId:    m.User.ExternalId,
+			Name:          m.User.Name,
+			Email:         m.User.Email,
+			EmailVerified: m.User.EmailVerified,
+			Phone:         m.User.Phone,
+			PhoneVerified: m.User.PhoneVerified,
+			Ip:            m.User.Ip,
+			Locale:        m.User.Locale,
+			Address:       m.User.Address,
+			Metadata:      m.User.Metadata,
+		}
+
+		st.User.ExpireAt, _ = ptypes.Timestamp(m.User.ExpireAt)
+		st.User.CreatedAt, _ = ptypes.Timestamp(m.User.CreatedAt)
+		st.User.UpdatedAt, _ = ptypes.Timestamp(m.User.UpdatedAt)
 	}
 
 	if m.PaymentMethod != nil {
@@ -1017,7 +1039,29 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.TotalPaymentAmount = decoded.TotalPaymentAmount
 	m.UserAddressDataRequired = decoded.UserAddressDataRequired
 	m.BillingAddress = decoded.BillingAddress
-	m.User = decoded.User
+
+	if decoded.User != nil {
+		m.User = &Customer{
+			Id:            decoded.User.Id.Hex(),
+			Token:         decoded.User.Token,
+			ProjectId:     decoded.User.ProjectId.Hex(),
+			MerchantId:    decoded.User.MerchantId.Hex(),
+			ExternalId:    decoded.User.ExternalId,
+			Name:          decoded.User.Name,
+			Email:         decoded.User.Email,
+			EmailVerified: decoded.User.EmailVerified,
+			Phone:         decoded.User.Phone,
+			PhoneVerified: decoded.User.PhoneVerified,
+			Ip:            decoded.User.Ip,
+			Locale:        decoded.User.Locale,
+			Address:       decoded.User.Address,
+			Metadata:      decoded.User.Metadata,
+		}
+
+		m.User.ExpireAt, _ = ptypes.TimestampProto(decoded.User.ExpireAt)
+		m.User.CreatedAt, _ = ptypes.TimestampProto(decoded.User.CreatedAt)
+		m.User.UpdatedAt, _ = ptypes.TimestampProto(decoded.User.UpdatedAt)
+	}
 
 	m.PaymentMethodOrderClosedAt, err = ptypes.TimestampProto(decoded.PaymentMethodOrderClosedAt)
 

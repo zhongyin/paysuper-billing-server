@@ -24,9 +24,13 @@ const (
 	customerFieldExpireAt   = "ExpireAt"
 	customerFieldCreatedAt  = "CreatedAt"
 	customerFieldUpdatedAt  = "UpdatedAt"
+
+	customerErrorNotFound = "customer with specified data not found"
 )
 
 var (
+	ErrCustomerNotFound = errors.New(customerErrorNotFound)
+
 	customerHistoryExcludedFields = map[string]bool{
 		customerFieldId:         true,
 		customerFieldToken:      true,
@@ -75,6 +79,21 @@ func (s *Service) ChangeCustomer(
 	rsp.Item = customer
 
 	return nil
+}
+
+func (s *Service) getCustomerBy(query bson.M) (customer *billing.Customer, err error) {
+	err = s.db.Collection(pkg.CollectionCustomer).Find(query).One(&customer)
+
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Query to find customer failed", []interface{}{"err", err.Error(), "query", query})
+		return customer, errors.New(orderErrorUnknown)
+	}
+
+	if customer == nil {
+		return customer, ErrCustomerNotFound
+	}
+
+	return
 }
 
 func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, error) {

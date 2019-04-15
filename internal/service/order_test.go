@@ -4822,6 +4822,17 @@ func (suite *OrderTestSuite) TestOrder_OrderReCalculateAmounts_Ok() {
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+		Locale:  "ru-Ru",
+		Ip:      "127.0.0.1",
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
 	order, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
 	assert.Nil(suite.T(), order.BillingAddress)
