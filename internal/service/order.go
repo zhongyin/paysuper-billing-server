@@ -149,7 +149,11 @@ func (s *Service) OrderCreateProcess(
 	req *billing.OrderCreateRequest,
 	rsp *billing.Order,
 ) error {
-	processor := &OrderCreateRequestProcessor{Service: s, request: req, checked: &orderCreateRequestProcessorChecked{}}
+	processor := &OrderCreateRequestProcessor{
+		Service: s,
+		request: req,
+		checked: &orderCreateRequestProcessorChecked{},
+	}
 
 	if err := processor.processProject(); err != nil {
 		return err
@@ -161,8 +165,12 @@ func (s *Service) OrderCreateProcess(
 		}
 	}
 
-	if err := processor.processPayerData(); err != nil {
-		return err
+	if req.User != nil && req.User.Ip != "" {
+		err := processor.processPayerData()
+
+		if err != nil {
+			return err
+		}
 	}
 
 	if processor.checked.project.IsProductsCheckout == true {
@@ -259,6 +267,7 @@ func (s *Service) OrderCreateProcess(
 	rsp.Amount = order.Amount
 	rsp.Currency = order.Currency
 	rsp.Metadata = order.Metadata
+	rsp.User = order.User
 
 	return nil
 }
@@ -277,7 +286,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	p := &PaymentFormProcessor{service: s, order: order, request: req}
 	p1 := &OrderCreateRequestProcessor{Service: s,
 		request: &billing.OrderCreateRequest{
-			PayerIp: req.Ip,
+			User: &billing.Customer{Ip: req.Ip},
 		},
 		checked: &orderCreateRequestProcessorChecked{},
 	}
@@ -335,7 +344,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 		}
 	}
 
-	customer, err = s.changeCustomer(customer, order.Project.Merchant.Id)
+	customer, err = s.changeCustomer(customer)
 
 	if err != nil {
 		return err
@@ -719,7 +728,7 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 		return nil
 	}
 
-	if order.PayerData.Country == country {
+	if order.User.Address.Country == country {
 		return nil
 	}
 
@@ -968,6 +977,19 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PrivateMetadata: v.checked.privateMetadata,
 	}
 
+	if v.request.User != nil {
+		v.request.User.ProjectId = order.Project.Id
+		v.request.User.MerchantId = order.Project.Merchant.Id
+
+		customer, err := v.changeCustomer(v.request.User)
+
+		if err != nil {
+			return nil, err
+		}
+
+		order.User = customer
+	}
+
 	if order.User != nil {
 		v.processOrderVat(order)
 	}
@@ -1046,7 +1068,7 @@ func (v *OrderCreateRequestProcessor) processPrivateMetadata() {
 }
 
 func (v *OrderCreateRequestProcessor) processPayerData() error {
-	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.request.PayerIp})
+	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.request.User.Ip})
 
 	if err != nil {
 		zap.S().Errorw("[PAYONE_BILLING] Order create get payer data error", "err", err, "ip", v.request.PayerIp)
@@ -1054,14 +1076,14 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	}
 
 	data := &billing.PayerData{
-		Ip:          v.request.PayerIp,
+		Ip:          v.request.User.Ip,
 		Country:     rsp.Country.IsoCode,
 		CountryName: &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
 		City:        &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
 		Timezone:    rsp.Location.TimeZone,
-		Email:       v.request.PayerEmail,
-		Phone:       v.request.PayerPhone,
-		Language:    v.request.Language,
+		Email:       v.request.User.Email,
+		Phone:       v.request.User.Phone,
+		Language:    v.request.User.Locale,
 	}
 
 	if len(rsp.Subdivisions) > 0 {
@@ -1254,7 +1276,7 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 		req.UserData.City = order.BillingAddress.City
 	}
 
-	if order.PayerData.Country == CountryCodeUSA {
+	if order.User.Address.Country == CountryCodeUSA {
 		order.Tax.Type = taxTypeSalesTax
 
 		req.IpData.Zip = order.User.Address.PostalCode
@@ -1499,7 +1521,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return err
 	}
 
-	order.PayerData.Email = v.data[pkg.PaymentCreateFieldEmail]
+	order.User.Email = v.data[pkg.PaymentCreateFieldEmail]
 	order.PaymentRequisites = make(map[string]string)
 
 	if order.UserAddressDataRequired == true {
@@ -1922,5 +1944,20 @@ func (s *Service) notifyPaylinkError(PaylinkId string, err error, req interface{
 		s.logError("Cannot send centrifugo message about Paylink Error", []interface{}{
 			"error", sErr.Error(), "PaylinkId", PaylinkId, "originalError", err.Error(), "request", req, "order", order,
 		})
+	}
+}
+
+func (v *OrderCreateRequestProcessor) getBillingAddress() *billing.OrderBillingAddress {
+	if v.checked.payerData == nil {
+		return nil
+	}
+
+	data := v.checked.payerData
+
+	return &billing.OrderBillingAddress{
+		Country:    data.Country,
+		City:       data.City.En,
+		PostalCode: data.Zip,
+		State:      data.State,
 	}
 }

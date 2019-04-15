@@ -29,7 +29,9 @@ const (
 )
 
 var (
-	ErrCustomerNotFound = errors.New(customerErrorNotFound)
+	ErrCustomerNotFound        = errors.New(customerErrorNotFound)
+	ErrCustomerProjectNotFound = errors.New(orderErrorProjectNotFound)
+	ErrCustomerGeoIncorrect    = errors.New(orderErrorPayerRegionUnknown)
 
 	customerHistoryExcludedFields = map[string]bool{
 		customerFieldId:         true,
@@ -48,27 +50,15 @@ func (s *Service) ChangeCustomer(
 	req *billing.Customer,
 	rsp *grpc.ChangeCustomerResponse,
 ) error {
-	processor := &OrderCreateRequestProcessor{
-		Service: s,
-		request: &billing.OrderCreateRequest{
-			ProjectId: req.ProjectId,
-		},
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-
-	err := processor.processProject()
-
-	if err != nil {
-		rsp.Status = pkg.ResponseStatusBadData
-		rsp.Message = err.Error()
-
-		return nil
-	}
-
-	customer, err := s.changeCustomer(req, processor.checked.project.Merchant.Id)
+	customer, err := s.changeCustomer(req)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusSystemError
+
+		if err == ErrCustomerProjectNotFound || err == ErrCustomerGeoIncorrect {
+			rsp.Status = pkg.ResponseStatusBadData
+		}
+
 		rsp.Message = err.Error()
 
 		return nil
@@ -95,7 +85,7 @@ func (s *Service) getCustomerBy(query bson.M) (customer *billing.Customer, err e
 	return
 }
 
-func (s *Service) changeCustomer(req *billing.Customer, merchantId string) (*billing.Customer, error) {
+func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, error) {
 	var customer *billing.Customer
 	var isNew bool
 	var err error
@@ -135,10 +125,10 @@ func (s *Service) changeCustomer(req *billing.Customer, merchantId string) (*bil
 
 	if customer == nil {
 		isNew = true
+
 		customer = &billing.Customer{
 			Id:            bson.NewObjectId().Hex(),
 			ProjectId:     req.ProjectId,
-			MerchantId:    merchantId,
 			ExternalId:    req.ExternalId,
 			Name:          req.Name,
 			Email:         req.Email,
@@ -150,6 +140,33 @@ func (s *Service) changeCustomer(req *billing.Customer, merchantId string) (*bil
 			Address:       req.Address,
 			Metadata:      req.Metadata,
 			CreatedAt:     ptypes.TimestampNow(),
+		}
+
+		processor := &OrderCreateRequestProcessor{
+			Service: s,
+			request: &billing.OrderCreateRequest{
+				ProjectId: req.ProjectId,
+				User:      customer,
+			},
+			checked: &orderCreateRequestProcessorChecked{},
+		}
+
+		if req.MerchantId == "" {
+			if err := processor.processProject(); err != nil {
+				return nil, ErrCustomerProjectNotFound
+			}
+
+			customer.MerchantId = processor.checked.project.Merchant.Id
+		} else {
+			customer.MerchantId = req.MerchantId
+		}
+
+		if customer.Address == nil && customer.Ip != "" {
+			if err = processor.processPayerData(); err != nil {
+				return nil, ErrCustomerGeoIncorrect
+			}
+
+			customer.Address = processor.getBillingAddress()
 		}
 	} else {
 		changes := s.getCustomerChanges(req, customer)

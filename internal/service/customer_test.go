@@ -311,7 +311,7 @@ func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_Ok() {
 	assert.Equal(suite.T(), req.ProjectId, rsp.Item.ProjectId)
 	assert.Equal(suite.T(), req.ExternalId, rsp.Item.ExternalId)
 	assert.Equal(suite.T(), req.Ip, rsp.Item.Ip)
-	assert.Nil(suite.T(), rsp.Item.Address)
+	assert.NotNil(suite.T(), rsp.Item.Address)
 
 	var customer *billing.Customer
 	err = suite.service.db.Collection(pkg.CollectionCustomer).

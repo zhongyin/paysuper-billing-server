@@ -59,6 +59,8 @@ message OrderCreateRequest {
     map<string, string> metadata = 23;
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 24;
+
+    Customer user = 25;
 }
 
 message Project {
@@ -756,7 +758,7 @@ message Refund {
 
 message Customer {
     string id = 1;
-    // @inject_tag: json:"token"
+    // @inject_tag: json:"-"
     string token = 2;
     // @inject_tag: json:"-"
     string project_id = 3;
@@ -766,7 +768,7 @@ message Customer {
     string external_id = 5;
     // @inject_tag: json:"name"
     string name = 6;
-    // @inject_tag: json:"email"
+    // @inject_tag: json:"email" validate:"omitempty,email"
     string email = 7;
     // @inject_tag: json:"email_verified"
     bool email_verified = 8;
@@ -774,9 +776,9 @@ message Customer {
     string phone = 9;
     // @inject_tag: json:"phone_verified"
     bool phone_verified = 10;
-    // @inject_tag: json:"ip"
+    // @inject_tag: json:"ip" validate:"omitempty,ip"
     string ip = 11;
-    // @inject_tag: json:"locale"
+    // @inject_tag: json:"locale" validate:"omitempty,alpha,len=2"
     string locale = 12;
     // @inject_tag: json:"address"
     OrderBillingAddress address = 13;
