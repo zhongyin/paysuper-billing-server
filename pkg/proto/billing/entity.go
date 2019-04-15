@@ -65,7 +65,3 @@ func (m *Order) FormInputTimeIsEnded() bool {
 
 	return err != nil || t.Before(time.Now())
 }
-
-func (m *Customer) IsEmptyRequest() bool {
-	return m.ExternalId == "" && m.Email == "" && m.Phone == "" && m.Token == ""
-}

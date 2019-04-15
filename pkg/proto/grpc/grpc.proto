@@ -47,7 +47,7 @@ service BillingService {
     rpc GetProduct(RequestProduct) returns (Product) {}
     rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
 
-    rpc ChangeCustomer(billing.Customer) returns (billing.Customer) {}
+    rpc ChangeCustomer(billing.Customer) returns (ChangeCustomerResponse) {}
 }
 
 message EmptyRequest {
@@ -494,4 +494,10 @@ message I18NTextSearchable {
     string lang = 1;
     //@inject_tag: validate:"required" json:"value"
     string value = 2;
+}
+
+message ChangeCustomerResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Customer item = 3;
 }

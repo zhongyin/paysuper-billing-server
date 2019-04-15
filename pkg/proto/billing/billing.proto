@@ -728,13 +728,6 @@ message Refund {
     float sales_tax = 12;
 }
 
-message CustomerHistory {
-    string id = 1;
-    string user_id = 2;
-    map<string, string> changes = 3;
-    google.protobuf.Timestamp created_at = 4;
-}
-
 message Customer {
     string id = 1;
     // @inject_tag: json:"token"

@@ -4,19 +4,20 @@ const (
 	ServiceName    = "p1paybilling"
 	ServiceVersion = "latest"
 
-	CollectionCurrency      = "currency"
-	CollectionCountry       = "country"
-	CollectionProject       = "project"
-	CollectionCurrencyRate  = "currency_rate"
-	CollectionOrder         = "order"
-	CollectionPaymentMethod = "payment_method"
-	CollectionCommission    = "commission"
-	CollectionBinData       = "bank_bin"
-	CollectionMerchant      = "merchant"
-	CollectionNotification  = "notification"
-	CollectionRefund        = "refund"
-	CollectionProduct       = "product"
-	CollectionCustomer      = "customer"
+	CollectionCurrency        = "currency"
+	CollectionCountry         = "country"
+	CollectionProject         = "project"
+	CollectionCurrencyRate    = "currency_rate"
+	CollectionOrder           = "order"
+	CollectionPaymentMethod   = "payment_method"
+	CollectionCommission      = "commission"
+	CollectionBinData         = "bank_bin"
+	CollectionMerchant        = "merchant"
+	CollectionNotification    = "notification"
+	CollectionRefund          = "refund"
+	CollectionProduct         = "product"
+	CollectionCustomer        = "customer"
+	CollectionCustomerHistory = "customer_history"
 
 	CardPayPaymentResponseStatusInProgress = "IN_PROGRESS"
 	CardPayPaymentResponseStatusPending    = "PENDING"
@@ -86,6 +87,8 @@ const (
 	PaymentSystemHandlerCardPay = "cardpay"
 
 	MerchantAgreementTypeESign = 2
+
+	DefaultCustomerTokenLifetime = 86400
 )
 
 var (

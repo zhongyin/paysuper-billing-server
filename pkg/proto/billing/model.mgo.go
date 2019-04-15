@@ -263,6 +263,33 @@ type MgoRefund struct {
 	SalesTax   float32          `bson:"sales_tax"`
 }
 
+type MgoCustomer struct {
+	Id            bson.ObjectId        `bson:"_id"`
+	Token         string               `bson:"token"`
+	ProjectId     bson.ObjectId        `bson:"project_id"`
+	MerchantId    bson.ObjectId        `bson:"merchant_id"`
+	ExternalId    string               `bson:"external_id"`
+	Name          string               `bson:"name"`
+	Email         string               `bson:"email"`
+	EmailVerified bool                 `bson:"email_verified"`
+	Phone         string               `bson:"phone"`
+	PhoneVerified bool                 `bson:"phone_verified"`
+	Ip            string               `bson:"ip"`
+	Locale        string               `bson:"locale"`
+	Address       *OrderBillingAddress `bson:"address"`
+	Metadata      map[string]string    `bson:"metadata"`
+	ExpireAt      time.Time            `bson:"expire_at"`
+	CreatedAt     time.Time            `bson:"created_at"`
+	UpdatedAt     time.Time            `bson:"updated_at"`
+}
+
+type MgoCustomerHistory struct {
+	Id         bson.ObjectId          `bson:"_id"`
+	CustomerId bson.ObjectId          `bson:"customer_id"`
+	Changes    map[string]interface{} `bson:"changes"`
+	CreatedAt  time.Time              `bson:"created_at"`
+}
+
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
@@ -1601,6 +1628,117 @@ func (m *Refund) SetBSON(raw bson.Raw) error {
 	m.Status = decoded.Status
 	m.PayerData = decoded.PayerData
 	m.SalesTax = decoded.SalesTax
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Customer) GetBSON() (interface{}, error) {
+	st := &MgoCustomer{
+		Token:         m.Token,
+		ExternalId:    m.ExternalId,
+		Name:          m.Name,
+		Email:         m.Email,
+		EmailVerified: m.EmailVerified,
+		Phone:         m.Phone,
+		PhoneVerified: m.PhoneVerified,
+		Ip:            m.Ip,
+		Locale:        m.Locale,
+		Address:       m.Address,
+		Metadata:      m.Metadata,
+	}
+
+	if bson.IsObjectIdHex(m.ProjectId) == false || bson.IsObjectIdHex(m.MerchantId) == false {
+		return nil, errors.New(errorInvalidObjectId)
+	}
+
+	st.ProjectId = bson.ObjectIdHex(m.ProjectId)
+	st.MerchantId = bson.ObjectIdHex(m.MerchantId)
+
+	t, err := ptypes.Timestamp(m.ExpireAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	st.ExpireAt = t
+
+	if len(m.Id) <= 0 {
+		st.Id = bson.NewObjectId()
+	} else {
+		if bson.IsObjectIdHex(m.Id) == false {
+			return nil, errors.New(errorInvalidObjectId)
+		}
+
+		st.Id = bson.ObjectIdHex(m.Id)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *Customer) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoCustomer)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.Token = decoded.Token
+	m.ProjectId = decoded.ProjectId.Hex()
+	m.MerchantId = decoded.MerchantId.Hex()
+	m.ExternalId = decoded.ExternalId
+	m.Name = decoded.Name
+	m.Email = decoded.Email
+	m.EmailVerified = decoded.EmailVerified
+	m.Phone = decoded.Phone
+	m.PhoneVerified = decoded.PhoneVerified
+	m.Ip = decoded.Ip
+	m.Locale = decoded.Locale
+	m.Address = decoded.Address
+	m.Metadata = decoded.Metadata
+
+	m.ExpireAt, err = ptypes.TimestampProto(decoded.ExpireAt)
+
+	if err != nil {
+		return err
+	}
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 

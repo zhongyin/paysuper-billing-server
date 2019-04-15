@@ -60,6 +60,7 @@ It has these top-level messages:
 	ListProductsResponse
 	RequestProduct
 	I18NTextSearchable
+	ChangeCustomerResponse
 */
 package grpc
 
@@ -127,7 +128,7 @@ type BillingService interface {
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error)
 	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
 	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
-	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error)
+	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*ChangeCustomerResponse, error)
 }
 
 type billingService struct {
@@ -468,9 +469,9 @@ func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProduct, 
 	return out, nil
 }
 
-func (c *billingService) ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*billing.Customer, error) {
+func (c *billingService) ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*ChangeCustomerResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.ChangeCustomer", in)
-	out := new(billing.Customer)
+	out := new(ChangeCustomerResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -513,7 +514,7 @@ type BillingServiceHandler interface {
 	ListProducts(context.Context, *ListProductsRequest, *ListProductsResponse) error
 	GetProduct(context.Context, *RequestProduct, *Product) error
 	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
-	ChangeCustomer(context.Context, *billing.Customer, *billing.Customer) error
+	ChangeCustomer(context.Context, *billing.Customer, *ChangeCustomerResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -550,7 +551,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error
 		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
 		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
-		ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error
+		ChangeCustomer(ctx context.Context, in *billing.Customer, out *ChangeCustomerResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -691,6 +692,6 @@ func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestPr
 	return h.BillingServiceHandler.DeleteProduct(ctx, in, out)
 }
 
-func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.Customer, out *billing.Customer) error {
+func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.Customer, out *ChangeCustomerResponse) error {
 	return h.BillingServiceHandler.ChangeCustomer(ctx, in, out)
 }

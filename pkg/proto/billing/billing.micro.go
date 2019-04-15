@@ -52,6 +52,7 @@ It has these top-level messages:
 	MerchantPaymentMethod
 	RefundPayerData
 	Refund
+	CustomerHistoryChanges
 	CustomerHistory
 	Customer
 */
