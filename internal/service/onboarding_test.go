@@ -2010,6 +2010,15 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Sort_Ok() {
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
 
+	req2 := &grpc.ListingNotificationRequest{
+		MerchantId: suite.merchant.Id,
+		Sort:       []string{"created_at"},
+		Limit:      10,
+		Offset:     0,
+	}
+	rsp2 := &grpc.Notifications{}
+	err = suite.service.ListNotifications(context.TODO(), req2, rsp2)
+
 	req1 := &grpc.ListingNotificationRequest{
 		MerchantId: suite.merchant.Id,
 		Sort:       []string{"-created_at"},
@@ -2020,7 +2029,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Sort_Ok() {
 	err = suite.service.ListNotifications(context.TODO(), req1, rsp1)
 	assert.Nil(suite.T(), err)
 	assert.Len(suite.T(), rsp1.Items, 3)
-	assert.Equal(suite.T(), rsp.Id, rsp1.Items[0].Id)
+	assert.Equal(suite.T(), rsp2.Items[len(rsp2.Items)-1].Id, rsp1.Items[0].Id)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
