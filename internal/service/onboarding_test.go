@@ -36,10 +36,11 @@ func Test_Onboarding(t *testing.T) {
 
 func (suite *OnboardingTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
-	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
 	assert.NoError(suite.T(), err, "Config load failed")
+
+	cfg.AccountingCurrency = "RUB"
+	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -285,7 +286,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
 		Name:                     "test project 1",
-		OnlyFixedAmounts:         true,
+		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
 		PaymentMethods: map[string]*billing.ProjectPaymentMethod{

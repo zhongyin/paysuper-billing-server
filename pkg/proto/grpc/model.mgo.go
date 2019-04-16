@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/paysuper/paysuper-recurring-repository/tools"
 	"time"
 )
 
@@ -83,7 +84,6 @@ func (p *Product) GetBSON() (interface{}, error) {
 		Sku:             p.Sku,
 		DefaultCurrency: p.DefaultCurrency,
 		Enabled:         p.Enabled,
-		Prices:          p.Prices,
 		Description:     p.Description,
 		LongDescription: p.LongDescription,
 		Images:          p.Images,
@@ -149,6 +149,13 @@ func (p *Product) GetBSON() (interface{}, error) {
 	st.Name = []*I18NTextSearchable{}
 	for k, v := range p.Name {
 		st.Name = append(st.Name, &I18NTextSearchable{Lang: k, Value: v})
+	}
+
+	for _, price := range p.Prices {
+		st.Prices = append(st.Prices, &ProductPrice{
+			Currency: price.Currency,
+			Amount:   tools.FormatAmount(price.Amount),
+		})
 	}
 
 	return st, nil

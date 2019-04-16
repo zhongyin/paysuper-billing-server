@@ -53,6 +53,12 @@ message OrderCreateRequest {
     bool is_json = 20;
     // @inject_tag: json:"-"
     string language = 21;
+    // @inject_tag: json:"products" validate:"omitempty,gte=1,dive,hexadecimal,len=24"
+    repeated string products = 22;
+    // @inject_tag: json:"-"
+    map<string, string> metadata = 23;
+    // @inject_tag: json:"-"
+    map<string, string> private_metadata = 24;
 }
 
 message Project {
@@ -80,8 +86,8 @@ message Project {
     string name = 11; // project name
     // @inject_tag: bson:"notify_emails" structure:"notify_emails"
     repeated string notify_emails = 12; // list of emails to send notifications about successfully completed payment operations
-    // @inject_tag: bson:"only_fixed_amounts" structure:"only_fixed_amounts"
-    bool only_fixed_amounts = 13; // is allow create order only with amounts from fixed packages list
+    // @inject_tag: bson:"is_products_checkout" structure:"is_products_checkout"
+    bool is_products_checkout = 13; // is allow create order only with amounts from fixed packages list
     // @inject_tag: bson:"secret_key" structure:"secret_key"
     string secret_key = 14; // secret key for create check hash for request about order statuses changes
     // @inject_tag: bson:"signature_required"
@@ -373,8 +379,6 @@ message Order {
     string payment_method_payer_account = 28; // account of payer in payment system
     // @inject_tag: bson:"pm_txn_params" structure:"pm_txn_params"
     map<string, string> payment_method_txn_params = 29; // any params received in request of payment system about payment
-    // @inject_tag: bson:"fixed_package" structure:"fixed_package"
-    FixedPackage fixed_package = 30; // fixed package which buy payer
     // @inject_tag: bson:"payment_requisites" json:"-" structure:"payment_requisites"
     map<string, string> payment_requisites = 31;
     // @inject_tag: bson:"psp_fee_amount" structure:"psp_fee_amount"
@@ -397,6 +401,51 @@ message Order {
 
     // @inject_tag: json:"-"
     bool user_address_data_required = 46;
+
+    // @inject_tag: json:"-" validate:"omitempty,gte=1,dive,hexadecimal,len=24"
+    repeated string products = 47;
+
+    // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
+    repeated OrderItem items = 48;
+
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 49;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 50;
+
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 51;
+
+    // @inject_tag: json:"-"
+    map<string, string> private_metadata = 52;
+}
+
+message OrderItem {
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"id" bson:"_id"
+    string id = 1;
+    //@inject_tag: validate:"required" json:"object"
+    string object = 2;
+    //@inject_tag: validate:"required" json:"sku" bson:"sku"
+    string sku = 3;
+    //@inject_tag: validate:"required" json:"name"
+    string name = 4;
+    //@inject_tag: validate:"required" json:"description"
+    string description = 5;
+    // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 6;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 7;
+    //@inject_tag: validate:"dive,omitempty,uri" json:"images"
+    repeated string images = 8;
+    //@inject_tag: validate:"omitempty,url" json:"url"
+    string url = 9;
+    //@inject_tag: json:"metadata"
+    map<string, string> metadata = 10;
+    //@inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 11;
+    //@inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 12;
+
 }
 
 message Currency {

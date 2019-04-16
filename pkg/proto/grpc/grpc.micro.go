@@ -57,6 +57,7 @@ It has these top-level messages:
 	Product
 	ProductPrice
 	ListProductsRequest
+	GetProductsForOrderRequest
 	ListProductsResponse
 	RequestProduct
 	I18NTextSearchable
@@ -127,6 +128,7 @@ type BillingService interface {
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...client.CallOption) (*ListProductsResponse, error)
 	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
 	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
+	GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, opts ...client.CallOption) (*ListProductsResponse, error)
 }
 
 type billingService struct {
@@ -467,6 +469,16 @@ func (c *billingService) DeleteProduct(ctx context.Context, in *RequestProduct, 
 	return out, nil
 }
 
+func (c *billingService) GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, opts ...client.CallOption) (*ListProductsResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetProductsForOrder", in)
+	out := new(ListProductsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -502,6 +514,7 @@ type BillingServiceHandler interface {
 	ListProducts(context.Context, *ListProductsRequest, *ListProductsResponse) error
 	GetProduct(context.Context, *RequestProduct, *Product) error
 	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
+	GetProductsForOrder(context.Context, *GetProductsForOrderRequest, *ListProductsResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -538,6 +551,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListProducts(ctx context.Context, in *ListProductsRequest, out *ListProductsResponse) error
 		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
 		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
+		GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -676,4 +690,8 @@ func (h *billingServiceHandler) GetProduct(ctx context.Context, in *RequestProdu
 
 func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error {
 	return h.BillingServiceHandler.DeleteProduct(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error {
+	return h.BillingServiceHandler.GetProductsForOrder(ctx, in, out)
 }

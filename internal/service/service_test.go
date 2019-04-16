@@ -45,11 +45,11 @@ func Test_BillingService(t *testing.T) {
 
 func (suite *BillingServiceTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
 
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
 	}
+	cfg.AccountingCurrency = "RUB"
 
 	suite.cfg = cfg
 
@@ -203,7 +203,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
 		Name:                     "test project 1",
-		OnlyFixedAmounts:         true,
+		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
 		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
@@ -232,28 +232,28 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		Merchant: merchant,
 	}
 	projectXsolla := &billing.Project{
-		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "xsolla",
-		LimitsCurrency:   rub,
-		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 0,
-		Name:             "test project 2",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 2 secret key",
-		IsActive:         true,
+		Id:                 bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub,
+		CallbackProtocol:   "xsolla",
+		LimitsCurrency:     rub,
+		MaxPaymentAmount:   15000,
+		MinPaymentAmount:   0,
+		Name:               "test project 2",
+		IsProductsCheckout: true,
+		SecretKey:          "test project 2 secret key",
+		IsActive:           true,
 	}
 	projectCardpay := &billing.Project{
-		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "cardpay",
-		LimitsCurrency:   rub,
-		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 0,
-		Name:             "test project 3",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 3 secret key",
-		IsActive:         true,
+		Id:                 bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub,
+		CallbackProtocol:   "cardpay",
+		LimitsCurrency:     rub,
+		MaxPaymentAmount:   15000,
+		MinPaymentAmount:   0,
+		Name:               "test project 3",
+		IsProductsCheckout: true,
+		SecretKey:          "test project 3 secret key",
+		IsActive:           true,
 	}
 
 	project := []interface{}{projectDefault, projectXsolla, projectCardpay}
@@ -582,6 +582,9 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 
 func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitError() {
 	cfg, err := config.NewConfig()
+
+	assert.NoError(suite.T(), err)
+
 	cfg.AccountingCurrency = "AUD"
 
 	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil)
