@@ -329,6 +329,7 @@ func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_Ok() {
 func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_WithHistory_Ok() {
 	req := &billing.Customer{
 		ProjectId:  suite.project.Id,
+		MerchantId: suite.project.Merchant.Id,
 		ExternalId: bson.NewObjectId().Hex(),
 		Email:      "test@unit.test",
 		Ip:         "127.0.0.1",
@@ -417,6 +418,27 @@ func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_TokenWithHistory_Ok(
 	assert.Equal(suite.T(), 3, count)
 }
 
+func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_GeoIpService_Error() {
+	suite.service.geo = mock.NewGeoIpServiceTestError()
+
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), ErrCustomerGeoIncorrect.Error(), rsp.Message)
+}
+
 func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_ProjectNotFound_Error() {
 	req := &billing.Customer{
 		ProjectId:  bson.NewObjectId().Hex(),
@@ -434,4 +456,270 @@ func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_ProjectNotFound_Erro
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), orderErrorProjectNotFound, rsp.Message)
+}
+
+func (suite *CustomerTestSuite) TestCustomer_GetCustomerBy_Ok() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	customer, err := suite.service.getCustomerBy(bson.M{"token": rsp.Item.Token})
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), customer)
+	assert.Equal(suite.T(), rsp.Item.Id, customer.Id)
+}
+
+func (suite *CustomerTestSuite) TestCustomer_GetCustomerBy_NotFound_Error() {
+	customer, err := suite.service.getCustomerBy(bson.M{"token": bson.NewObjectId().Hex()})
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), customer)
+	assert.Equal(suite.T(), ErrCustomerNotFound, err)
+}
+
+func (suite *CustomerTestSuite) TestCustomer_GetCustomerChanges_Ok() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	req = &billing.Customer{
+		ProjectId:     suite.project.Id,
+		Token:         rsp.Item.Token,
+		ExternalId:    bson.NewObjectId().Hex(),
+		Name:          "Unit Test",
+		Email:         "test1@unit.test",
+		EmailVerified: true,
+		Phone:         "1234567890",
+		PhoneVerified: true,
+		Ip:            "127.0.0.2",
+		Locale:        "en",
+		Address: &billing.OrderBillingAddress{
+			Country:    "US",
+			City:       "New York",
+			PostalCode: "000000",
+			State:      "CA",
+		},
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+	}
+	err = suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	assert.Equal(suite.T(), req.ExternalId, rsp.Item.ExternalId)
+	assert.Equal(suite.T(), req.Name, rsp.Item.Name)
+	assert.Equal(suite.T(), req.Email, rsp.Item.Email)
+	assert.Equal(suite.T(), req.EmailVerified, rsp.Item.EmailVerified)
+	assert.Equal(suite.T(), req.Phone, rsp.Item.Phone)
+	assert.Equal(suite.T(), req.PhoneVerified, rsp.Item.PhoneVerified)
+	assert.Equal(suite.T(), req.Ip, rsp.Item.Ip)
+	assert.Equal(suite.T(), req.Locale, rsp.Item.Locale)
+	assert.Equal(suite.T(), req.Address, rsp.Item.Address)
+}
+
+func (suite *CustomerTestSuite) TestCustomer_ChangeCustomerPaymentFormData_NoChanges_Ok() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+		AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+		Address: &billing.OrderBillingAddress{
+			Country:    "US",
+			City:       "New York",
+			PostalCode: "000000",
+			State:      "CA",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	customer, err := suite.service.changeCustomerPaymentFormData(
+		rsp.Item,
+		req.Ip,
+		req.AcceptLanguage,
+		req.UserAgent,
+		req.Email,
+		req.Address,
+	)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), customer)
+	assert.Equal(suite.T(), req.Ip, customer.Ip)
+	assert.Equal(suite.T(), req.AcceptLanguage, customer.AcceptLanguage)
+	assert.Equal(suite.T(), req.Locale, customer.Locale)
+	assert.Equal(suite.T(), req.UserAgent, customer.UserAgent)
+	assert.Equal(suite.T(), req.Email, customer.Email)
+	assert.Equal(suite.T(), req.Address, customer.Address)
+}
+
+func (suite *CustomerTestSuite) TestCustomer_ChangeCustomerPaymentFormData_ChangeData_Ok() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+		AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+		Address: &billing.OrderBillingAddress{
+			Country:    "US",
+			City:       "New York",
+			PostalCode: "000000",
+			State:      "CA",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	ip := "127.0.0.2"
+	acceptLanguage := "en-US,ru;q=0.9,en-US;q=0.8,en;q=0.7"
+	userAgent := "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4"
+	email := "test1@unit.test"
+	address := &billing.OrderBillingAddress{
+		Country:    "RU",
+		City:       "St.Petersburg",
+		PostalCode: "190000",
+		State:      "SPE",
+	}
+
+	customer, err := suite.service.changeCustomerPaymentFormData(rsp.Item, ip, acceptLanguage, userAgent, email, address)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), customer)
+	assert.NotEqual(suite.T(), req.Ip, customer.Ip)
+	assert.NotEqual(suite.T(), req.AcceptLanguage, customer.AcceptLanguage)
+	assert.NotEqual(suite.T(), req.Locale, customer.Locale)
+	assert.NotEqual(suite.T(), req.UserAgent, customer.UserAgent)
+	assert.NotEqual(suite.T(), req.Email, customer.Email)
+	assert.NotEqual(suite.T(), req.Address, customer.Address)
+
+	assert.Equal(suite.T(), rsp.Item.Id, customer.Id)
+	assert.Equal(suite.T(), ip, customer.Ip)
+	assert.Equal(suite.T(), acceptLanguage, customer.AcceptLanguage)
+	assert.Equal(suite.T(), "en", customer.Locale)
+	assert.Equal(suite.T(), userAgent, customer.UserAgent)
+	assert.Equal(suite.T(), email, customer.Email)
+	assert.Equal(suite.T(), address, customer.Address)
+}
+
+func (suite *CustomerTestSuite) TestCustomer_ChangeCustomerPaymentFormData_ChangeData_GeoService_Error() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+		AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+		Address: &billing.OrderBillingAddress{
+			Country:    "US",
+			City:       "New York",
+			PostalCode: "000000",
+			State:      "CA",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	ip := "127.0.0.2"
+	suite.service.geo = mock.NewGeoIpServiceTestError()
+
+	customer, err := suite.service.changeCustomerPaymentFormData(rsp.Item, ip, req.AcceptLanguage, req.UserAgent, req.Email, req.Address)
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), customer)
+	assert.Equal(suite.T(), orderErrorPayerRegionUnknown, err.Error())
+}
+
+func (suite *CustomerTestSuite) TestCustomer_ChangeCustomerPaymentFormData_ChangeData_SaveData_Error() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+		AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+		Address: &billing.OrderBillingAddress{
+			Country:    "US",
+			City:       "New York",
+			PostalCode: "000000",
+			State:      "CA",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+
+	userAgent := "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4"
+	rsp.Item.Token = bson.NewObjectId().Hex()
+	rsp.Item.ProjectId = bson.NewObjectId().Hex()
+	rsp.Item.MerchantId = ""
+
+	customer, err := suite.service.changeCustomerPaymentFormData(rsp.Item, req.Ip, req.AcceptLanguage, userAgent, req.Email, req.Address)
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), customer)
+	assert.Equal(suite.T(), ErrCustomerProjectNotFound, err)
 }

@@ -16,15 +16,17 @@ import (
 )
 
 const (
-	customerFieldExternalId    = "ExternalId"
-	customerFieldName          = "Name"
-	customerFieldEmail         = "Email"
-	customerFieldEmailVerified = "EmailVerified"
-	customerFieldPhone         = "Phone"
-	customerFieldPhoneVerified = "PhoneVerified"
-	customerFieldIp            = "Ip"
-	customerFieldLocale        = "Locale"
-	customerFieldAddress       = "Address"
+	customerFieldExternalId     = "ExternalId"
+	customerFieldName           = "Name"
+	customerFieldEmail          = "Email"
+	customerFieldEmailVerified  = "EmailVerified"
+	customerFieldPhone          = "Phone"
+	customerFieldPhoneVerified  = "PhoneVerified"
+	customerFieldIp             = "Ip"
+	customerFieldLocale         = "Locale"
+	customerFieldAddress        = "Address"
+	customerFieldAcceptLanguage = "AcceptLanguage"
+	customerFieldUserAgent      = "UserAgent"
 
 	customerErrorNotFound = "customer with specified data not found"
 )
@@ -251,6 +253,16 @@ func (s *Service) getCustomerChanges(newData, oldData *billing.Customer) map[str
 		changes[customerFieldAddress] = oldData.Address
 	}
 
+	if newData.AcceptLanguage != oldData.AcceptLanguage {
+		oldData.AcceptLanguage = newData.AcceptLanguage
+		changes[customerFieldAcceptLanguage] = oldData.AcceptLanguage
+	}
+
+	if newData.UserAgent != oldData.UserAgent {
+		oldData.UserAgent = newData.UserAgent
+		changes[customerFieldUserAgent] = oldData.UserAgent
+	}
+
 	oldData.Metadata = newData.Metadata
 
 	return changes
@@ -288,10 +300,6 @@ func (s *Service) changeCustomerPaymentFormData(
 		customer.Email = email
 	}
 
-	if address != nil && customer.Address != address {
-		customer.Address = address
-	}
-
 	if ip != "" && customer.Ip != ip {
 		processor := &OrderCreateRequestProcessor{
 			Service: s,
@@ -314,6 +322,10 @@ func (s *Service) changeCustomerPaymentFormData(
 			PostalCode: processor.checked.payerData.Zip,
 			State:      processor.checked.payerData.State,
 		}
+	}
+
+	if address != nil && customer.Address != address {
+		customer.Address = address
 	}
 
 	if acceptLanguage != "" && customer.AcceptLanguage != acceptLanguage {
