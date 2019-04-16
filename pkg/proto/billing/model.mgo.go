@@ -826,20 +826,22 @@ func (m *Order) GetBSON() (interface{}, error) {
 
 	if m.User != nil {
 		st.User = &MgoCustomer{
-			Id:            bson.ObjectIdHex(m.User.Id),
-			Token:         m.User.Token,
-			ProjectId:     bson.ObjectIdHex(m.User.ProjectId),
-			MerchantId:    bson.ObjectIdHex(m.User.MerchantId),
-			ExternalId:    m.User.ExternalId,
-			Name:          m.User.Name,
-			Email:         m.User.Email,
-			EmailVerified: m.User.EmailVerified,
-			Phone:         m.User.Phone,
-			PhoneVerified: m.User.PhoneVerified,
-			Ip:            m.User.Ip,
-			Locale:        m.User.Locale,
-			Address:       m.User.Address,
-			Metadata:      m.User.Metadata,
+			Id:             bson.ObjectIdHex(m.User.Id),
+			Token:          m.User.Token,
+			ProjectId:      bson.ObjectIdHex(m.User.ProjectId),
+			MerchantId:     bson.ObjectIdHex(m.User.MerchantId),
+			ExternalId:     m.User.ExternalId,
+			Name:           m.User.Name,
+			Email:          m.User.Email,
+			EmailVerified:  m.User.EmailVerified,
+			Phone:          m.User.Phone,
+			PhoneVerified:  m.User.PhoneVerified,
+			Ip:             m.User.Ip,
+			Locale:         m.User.Locale,
+			Address:        m.User.Address,
+			Metadata:       m.User.Metadata,
+			AcceptLanguage: m.User.AcceptLanguage,
+			UserAgent:      m.User.UserAgent,
 		}
 
 		st.User.ExpireAt, _ = ptypes.Timestamp(m.User.ExpireAt)
@@ -1054,20 +1056,22 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 
 	if decoded.User != nil {
 		m.User = &Customer{
-			Id:            decoded.User.Id.Hex(),
-			Token:         decoded.User.Token,
-			ProjectId:     decoded.User.ProjectId.Hex(),
-			MerchantId:    decoded.User.MerchantId.Hex(),
-			ExternalId:    decoded.User.ExternalId,
-			Name:          decoded.User.Name,
-			Email:         decoded.User.Email,
-			EmailVerified: decoded.User.EmailVerified,
-			Phone:         decoded.User.Phone,
-			PhoneVerified: decoded.User.PhoneVerified,
-			Ip:            decoded.User.Ip,
-			Locale:        decoded.User.Locale,
-			Address:       decoded.User.Address,
-			Metadata:      decoded.User.Metadata,
+			Id:             decoded.User.Id.Hex(),
+			Token:          decoded.User.Token,
+			ProjectId:      decoded.User.ProjectId.Hex(),
+			MerchantId:     decoded.User.MerchantId.Hex(),
+			ExternalId:     decoded.User.ExternalId,
+			Name:           decoded.User.Name,
+			Email:          decoded.User.Email,
+			EmailVerified:  decoded.User.EmailVerified,
+			Phone:          decoded.User.Phone,
+			PhoneVerified:  decoded.User.PhoneVerified,
+			Ip:             decoded.User.Ip,
+			Locale:         decoded.User.Locale,
+			Address:        decoded.User.Address,
+			Metadata:       decoded.User.Metadata,
+			AcceptLanguage: decoded.User.AcceptLanguage,
+			UserAgent:      decoded.User.UserAgent,
 		}
 
 		m.User.ExpireAt, _ = ptypes.TimestampProto(decoded.User.ExpireAt)

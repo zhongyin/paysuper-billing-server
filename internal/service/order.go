@@ -312,7 +312,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	var customer *billing.Customer
 
 	if cToken != "" {
-		customer, err = s.getCustomerBy(bson.M{"token": req.Token})
+		customer, err = s.getCustomerBy(bson.M{"token": cToken})
 
 		if err != nil {
 			return err

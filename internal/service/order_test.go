@@ -867,7 +867,6 @@ func (suite *OrderTestSuite) SetupTest() {
 	if err != nil {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
-	zap.ReplaceGlobals(suite.log)
 
 	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
 
@@ -5589,4 +5588,207 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_WithUser_Ok() {
 	assert.Equal(suite.T(), req.User.Ip, rsp.User.Ip)
 	assert.Equal(suite.T(), req.User.Locale, rsp.User.Locale)
 	assert.NotNil(suite.T(), rsp.User.Address)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_OrderNotFound_Error() {
+	req := &grpc.PaymentFormJsonDataRequest{
+		OrderId: bson.NewObjectId().Hex(),
+		Scheme:  "https",
+		Host:    "unit.test",
+	}
+	rsp := &grpc.PaymentFormJsonDataResponse{}
+	err := suite.service.PaymentFormJsonDataProcess(context.TODO(), req, rsp)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), orderErrorNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_CetCustomerGeoData_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		PayerEmail:    "test@unit.unit",
+		PayerIp:       "127.0.0.1",
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+
+	req1 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "https",
+		Host:    "unit.test",
+		Ip:      "127.0.0.1",
+	}
+	rsp1 := &grpc.PaymentFormJsonDataResponse{}
+
+	suite.service.geo = mock.NewGeoIpServiceTestError()
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp1)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), orderErrorPayerRegionUnknown, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_CustomerToken_Ok() {
+	req := &billing.Customer{
+		ProjectId:  suite.project.Id,
+		ExternalId: bson.NewObjectId().Hex(),
+		Email:      "test@unit.test",
+		Ip:         "127.0.0.1",
+		Locale:     "ru",
+		Metadata: map[string]string{
+			"field1": "value1",
+			"field2": "value2",
+		},
+		AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+		Address: &billing.OrderBillingAddress{
+			Country:    "US",
+			City:       "New York",
+			PostalCode: "000000",
+			State:      "CA",
+		},
+	}
+	rsp := &grpc.ChangeCustomerResponse{}
+	err := suite.service.ChangeCustomer(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+
+	req1 := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+	}
+
+	rsp1 := &billing.Order{}
+	err = suite.service.OrderCreateProcess(context.TODO(), req1, rsp1)
+	assert.Nil(suite.T(), err)
+	assert.Nil(suite.T(), rsp1.User)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId:   rsp1.Uuid,
+		Scheme:    "https",
+		Host:      "unit.test",
+		Ip:        "127.0.0.1",
+		Token:     rsp.Item.Token,
+		Locale:    req.AcceptLanguage,
+		UserAgent: req.UserAgent,
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+
+	order, err := suite.service.getOrderByUuid(rsp1.Uuid)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), order)
+	assert.NotNil(suite.T(), order.User)
+	assert.Equal(suite.T(), req.ProjectId, order.User.ProjectId)
+	assert.Equal(suite.T(), req.ExternalId, order.User.ExternalId)
+	assert.Equal(suite.T(), req.Email, order.User.Email)
+	assert.Equal(suite.T(), req.Ip, order.User.Ip)
+	assert.Equal(suite.T(), req.Locale, order.User.Locale)
+	assert.Equal(suite.T(), req.AcceptLanguage, order.User.AcceptLanguage)
+	assert.Equal(suite.T(), req.UserAgent, order.User.UserAgent)
+	assert.Equal(suite.T(), req.Address, order.User.Address)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_CustomerTokenInOrder_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+		User: &billing.Customer{
+			ProjectId:  suite.project.Id,
+			ExternalId: bson.NewObjectId().Hex(),
+			Email:      "test@unit.test",
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata: map[string]string{
+				"field1": "value1",
+				"field2": "value2",
+			},
+			AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+			UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+			Address: &billing.OrderBillingAddress{
+				Country:    "US",
+				City:       "New York",
+				PostalCode: "000000",
+				State:      "CA",
+			},
+		},
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), rsp.User)
+
+	req1 := &grpc.PaymentFormJsonDataRequest{
+		OrderId:   rsp.Uuid,
+		Scheme:    "https",
+		Host:      "unit.test",
+		Ip:        req.User.Ip,
+		Locale:    req.User.AcceptLanguage,
+		UserAgent: req.User.UserAgent,
+	}
+	rsp1 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp1)
+	assert.NoError(suite.T(), err)
+
+	order, err := suite.service.getOrderByUuid(rsp.Uuid)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), order)
+	assert.NotNil(suite.T(), order.User)
+	assert.Equal(suite.T(), req.ProjectId, order.User.ProjectId)
+	assert.Equal(suite.T(), req.User.ExternalId, order.User.ExternalId)
+	assert.Equal(suite.T(), req.User.Email, order.User.Email)
+	assert.Equal(suite.T(), req.User.Ip, order.User.Ip)
+	assert.Equal(suite.T(), req.User.Locale, order.User.Locale)
+	assert.Equal(suite.T(), req.User.AcceptLanguage, order.User.AcceptLanguage)
+	assert.Equal(suite.T(), req.User.UserAgent, order.User.UserAgent)
+	assert.Equal(suite.T(), req.User.Address, order.User.Address)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_CustomerTokenNotFound_Error() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
+		PaymentMethod: suite.paymentMethod.Group,
+		Currency:      "RUB",
+		Amount:        100,
+		Account:       "unit test",
+		Description:   "unit test",
+		OrderId:       bson.NewObjectId().Hex(),
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Nil(suite.T(), rsp.User)
+
+	req1 := &grpc.PaymentFormJsonDataRequest{
+		OrderId:   rsp.Uuid,
+		Scheme:    "https",
+		Host:      "unit.test",
+		Ip:        "127.0.0.1",
+		Token:     bson.NewObjectId().Hex(),
+		Locale:    "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+	}
+	rsp1 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp1)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), ErrCustomerNotFound, err)
 }
