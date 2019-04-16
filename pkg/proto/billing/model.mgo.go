@@ -268,23 +268,25 @@ type MgoRefund struct {
 }
 
 type MgoCustomer struct {
-	Id            bson.ObjectId        `bson:"_id"`
-	Token         string               `bson:"token"`
-	ProjectId     bson.ObjectId        `bson:"project_id"`
-	MerchantId    bson.ObjectId        `bson:"merchant_id"`
-	ExternalId    string               `bson:"external_id"`
-	Name          string               `bson:"name"`
-	Email         string               `bson:"email"`
-	EmailVerified bool                 `bson:"email_verified"`
-	Phone         string               `bson:"phone"`
-	PhoneVerified bool                 `bson:"phone_verified"`
-	Ip            string               `bson:"ip"`
-	Locale        string               `bson:"locale"`
-	Address       *OrderBillingAddress `bson:"address"`
-	Metadata      map[string]string    `bson:"metadata"`
-	ExpireAt      time.Time            `bson:"expire_at"`
-	CreatedAt     time.Time            `bson:"created_at"`
-	UpdatedAt     time.Time            `bson:"updated_at"`
+	Id             bson.ObjectId        `bson:"_id"`
+	Token          string               `bson:"token"`
+	ProjectId      bson.ObjectId        `bson:"project_id"`
+	MerchantId     bson.ObjectId        `bson:"merchant_id"`
+	ExternalId     string               `bson:"external_id"`
+	Name           string               `bson:"name"`
+	Email          string               `bson:"email"`
+	EmailVerified  bool                 `bson:"email_verified"`
+	Phone          string               `bson:"phone"`
+	PhoneVerified  bool                 `bson:"phone_verified"`
+	Ip             string               `bson:"ip"`
+	Locale         string               `bson:"locale"`
+	Address        *OrderBillingAddress `bson:"address"`
+	AcceptLanguage string               `bson:"accept_language"`
+	UserAgent      string               `bson:"user_agent"`
+	Metadata       map[string]string    `bson:"metadata"`
+	ExpireAt       time.Time            `bson:"expire_at"`
+	CreatedAt      time.Time            `bson:"created_at"`
+	UpdatedAt      time.Time            `bson:"updated_at"`
 }
 
 type MgoCustomerHistory struct {
@@ -1700,17 +1702,19 @@ func (m *Refund) SetBSON(raw bson.Raw) error {
 
 func (m *Customer) GetBSON() (interface{}, error) {
 	st := &MgoCustomer{
-		Token:         m.Token,
-		ExternalId:    m.ExternalId,
-		Name:          m.Name,
-		Email:         m.Email,
-		EmailVerified: m.EmailVerified,
-		Phone:         m.Phone,
-		PhoneVerified: m.PhoneVerified,
-		Ip:            m.Ip,
-		Locale:        m.Locale,
-		Address:       m.Address,
-		Metadata:      m.Metadata,
+		Token:          m.Token,
+		ExternalId:     m.ExternalId,
+		Name:           m.Name,
+		Email:          m.Email,
+		EmailVerified:  m.EmailVerified,
+		Phone:          m.Phone,
+		PhoneVerified:  m.PhoneVerified,
+		Ip:             m.Ip,
+		Locale:         m.Locale,
+		Address:        m.Address,
+		Metadata:       m.Metadata,
+		AcceptLanguage: m.AcceptLanguage,
+		UserAgent:      m.UserAgent,
 	}
 
 	if bson.IsObjectIdHex(m.ProjectId) == false || bson.IsObjectIdHex(m.MerchantId) == false {
@@ -1787,6 +1791,8 @@ func (m *Customer) SetBSON(raw bson.Raw) error {
 	m.Locale = decoded.Locale
 	m.Address = decoded.Address
 	m.Metadata = decoded.Metadata
+	m.AcceptLanguage = decoded.AcceptLanguage
+	m.UserAgent = decoded.UserAgent
 
 	m.ExpireAt, err = ptypes.TimestampProto(decoded.ExpireAt)
 

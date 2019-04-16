@@ -65,3 +65,23 @@ func (m *Order) FormInputTimeIsEnded() bool {
 
 	return err != nil || t.Before(time.Now())
 }
+
+func (m *Order) GetUserEmail() string {
+	if m.User == nil {
+		return ""
+	}
+
+	return m.User.Email
+}
+
+func (m *Order) GetUserAddress() *OrderBillingAddress {
+	if m.User == nil || m.User.Address == nil {
+		return nil
+	}
+
+	return m.User.Address
+}
+
+func (m *Order) HasCustomer() bool {
+	return m.User != nil && m.User.Token != ""
+}

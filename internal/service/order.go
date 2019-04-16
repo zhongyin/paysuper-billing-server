@@ -71,6 +71,8 @@ const (
 	orderErrorNoNameInRequiredLanguage                 = "no name in required language %s"
 	orderErrorNoDescriptionInDefaultLanguage           = "no description in default language %s"
 	orderErrorNoDescriptionInRequiredLanguage          = "no description in required language %s"
+	orderErrorTokenNotFound                            = "customer token not found in order"
+	orderErrorCustomerNotFound                         = "customer with specified token not found"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
@@ -121,9 +123,12 @@ type PaymentFormProcessor struct {
 }
 
 type PaymentCreateProcessor struct {
-	service *Service
-	data    map[string]string
-	checked struct {
+	service        *Service
+	data           map[string]string
+	ip             string
+	userAgent      string
+	acceptLanguage string
+	checked        struct {
 		order         *billing.Order
 		project       *billing.Project
 		paymentMethod *billing.PaymentMethod
@@ -298,11 +303,10 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 
 	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
-
 	cToken := req.Token
 
-	if cToken == "" && order.CustomerToken != "" {
-		cToken = order.CustomerToken
+	if cToken == "" && order.HasCustomer() == true {
+		cToken = order.User.Token
 	}
 
 	var customer *billing.Customer
@@ -314,40 +318,40 @@ func (s *Service) PaymentFormJsonDataProcess(
 			return err
 		}
 
-		if customer.Ip != req.Ip || customer.Locale != loc {
-			if customer.Ip != req.Ip {
-				customer.Ip = req.Ip
+		customer, err = s.changeCustomerPaymentFormData(
+			customer,
+			req.Ip,
+			req.Locale,
+			req.UserAgent,
+			order.GetUserEmail(),
+			order.GetUserAddress(),
+		)
 
-				customer.Address = &billing.OrderBillingAddress{
-					Country:    p1.checked.payerData.Country,
-					City:       p1.checked.payerData.City.En,
-					PostalCode: p1.checked.payerData.Zip,
-					State:      p1.checked.payerData.State,
-				}
-			}
-
-			if customer.Locale != loc {
-				customer.Locale = loc
-			}
+		if err != nil {
+			return err
 		}
 	} else {
 		customer = &billing.Customer{
-			ProjectId: order.Project.Id,
-			Ip:        p1.checked.payerData.Ip,
-			Locale:    loc,
+			Id:         bson.NewObjectId().Hex(),
+			ProjectId:  order.Project.Id,
+			MerchantId: order.Project.Merchant.Id,
+			Ip:         p1.checked.payerData.Ip,
+			Locale:     loc,
 			Address: &billing.OrderBillingAddress{
 				Country:    p1.checked.payerData.Country,
 				City:       p1.checked.payerData.City.En,
 				PostalCode: p1.checked.payerData.Zip,
 				State:      p1.checked.payerData.State,
 			},
+			AcceptLanguage: req.Locale,
+			UserAgent:      req.UserAgent,
 		}
-	}
 
-	customer, err = s.changeCustomer(customer)
+		customer, err = s.changeCustomer(customer)
 
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	order.User = customer
@@ -406,7 +410,13 @@ func (s *Service) PaymentCreateProcess(
 	req *grpc.PaymentCreateRequest,
 	rsp *grpc.PaymentCreateResponse,
 ) error {
-	processor := &PaymentCreateProcessor{service: s, data: req.Data}
+	processor := &PaymentCreateProcessor{
+		service:        s,
+		data:           req.Data,
+		ip:             req.Ip,
+		userAgent:      req.UserAgent,
+		acceptLanguage: req.AcceptLanguage,
+	}
 	err := processor.processPaymentFormData()
 
 	if err != nil {
@@ -616,6 +626,15 @@ func (s *Service) PaymentFormLanguageChanged(
 		UserAddressDataRequired: false,
 	}
 
+	_, err = s.changeOrderCustomerData(order, req.Ip, req.AcceptLanguage, req.UserAgent)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
 	if order.User.Locale == req.Lang {
 		return nil
 	}
@@ -735,6 +754,15 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 	order.User.Address.Country = country
 	order.UserAddressDataRequired = true
 
+	_, err = s.changeOrderCustomerData(order, req.Ip, req.AcceptLanguage, req.UserAgent)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
 	err = s.updateOrder(order)
 
 	if err != nil {
@@ -772,6 +800,29 @@ func (s *Service) ProcessBillingAddress(
 		Country:    req.Country,
 		City:       req.City,
 		PostalCode: req.Zip,
+	}
+
+	customer, err := s.changeOrderCustomerData(order, req.Ip, req.AcceptLanguage, req.UserAgent)
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusSystemError
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	if customer.Address != order.BillingAddress {
+		customer.Address = order.BillingAddress
+		customer, err = s.changeCustomer(customer)
+
+		if err != nil {
+			rsp.Status = pkg.ResponseStatusSystemError
+			rsp.Message = err.Error()
+
+			return nil
+		}
+
+		order.User = customer
 	}
 
 	err = s.ProcessOrderProducts(order)
@@ -835,7 +886,6 @@ func (s *Service) updateOrder(order *billing.Order) error {
 
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"error", err.Error(), "order", order})
-
 		return errors.New(orderErrorUnknown)
 	}
 
@@ -1544,6 +1594,23 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		processor.processOrderVat(order)
 	}
 
+	customer, err := v.service.changeOrderCustomerData(order, v.ip, v.acceptLanguage, v.userAgent)
+
+	if err != nil {
+		return err
+	}
+
+	if customer.Address != order.BillingAddress {
+		customer.Address = order.BillingAddress
+		customer, err = v.service.changeCustomer(customer)
+
+		if err != nil {
+			return err
+		}
+
+		order.User = customer
+	}
+
 	delete(v.data, pkg.PaymentCreateFieldOrderId)
 	delete(v.data, pkg.PaymentCreateFieldPaymentMethodId)
 	delete(v.data, pkg.PaymentCreateFieldEmail)
@@ -1960,4 +2027,34 @@ func (v *OrderCreateRequestProcessor) getBillingAddress() *billing.OrderBillingA
 		PostalCode: data.Zip,
 		State:      data.State,
 	}
+}
+
+func (s *Service) changeOrderCustomerData(
+	order *billing.Order,
+	ip, acceptLanguage, userAgent string,
+) (*billing.Customer, error) {
+	if order.HasCustomer() == false {
+		return nil, errors.New(orderErrorTokenNotFound)
+	}
+
+	customer, err := s.getCustomerBy(bson.M{"token": order.User.Token})
+
+	if err != nil {
+		return nil, errors.New(orderErrorCustomerNotFound)
+	}
+
+	customer, err = s.changeCustomerPaymentFormData(
+		customer,
+		ip,
+		acceptLanguage,
+		userAgent,
+		order.GetUserEmail(),
+		order.GetUserAddress(),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return customer, nil
 }

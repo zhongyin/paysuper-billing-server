@@ -577,16 +577,16 @@ func (h *cardPay) getToken(pmKey string) *cardPayToken {
 }
 
 func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]string) (*CardPayOrder, error) {
-
-	items := []*CardPayItem{}
+	var items []*CardPayItem
 
 	for _, it := range order.Items {
-		items = append(items, &CardPayItem{
+		item := &CardPayItem{
 			Name:        it.Name,
 			Description: it.Description,
 			Count:       1,
 			Price:       it.Amount,
-		})
+		}
+		items = append(items, item)
 	}
 
 	cardPayOrder := &CardPayOrder{

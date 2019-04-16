@@ -16,14 +16,15 @@ import (
 )
 
 const (
-	customerFieldId         = "Id"
-	customerFieldToken      = "Token"
-	customerFieldProjectId  = "ProjectId"
-	customerFieldMerchantId = "MerchantId"
-	customerFieldMetadata   = "Metadata"
-	customerFieldExpireAt   = "ExpireAt"
-	customerFieldCreatedAt  = "CreatedAt"
-	customerFieldUpdatedAt  = "UpdatedAt"
+	customerFieldExternalId    = "ExternalId"
+	customerFieldName          = "Name"
+	customerFieldEmail         = "Email"
+	customerFieldEmailVerified = "EmailVerified"
+	customerFieldPhone         = "Phone"
+	customerFieldPhoneVerified = "PhoneVerified"
+	customerFieldIp            = "Ip"
+	customerFieldLocale        = "Locale"
+	customerFieldAddress       = "Address"
 
 	customerErrorNotFound = "customer with specified data not found"
 )
@@ -32,17 +33,6 @@ var (
 	ErrCustomerNotFound        = errors.New(customerErrorNotFound)
 	ErrCustomerProjectNotFound = errors.New(orderErrorProjectNotFound)
 	ErrCustomerGeoIncorrect    = errors.New(orderErrorPayerRegionUnknown)
-
-	customerHistoryExcludedFields = map[string]bool{
-		customerFieldId:         true,
-		customerFieldToken:      true,
-		customerFieldProjectId:  true,
-		customerFieldMerchantId: true,
-		customerFieldMetadata:   true,
-		customerFieldExpireAt:   true,
-		customerFieldCreatedAt:  true,
-		customerFieldUpdatedAt:  true,
-	}
 )
 
 func (s *Service) ChangeCustomer(
@@ -127,19 +117,21 @@ func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, erro
 		isNew = true
 
 		customer = &billing.Customer{
-			Id:            bson.NewObjectId().Hex(),
-			ProjectId:     req.ProjectId,
-			ExternalId:    req.ExternalId,
-			Name:          req.Name,
-			Email:         req.Email,
-			EmailVerified: req.EmailVerified,
-			Phone:         req.Phone,
-			PhoneVerified: req.PhoneVerified,
-			Ip:            req.Ip,
-			Locale:        req.Locale,
-			Address:       req.Address,
-			Metadata:      req.Metadata,
-			CreatedAt:     ptypes.TimestampNow(),
+			Id:             bson.NewObjectId().Hex(),
+			ProjectId:      req.ProjectId,
+			ExternalId:     req.ExternalId,
+			Name:           req.Name,
+			Email:          req.Email,
+			EmailVerified:  req.EmailVerified,
+			Phone:          req.Phone,
+			PhoneVerified:  req.PhoneVerified,
+			Ip:             req.Ip,
+			Locale:         req.Locale,
+			Address:        req.Address,
+			AcceptLanguage: req.AcceptLanguage,
+			UserAgent:      req.UserAgent,
+			Metadata:       req.Metadata,
+			CreatedAt:      ptypes.TimestampNow(),
 		}
 
 		processor := &OrderCreateRequestProcessor{
@@ -212,24 +204,54 @@ func (s *Service) customerTokenUpdate(c *billing.Customer) {
 }
 
 func (s *Service) getCustomerChanges(newData, oldData *billing.Customer) map[string]interface{} {
-	newDataMap := pkg.NewStructureConverter(newData).Map()
-	oldDataMap := pkg.NewStructureConverter(oldData).Map()
-
 	changes := make(map[string]interface{})
 
-	for k, v := range newDataMap {
-		if vv, ok := customerHistoryExcludedFields[k]; ok && vv == true {
-			continue
-		}
-
-		vv, _ := oldDataMap[k]
-
-		if vv == v {
-			continue
-		}
-
-		changes[k] = vv
+	if newData.ExternalId != oldData.ExternalId {
+		oldData.ExternalId = newData.ExternalId
+		changes[customerFieldExternalId] = oldData.ExternalId
 	}
+
+	if newData.Name != oldData.Name {
+		oldData.Name = newData.Name
+		changes[customerFieldName] = oldData.Name
+	}
+
+	if newData.Email != oldData.Email {
+		oldData.Email = newData.Email
+		changes[customerFieldEmail] = oldData.Email
+	}
+
+	if newData.EmailVerified != oldData.EmailVerified {
+		oldData.EmailVerified = newData.EmailVerified
+		changes[customerFieldEmailVerified] = oldData.EmailVerified
+	}
+
+	if newData.Phone != oldData.Phone {
+		oldData.Phone = newData.Phone
+		changes[customerFieldPhone] = oldData.Phone
+	}
+
+	if newData.PhoneVerified != oldData.PhoneVerified {
+		oldData.PhoneVerified = newData.PhoneVerified
+		changes[customerFieldPhoneVerified] = oldData.PhoneVerified
+	}
+
+	if newData.Ip != oldData.Ip {
+		oldData.Ip = newData.Ip
+		changes[customerFieldIp] = oldData.Ip
+	}
+
+	if newData.Locale != oldData.Locale {
+		oldData.Locale = newData.Locale
+		changes[customerFieldLocale] = oldData.Locale
+	}
+
+	if newData.Address != oldData.Address {
+		oldData.Address = newData.Address
+		changes[customerFieldAddress] = oldData.Address
+	}
+
+	oldData.Metadata = newData.Metadata
 
 	return changes
 }
@@ -250,4 +272,64 @@ func (s *Service) saveCustomerHistory(customerId string, changes map[string]inte
 	}
 
 	return nil
+}
+
+func (s *Service) changeCustomerPaymentFormData(
+	customer *billing.Customer,
+	ip, acceptLanguage, userAgent, email string,
+	address *billing.OrderBillingAddress,
+) (*billing.Customer, error) {
+	if customer.Ip == ip && customer.AcceptLanguage == acceptLanguage && customer.UserAgent == userAgent &&
+		(email == "" || customer.Email == email) && (address == nil || customer.Address == address) {
+		return customer, nil
+	}
+
+	if email != "" && customer.Email != email {
+		customer.Email = email
+	}
+
+	if address != nil && customer.Address != address {
+		customer.Address = address
+	}
+
+	if ip != "" && customer.Ip != ip {
+		processor := &OrderCreateRequestProcessor{
+			Service: s,
+			request: &billing.OrderCreateRequest{
+				User: &billing.Customer{Ip: ip},
+			},
+			checked: &orderCreateRequestProcessorChecked{},
+		}
+
+		err := processor.processPayerData()
+
+		if err != nil {
+			return nil, err
+		}
+
+		customer.Ip = ip
+		customer.Address = &billing.OrderBillingAddress{
+			Country:    processor.checked.payerData.Country,
+			City:       processor.checked.payerData.City.En,
+			PostalCode: processor.checked.payerData.Zip,
+			State:      processor.checked.payerData.State,
+		}
+	}
+
+	if acceptLanguage != "" && customer.AcceptLanguage != acceptLanguage {
+		customer.AcceptLanguage = acceptLanguage
+		customer.Locale, _ = s.getCountryFromAcceptLanguage(acceptLanguage)
+	}
+
+	if userAgent != "" && customer.UserAgent != userAgent {
+		customer.UserAgent = userAgent
+	}
+
+	customer, err := s.changeCustomer(customer)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return customer, nil
 }

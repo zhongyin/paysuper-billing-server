@@ -395,8 +395,6 @@ message Order {
 
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 52;
-    // @inject_tag: json:"-"
-    string customer_token = 53;
 }
 
 message OrderItem {
@@ -785,9 +783,13 @@ message Customer {
     // @inject_tag: json:"metadata"
     map<string, string> metadata = 14;
     // @inject_tag: json:"-"
-    google.protobuf.Timestamp expire_at = 15;
+    string accept_language = 15;
     // @inject_tag: json:"-"
-    google.protobuf.Timestamp created_at = 16;
+    string user_agent = 16;
     // @inject_tag: json:"-"
-    google.protobuf.Timestamp updated_at = 17;
+    google.protobuf.Timestamp expire_at = 17;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp created_at = 18;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp updated_at = 19;
 }
