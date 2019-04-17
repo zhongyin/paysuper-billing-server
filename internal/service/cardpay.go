@@ -604,7 +604,7 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 		Customer: &CardPayCustomer{
 			Email:   order.User.Email,
 			Ip:      order.User.Ip,
-			Account: order.ProjectAccount,
+			Account: order.User.Id,
 		},
 	}
 
