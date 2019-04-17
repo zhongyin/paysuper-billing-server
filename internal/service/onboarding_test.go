@@ -2021,13 +2021,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Sort_Ok() {
 	err = suite.service.ListNotifications(context.TODO(), req1, rsp1)
 	assert.Nil(suite.T(), err)
 	assert.Len(suite.T(), rsp1.Items, 3)
-
-	t1, err := ptypes.Timestamp(rsp1.Items[0].CreatedAt)
-	assert.NoError(suite.T(), err)
-
-	t2, err := ptypes.Timestamp(rsp1.Items[1].CreatedAt)
-	assert.NoError(suite.T(), err)
-	assert.True(suite.T(), t1.After(t2))
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {

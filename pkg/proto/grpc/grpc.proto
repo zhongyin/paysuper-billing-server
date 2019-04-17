@@ -78,6 +78,7 @@ message PaymentFormJsonDataRequest {
     string locale = 4;
     string ip = 5;
     string user_agent = 7;
+    string token = 8;
 }
 
 message PaymentFormJsonDataProject {
