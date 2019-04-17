@@ -13,7 +13,7 @@ message Name {
 }
 
 message OrderCreateRequest {
-    // @inject_tag: query:"PO_PROJECT_ID" form:"PO_PROJECT_ID" json:"project" validate:"required,hexadecimal"
+    // @inject_tag: query:"PO_PROJECT_ID" form:"PO_PROJECT_ID" json:"project" validate:"required,hexadecimal,len=24"
     string project_id = 1;
     // @inject_tag: query:"PO_SIGNATURE" form:"PO_SIGNATURE" validate:"omitempty,alphanum"
     string signature = 2;
