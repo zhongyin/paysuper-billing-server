@@ -1,13 +1,19 @@
 package service
 
 import (
+	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"errors"
+	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
+	"github.com/paysuper/paysuper-billing-server/internal/mock"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -17,10 +23,13 @@ import (
 
 type BillingServiceTestSuite struct {
 	suite.Suite
-	db   *database.Source
-	log  *zap.Logger
-	cfg  *config.Config
-	exCh chan bool
+	db      *database.Source
+	log     *zap.Logger
+	cfg     *config.Config
+	exCh    chan bool
+	service *Service
+
+	project *billing.Project
 }
 
 type getAllErrorTest Currency
@@ -468,7 +477,34 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
+	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
+
+	if err != nil {
+		suite.FailNow("Creating RabbitMQ publisher failed", "%v", err)
+	}
+
+	suite.service = NewBillingService(
+		db,
+		cfg,
+		make(chan bool, 1),
+		mock.NewGeoIpServiceTestOk(),
+		mock.NewRepositoryServiceOk(),
+		mock.NewTaxServiceOkMock(),
+		broker,
+	)
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err = suite.service.Init()
+
+	if err != nil {
+		suite.FailNow("Billing service initialization failed", "%v", err)
+	}
+
 	suite.exCh = make(chan bool, 1)
+	suite.project = projectDefault
 }
 
 func (suite *BillingServiceTestSuite) TearDownTest() {
@@ -609,4 +645,54 @@ func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment
 
 	isProd := service.isProductionEnvironment()
 	assert.False(suite.T(), isProd)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_CheckProjectRequestSignature_Ok() {
+	req := &grpc.CheckProjectRequestSignatureRequest{
+		Body:      `{"field1": "val1", "field2": "val2", "field3": "val3"}`,
+		ProjectId: suite.project.Id,
+	}
+	rsp := &grpc.CheckProjectRequestSignatureResponse{}
+
+	hashString := req.Body + suite.project.SecretKey
+	h := sha512.New()
+	h.Write([]byte(hashString))
+
+	req.Signature = hex.EncodeToString(h.Sum(nil))
+
+	err := suite.service.CheckProjectRequestSignature(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_CheckProjectRequestSignature_ProjectNotFound_Error() {
+	req := &grpc.CheckProjectRequestSignatureRequest{
+		Body:      `{"field1": "val1", "field2": "val2", "field3": "val3"}`,
+		ProjectId: bson.NewObjectId().Hex(),
+	}
+	rsp := &grpc.CheckProjectRequestSignatureResponse{}
+
+	err := suite.service.CheckProjectRequestSignature(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), orderErrorProjectNotFound, rsp.Message)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_CheckProjectRequestSignature_IncorrectSignature_Error() {
+	req := &grpc.CheckProjectRequestSignatureRequest{
+		Body:      `{"field1": "val1", "field2": "val2", "field3": "val3"}`,
+		ProjectId: suite.project.Id,
+	}
+	rsp := &grpc.CheckProjectRequestSignatureResponse{}
+
+	hashString := req.Body + "some_random_string"
+	h := sha512.New()
+	h.Write([]byte(hashString))
+
+	req.Signature = hex.EncodeToString(h.Sum(nil))
+
+	err := suite.service.CheckProjectRequestSignature(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), orderErrorSignatureInvalid, rsp.Message)
 }

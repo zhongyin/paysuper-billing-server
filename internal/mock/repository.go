@@ -47,24 +47,28 @@ func (r *RepositoryServiceOk) FindSavedCards(
 	opts ...client.CallOption,
 ) (*repository.SavedCardList, error) {
 	projectId := bson.NewObjectId().Hex()
+	merchantId := bson.NewObjectId().Hex()
+	token := bson.NewObjectId().Hex()
 
 	return &repository.SavedCardList{
 		SavedCards: []*entity.SavedCard{
 			{
-				Id:        bson.NewObjectId().Hex(),
-				Account:   "test@unit.unit",
-				ProjectId: projectId,
-				MaskedPan: "555555******4444",
-				Expire:    &entity.CardExpire{Month: "12", Year: "2019"},
-				IsActive:  true,
+				Id:         bson.NewObjectId().Hex(),
+				Token:      token,
+				ProjectId:  projectId,
+				MerchantId: merchantId,
+				MaskedPan:  "555555******4444",
+				Expire:     &entity.CardExpire{Month: "12", Year: "2019"},
+				IsActive:   true,
 			},
 			{
-				Id:        bson.NewObjectId().Hex(),
-				Account:   "test@unit.unit",
-				ProjectId: projectId,
-				MaskedPan: "400000******0002",
-				Expire:    &entity.CardExpire{Month: "12", Year: "2019"},
-				IsActive:  true,
+				Id:         bson.NewObjectId().Hex(),
+				Token:      token,
+				ProjectId:  projectId,
+				MerchantId: merchantId,
+				MaskedPan:  "400000******0002",
+				Expire:     &entity.CardExpire{Month: "12", Year: "2019"},
+				IsActive:   true,
 			},
 		},
 	}, nil

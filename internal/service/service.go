@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -293,6 +295,43 @@ func (s *Service) sendCentrifugoMessage(msg map[string]interface{}) error {
 	if err = s.centrifugoClient.Publish(context.Background(), centrifugoChannel, b); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *Service) CheckProjectRequestSignature(
+	ctx context.Context,
+	req *grpc.CheckProjectRequestSignatureRequest,
+	rsp *grpc.CheckProjectRequestSignatureResponse,
+) error {
+	p := &OrderCreateRequestProcessor{
+		Service: s,
+		request: &billing.OrderCreateRequest{ProjectId: req.ProjectId},
+		checked: &orderCreateRequestProcessorChecked{},
+	}
+
+	err := p.processProject()
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	hashString := req.Body + p.checked.project.SecretKey
+
+	h := sha512.New()
+	h.Write([]byte(hashString))
+
+	if hex.EncodeToString(h.Sum(nil)) != req.Signature {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = orderErrorSignatureInvalid
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
 
 	return nil
 }

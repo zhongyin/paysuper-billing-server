@@ -62,6 +62,8 @@ It has these top-level messages:
 	RequestProduct
 	I18NTextSearchable
 	ChangeCustomerResponse
+	CheckProjectRequestSignatureRequest
+	CheckProjectRequestSignatureResponse
 */
 package grpc
 
@@ -131,6 +133,7 @@ type BillingService interface {
 	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
 	GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, opts ...client.CallOption) (*ListProductsResponse, error)
 	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*ChangeCustomerResponse, error)
+	CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
 }
 
 type billingService struct {
@@ -491,6 +494,16 @@ func (c *billingService) ChangeCustomer(ctx context.Context, in *billing.Custome
 	return out, nil
 }
 
+func (c *billingService) CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.CheckProjectRequestSignature", in)
+	out := new(CheckProjectRequestSignatureResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -528,6 +541,7 @@ type BillingServiceHandler interface {
 	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
 	GetProductsForOrder(context.Context, *GetProductsForOrderRequest, *ListProductsResponse) error
 	ChangeCustomer(context.Context, *billing.Customer, *ChangeCustomerResponse) error
+	CheckProjectRequestSignature(context.Context, *CheckProjectRequestSignatureRequest, *CheckProjectRequestSignatureResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -566,6 +580,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
 		GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error
 		ChangeCustomer(ctx context.Context, in *billing.Customer, out *ChangeCustomerResponse) error
+		CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -712,4 +727,8 @@ func (h *billingServiceHandler) GetProductsForOrder(ctx context.Context, in *Get
 
 func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.Customer, out *ChangeCustomerResponse) error {
 	return h.BillingServiceHandler.ChangeCustomer(ctx, in, out)
+}
+
+func (h *billingServiceHandler) CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error {
+	return h.BillingServiceHandler.CheckProjectRequestSignature(ctx, in, out)
 }

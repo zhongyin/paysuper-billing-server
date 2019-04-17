@@ -2877,8 +2877,12 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_CurrencyInvalid_Error(
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	rsp := &billing.Order{}
@@ -2901,8 +2905,12 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_CurrencyEmpty_Error() 
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	rsp := &billing.Order{}
@@ -2928,8 +2936,12 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_DuplicateProjectOrderI
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       orderId,
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	order := &billing.Order{
@@ -3018,8 +3030,12 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_PaymentMethodInvalid_E
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	rsp := &billing.Order{}
@@ -3042,8 +3058,12 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_AmountInvalid_Error() 
 		Amount:        10,
 		Account:       "unit test",
 		Description:   "unit test",
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	rsp := &billing.Order{}
@@ -3066,8 +3086,12 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_PrepareOrderInvalid_Er
 		Amount:        100,
 		Account:       "unit test",
 		Description:   "unit test",
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	rsp := &billing.Order{}
@@ -3091,8 +3115,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_DevEnviro
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	order := &billing.Order{}
@@ -3126,8 +3154,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Cache_Ok(
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	order := &billing.Order{}
@@ -3174,8 +3206,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvir
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	suite.service.cfg.Environment = "prod"
@@ -3212,8 +3248,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	order := &billing.Order{}
@@ -3241,8 +3281,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	suite.service.cfg.Environment = environmentProd
@@ -3274,8 +3318,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaym
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	suite.service.cfg.Environment = environmentProd
@@ -3307,8 +3355,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_SavedCards_Ok()
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	order := &billing.Order{}
@@ -3343,8 +3395,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_EmptySavedCards
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	suite.service.rep = mock.NewRepositoryServiceEmpty()
@@ -3381,8 +3437,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_NotBankCard_Ok(
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	suite.service.rep = mock.NewRepositoryServiceEmpty()
@@ -3419,8 +3479,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_GetSavedCards_E
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		User: &billing.Customer{
+			ExternalId: bson.NewObjectId().Hex(),
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata:   map[string]string{"field1": "val1", "field2": "val2"},
+		},
 	}
 
 	suite.service.rep = mock.NewRepositoryServiceError()

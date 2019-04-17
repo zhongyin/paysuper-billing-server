@@ -51,7 +51,7 @@ const (
 	orderErrorAmountLowerThanMinAllowedPaymentMethod   = "order amount is lower than min allowed payment amount for payment method"
 	orderErrorAmountGreaterThanMaxAllowedPaymentMethod = "order amount is greater than max allowed payment amount for payment method"
 	orderErrorCanNotCreate                             = "order can't create. try request later"
-	orderErrorSignatureInvalid                         = "order request signature is invalid"
+	orderErrorSignatureInvalid                         = "request signature is invalid"
 	orderErrorNotFound                                 = "order with specified identifier not found"
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
 	orderErrorFormInputTimeExpired                     = "time to enter date on payment form expired"
@@ -858,9 +858,10 @@ func (s *Service) ProcessBillingAddress(
 
 func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
-		Account:   order.ProjectAccount,
-		ProjectId: order.Project.Id,
-		MaskedPan: order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
+		Token:      order.User.Token,
+		ProjectId:  order.Project.Id,
+		MerchantId: order.Project.Merchant.Id,
+		MaskedPan:  order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
 		Expire: &entity.CardExpire{
 			Month: order.PaymentRequisites[pkg.PaymentCreateFieldMonth],
 			Year:  order.PaymentRequisites[pkg.PaymentCreateFieldYear],
@@ -1470,7 +1471,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
-		req := &repo.SavedCardRequest{Account: v.order.ProjectAccount, ProjectId: v.order.Project.Id}
+		req := &repo.SavedCardRequest{Token: v.order.User.Token}
 		rsp, err := v.service.rep.FindSavedCards(context.TODO(), req)
 
 		if err != nil {
