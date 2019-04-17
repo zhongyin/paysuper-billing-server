@@ -304,6 +304,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
 
 	var customer *billing.Customer
+	var hasCustomerToken bool
 
 	if order.HasCustomer() == true {
 		customer, err = s.getCustomerBy(bson.M{"token": order.User.Token})
@@ -324,6 +325,8 @@ func (s *Service) PaymentFormJsonDataProcess(
 		if err != nil {
 			return err
 		}
+
+		hasCustomerToken = true
 	} else {
 		customer = &billing.Customer{
 			Id:         bson.NewObjectId().Hex(),
@@ -395,7 +398,8 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
-	rsp.HasCustomerToken = order.HasCustomer()
+	rsp.HasCustomerToken = hasCustomerToken
+	rsp.CustomerToken = order.User.Token
 
 	return nil
 }

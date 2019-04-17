@@ -109,6 +109,8 @@ message PaymentFormJsonDataResponse {
     repeated billing.OrderItem items = 13;
     // @inject_tag: json:"-"
     bool has_customer_token = 14;
+    // @inject_tag: json:"-"
+    string customer_token = 15;
 }
 
 message PaymentNotifyRequest {
