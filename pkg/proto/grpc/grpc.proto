@@ -77,7 +77,6 @@ message PaymentFormJsonDataRequest {
     string host = 3;
     string locale = 4;
     string ip = 5;
-    string token = 6;
     string user_agent = 7;
 }
 

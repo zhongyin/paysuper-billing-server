@@ -60,8 +60,8 @@ message OrderCreateRequest {
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 24;
 
-    // @inject_tag: json:"user" validate:"required"
     Customer user = 25;
+    string token = 26;
 }
 
 message Project {

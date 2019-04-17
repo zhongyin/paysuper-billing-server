@@ -5731,19 +5731,18 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_CustomerToken_
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
+		Token:         rsp.Item.Token,
 	}
 
 	rsp1 := &billing.Order{}
 	err = suite.service.OrderCreateProcess(context.TODO(), req1, rsp1)
 	assert.Nil(suite.T(), err)
-	assert.Nil(suite.T(), rsp1.User)
 
 	req2 := &grpc.PaymentFormJsonDataRequest{
 		OrderId:   rsp1.Uuid,
 		Scheme:    "https",
 		Host:      "unit.test",
 		Ip:        "127.0.0.1",
-		Token:     rsp.Item.Token,
 		Locale:    req.AcceptLanguage,
 		UserAgent: req.UserAgent,
 	}
@@ -5835,19 +5834,43 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_CustomerTokenN
 		Account:       "unit test",
 		Description:   "unit test",
 		OrderId:       bson.NewObjectId().Hex(),
+		User: &billing.Customer{
+			ProjectId:  suite.project.Id,
+			ExternalId: bson.NewObjectId().Hex(),
+			Email:      "test@unit.test",
+			Ip:         "127.0.0.1",
+			Locale:     "ru",
+			Metadata: map[string]string{
+				"field1": "value1",
+				"field2": "value2",
+			},
+			AcceptLanguage: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+			UserAgent:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
+			Address: &billing.OrderBillingAddress{
+				Country:    "US",
+				City:       "New York",
+				PostalCode: "000000",
+				State:      "CA",
+			},
+		},
 	}
 
 	rsp := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
 	assert.NoError(suite.T(), err)
-	assert.Nil(suite.T(), rsp.User)
+
+	order, err := suite.service.getOrderByUuid(rsp.Uuid)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), order)
+
+	order.User.Token = bson.NewObjectId().Hex()
+	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(rsp.Id), order)
 
 	req1 := &grpc.PaymentFormJsonDataRequest{
 		OrderId:   rsp.Uuid,
 		Scheme:    "https",
 		Host:      "unit.test",
 		Ip:        "127.0.0.1",
-		Token:     bson.NewObjectId().Hex(),
 		Locale:    "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
 		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 OPR/58.0.3135.127",
 	}
