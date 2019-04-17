@@ -89,6 +89,8 @@ const (
 	MerchantAgreementTypeESign = 2
 
 	DefaultCustomerTokenLifetime = 86400
+
+	OrderInlineFormUrlMask = "%s://%s/order/%s"
 )
 
 var (

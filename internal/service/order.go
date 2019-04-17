@@ -88,7 +88,6 @@ const (
 	paymentCreateBankCardFieldIssuerCountry = "bank_issuer_country"
 
 	orderDefaultDescription      = "Payment by order # %s"
-	orderInlineFormUrlMask       = "%s://%s/order/%s"
 	orderInlineFormImagesUrlMask = "//%s%s"
 
 	defaultExpireDateToFormInput = 30
@@ -397,7 +396,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 	rsp.PaymentMethods = pms
 	rsp.Token, _ = token.SignedString([]byte(s.cfg.CentrifugoSecret))
-	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
+	rsp.InlineFormRedirectUrl = fmt.Sprintf(pkg.OrderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
