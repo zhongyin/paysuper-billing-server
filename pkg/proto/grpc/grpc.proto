@@ -107,6 +107,8 @@ message PaymentFormJsonDataResponse {
     bool user_address_data_required = 12;
     // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
     repeated billing.OrderItem items = 13;
+    // @inject_tag: json:"-"
+    bool has_customer_token = 14;
 }
 
 message PaymentNotifyRequest {

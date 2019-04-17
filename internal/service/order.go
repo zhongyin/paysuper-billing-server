@@ -395,6 +395,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
+	rsp.HasCustomerToken = order.HasCustomer()
 
 	return nil
 }
