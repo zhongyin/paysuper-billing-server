@@ -771,7 +771,7 @@ message Customer {
     string email = 7;
     // @inject_tag: json:"email_verified"
     bool email_verified = 8;
-    // @inject_tag: json:"phone"
+    // @inject_tag: json:"phone" validate:"omitempty,phone"
     string phone = 9;
     // @inject_tag: json:"phone_verified"
     bool phone_verified = 10;
