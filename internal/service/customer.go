@@ -65,13 +65,13 @@ func (s *Service) ChangeCustomer(
 func (s *Service) getCustomerBy(query bson.M) (customer *billing.Customer, err error) {
 	err = s.db.Collection(pkg.CollectionCustomer).Find(query).One(&customer)
 
-	if err != nil && err != mgo.ErrNotFound {
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return customer, ErrCustomerNotFound
+		}
+
 		s.logError("Query to find customer failed", []interface{}{"err", err.Error(), "query", query})
 		return customer, errors.New(orderErrorUnknown)
-	}
-
-	if customer == nil {
-		return customer, ErrCustomerNotFound
 	}
 
 	return
@@ -79,31 +79,30 @@ func (s *Service) getCustomerBy(query bson.M) (customer *billing.Customer, err e
 
 func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, error) {
 	var customer *billing.Customer
-	var isNew bool
 	var err error
 
 	if req.IsEmptyRequest() == false {
 		query := bson.M{"project_id": bson.ObjectIdHex(req.ProjectId)}
 
-		if req.Token != "" {
-			query["token"] = req.Token
+		if req.ExternalId != "" || req.Email != "" || req.Phone != "" {
+			var subQuery []bson.M
+
+			if req.ExternalId != "" {
+				subQuery = append(subQuery, bson.M{"external_id": req.ExternalId})
+			}
+
+			if req.Email != "" {
+				subQuery = append(subQuery, bson.M{"email": req.Email})
+			}
+
+			if req.Phone != "" {
+				subQuery = append(subQuery, bson.M{"phone": req.Phone})
+			}
+
+			query["$or"] = subQuery
 		} else {
-			if req.ExternalId != "" || req.Email != "" || req.Phone != "" {
-				var subQuery []bson.M
-
-				if req.ExternalId != "" {
-					subQuery = append(subQuery, bson.M{"external_id": req.ExternalId})
-				}
-
-				if req.Email != "" {
-					subQuery = append(subQuery, bson.M{"email": req.Email})
-				}
-
-				if req.Phone != "" {
-					subQuery = append(subQuery, bson.M{"phone": req.Phone})
-				}
-
-				query["$or"] = subQuery
+			if req.Token != "" {
+				query["token"] = req.Token
 			}
 		}
 
@@ -116,61 +115,86 @@ func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, erro
 	}
 
 	if customer == nil {
-		isNew = true
-
-		customer = &billing.Customer{
-			Id:             bson.NewObjectId().Hex(),
-			ProjectId:      req.ProjectId,
-			ExternalId:     req.ExternalId,
-			Name:           req.Name,
-			Email:          req.Email,
-			EmailVerified:  req.EmailVerified,
-			Phone:          req.Phone,
-			PhoneVerified:  req.PhoneVerified,
-			Ip:             req.Ip,
-			Locale:         req.Locale,
-			Address:        req.Address,
-			AcceptLanguage: req.AcceptLanguage,
-			UserAgent:      req.UserAgent,
-			Metadata:       req.Metadata,
-			CreatedAt:      ptypes.TimestampNow(),
-		}
-
-		processor := &OrderCreateRequestProcessor{
-			Service: s,
-			request: &billing.OrderCreateRequest{
-				ProjectId: req.ProjectId,
-				User:      customer,
-			},
-			checked: &orderCreateRequestProcessorChecked{},
-		}
-
-		if req.MerchantId == "" {
-			if err := processor.processProject(); err != nil {
-				return nil, ErrCustomerProjectNotFound
-			}
-
-			customer.MerchantId = processor.checked.project.Merchant.Id
-		} else {
-			customer.MerchantId = req.MerchantId
-		}
-
-		if customer.Address == nil && customer.Ip != "" {
-			if err = processor.processPayerData(); err != nil {
-				return nil, ErrCustomerGeoIncorrect
-			}
-
-			customer.Address = processor.getBillingAddress()
-		}
+		customer, err = s.createCustomer(req)
 	} else {
-		changes := s.getCustomerChanges(req, customer)
+		customer, err = s.updateCustomer(req, customer)
+	}
 
-		if len(changes) > 0 {
-			err = s.saveCustomerHistory(customer.Id, changes)
+	if err != nil {
+		return nil, err
+	}
 
-			if err != nil {
-				return nil, errors.New(orderErrorUnknown)
-			}
+	return customer, nil
+}
+
+func (s *Service) createCustomer(req *billing.Customer) (*billing.Customer, error) {
+	customer := &billing.Customer{
+		Id:             bson.NewObjectId().Hex(),
+		ProjectId:      req.ProjectId,
+		ExternalId:     req.ExternalId,
+		Name:           req.Name,
+		Email:          req.Email,
+		EmailVerified:  req.EmailVerified,
+		Phone:          req.Phone,
+		PhoneVerified:  req.PhoneVerified,
+		Ip:             req.Ip,
+		Locale:         req.Locale,
+		Address:        req.Address,
+		AcceptLanguage: req.AcceptLanguage,
+		UserAgent:      req.UserAgent,
+		Metadata:       req.Metadata,
+		CreatedAt:      ptypes.TimestampNow(),
+	}
+
+	processor := &OrderCreateRequestProcessor{
+		Service: s,
+		request: &billing.OrderCreateRequest{
+			ProjectId: req.ProjectId,
+			User:      customer,
+		},
+		checked: &orderCreateRequestProcessorChecked{},
+	}
+
+	if req.MerchantId == "" {
+		if err := processor.processProject(); err != nil {
+			return nil, ErrCustomerProjectNotFound
+		}
+
+		customer.MerchantId = processor.checked.project.Merchant.Id
+	} else {
+		customer.MerchantId = req.MerchantId
+	}
+
+	if customer.Address == nil && customer.Ip != "" {
+		err := processor.processPayerData()
+
+		if err != nil {
+			return nil, ErrCustomerGeoIncorrect
+		}
+
+		customer.Address = processor.getBillingAddress()
+	}
+
+	s.customerTokenUpdate(customer)
+
+	err := s.db.Collection(pkg.CollectionCustomer).Insert(customer)
+
+	if err != nil {
+		s.logError("Query to create new customer failed", []interface{}{"error", err.Error(), "data", customer})
+		return nil, errors.New(orderErrorUnknown)
+	}
+
+	return customer, nil
+}
+
+func (s *Service) updateCustomer(req, customer *billing.Customer) (*billing.Customer, error) {
+	changes := s.getCustomerChanges(req, customer)
+
+	if len(changes) > 0 {
+		err := s.saveCustomerHistory(customer.Id, changes)
+
+		if err != nil {
+			return nil, errors.New(orderErrorUnknown)
 		}
 	}
 
@@ -178,14 +202,10 @@ func (s *Service) changeCustomer(req *billing.Customer) (*billing.Customer, erro
 		s.customerTokenUpdate(customer)
 	}
 
-	if isNew == true {
-		err = s.db.Collection(pkg.CollectionCustomer).Insert(customer)
-	} else {
-		err = s.db.Collection(pkg.CollectionCustomer).UpdateId(bson.ObjectIdHex(customer.Id), customer)
-	}
+	err := s.db.Collection(pkg.CollectionCustomer).UpdateId(bson.ObjectIdHex(customer.Id), customer)
 
 	if err != nil {
-		s.logError("Query to save customer data failed", []interface{}{"error", err.Error(), "data", customer})
+		s.logError("Query to update customer data failed", []interface{}{"error", err.Error(), "data", customer})
 		return nil, errors.New(orderErrorUnknown)
 	}
 
@@ -209,58 +229,63 @@ func (s *Service) getCustomerChanges(newData, oldData *billing.Customer) map[str
 	changes := make(map[string]interface{})
 
 	if newData.ExternalId != oldData.ExternalId {
-		oldData.ExternalId = newData.ExternalId
 		changes[customerFieldExternalId] = oldData.ExternalId
+		oldData.ExternalId = newData.ExternalId
 	}
 
 	if newData.Name != oldData.Name {
-		oldData.Name = newData.Name
 		changes[customerFieldName] = oldData.Name
+		oldData.Name = newData.Name
 	}
 
 	if newData.Email != oldData.Email {
-		oldData.Email = newData.Email
 		changes[customerFieldEmail] = oldData.Email
+		oldData.Email = newData.Email
 	}
 
 	if newData.EmailVerified != oldData.EmailVerified {
-		oldData.EmailVerified = newData.EmailVerified
 		changes[customerFieldEmailVerified] = oldData.EmailVerified
+		oldData.EmailVerified = newData.EmailVerified
 	}
 
 	if newData.Phone != oldData.Phone {
-		oldData.Phone = newData.Phone
 		changes[customerFieldPhone] = oldData.Phone
+		oldData.Phone = newData.Phone
 	}
 
 	if newData.PhoneVerified != oldData.PhoneVerified {
-		oldData.PhoneVerified = newData.PhoneVerified
 		changes[customerFieldPhoneVerified] = oldData.PhoneVerified
+		oldData.PhoneVerified = newData.PhoneVerified
 	}
 
 	if newData.Ip != oldData.Ip {
-		oldData.Ip = newData.Ip
 		changes[customerFieldIp] = oldData.Ip
-	}
-
-	if newData.Locale != oldData.Locale {
-		oldData.Locale = newData.Locale
-		changes[customerFieldLocale] = oldData.Locale
+		oldData.Ip = newData.Ip
 	}
 
 	if newData.Address != oldData.Address {
-		oldData.Address = newData.Address
 		changes[customerFieldAddress] = oldData.Address
+		oldData.Address = newData.Address
+	}
+
+	if newData.Locale != oldData.Locale {
+		changes[customerFieldLocale] = oldData.Locale
+		oldData.Locale = newData.Locale
 	}
 
 	if newData.AcceptLanguage != oldData.AcceptLanguage {
-		oldData.AcceptLanguage = newData.AcceptLanguage
 		changes[customerFieldAcceptLanguage] = oldData.AcceptLanguage
+		oldData.AcceptLanguage = newData.AcceptLanguage
+
+		if newData.Locale == oldData.Locale {
+			changes[customerFieldLocale] = oldData.Locale
+			oldData.Locale, _ = s.getCountryFromAcceptLanguage(oldData.AcceptLanguage)
+		}
 	}
 
 	if newData.UserAgent != oldData.UserAgent {
-		oldData.UserAgent = newData.UserAgent
 		changes[customerFieldUserAgent] = oldData.UserAgent
+		oldData.UserAgent = newData.UserAgent
 	}
 
 	oldData.Metadata = newData.Metadata
@@ -291,8 +316,10 @@ func (s *Service) changeCustomerPaymentFormData(
 	ip, acceptLanguage, userAgent, email string,
 	address *billing.OrderBillingAddress,
 ) (*billing.Customer, error) {
-	if customer.Ip == ip && customer.AcceptLanguage == acceptLanguage && customer.UserAgent == userAgent &&
-		(email == "" || customer.Email == email) && (address == nil || customer.Address == address) {
+	isHeaderDataMatch := customer.Ip == ip && customer.AcceptLanguage == acceptLanguage && customer.UserAgent == userAgent
+	isUserIdentityMatch := (email == "" || customer.Email == email) && (address == nil || customer.Address == address)
+
+	if isHeaderDataMatch == true && isUserIdentityMatch {
 		return customer, nil
 	}
 
