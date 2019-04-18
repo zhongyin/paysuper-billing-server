@@ -65,10 +65,8 @@ message OrderCreateRequest {
 }
 
 message Project {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
-    string id = 1; // unique project identifier
-    // @inject_tag: bson:"callback_currency" structure:"callback_currency"
-    Currency callback_currency = 2; // full object of currency which described currency to send payment notification
+    string id = 1;
+    string callback_currency = 2; // full object of currency which described currency to send payment notification
     // @inject_tag: bson:"callback_protocol" structure:"callback_protocol"
     string callback_protocol = 3; // protocol identifier to send payment notification. possible values: default, cardpay, xsolla
     // @inject_tag: bson:"create_invoice_allowed_urls" structure:"create_invoice_allowed_urls"
