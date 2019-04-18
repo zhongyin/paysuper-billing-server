@@ -373,7 +373,7 @@ func (m *Vat) SetBSON(raw bson.Raw) error {
 func (m *Project) GetBSON() (interface{}, error) {
 	st := &MgoProject{
 		CallbackCurrency:         m.CallbackCurrency,
-		CreateInvoiceAllowedUrls: m.CreateInvoiceAllowedUrls,
+		CreateInvoiceAllowedUrls: m.CreateOrderAllowedUrls,
 		AllowDynamicNotifyUrls:   m.AllowDynamicNotifyUrls,
 		AllowDynamicRedirectUrls: m.AllowDynamicRedirectUrls,
 		LimitsCurrency:           m.LimitsCurrency,

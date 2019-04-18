@@ -66,53 +66,50 @@ message OrderCreateRequest {
 
 message Project {
     string id = 1;
-    string callback_currency = 2; // full object of currency which described currency to send payment notification
-    // @inject_tag: bson:"callback_protocol" structure:"callback_protocol"
-    string callback_protocol = 3; // protocol identifier to send payment notification. possible values: default, cardpay, xsolla
-    // @inject_tag: bson:"create_invoice_allowed_urls" structure:"create_invoice_allowed_urls"
-    repeated string create_invoice_allowed_urls = 4; // list of urls rom which you can send a request to create an order
-    // @inject_tag: bson:"merchant" json:"-" structure:"merchant"
-    Merchant merchant = 5; // full object of merchant which describes project's owner
-    // @inject_tag: bson:"allow_dynamic_notify_urls"
-    bool allow_dynamic_notify_urls = 6; // is allow send dynamic notification urls in request to create an order
-    // @inject_tag: bson:"allow_dynamic_redirect_urls"
-    bool allow_dynamic_redirect_urls = 7; // is allow send dynamic user's redirect urls in request to create an order
-    // @inject_tag: bson:"limits_currency" structure:"limits_currency"
-    Currency limits_currency = 8; // full object of currency which describes currency for amount's limit
-    // @inject_tag: bson:"max_payment_amount" structure:"max_payment_amount"
-    double max_payment_amount = 9; // maximal amount allowed for create order
-    // @inject_tag: bson:"min_payment_amount" structure:"min_payment_amount"
-    double min_payment_amount = 10; // minimal amount allowed for create order
-    // @inject_tag: bson:"name" structure:"name"
-    string name = 11; // project name
-    // @inject_tag: bson:"notify_emails" structure:"notify_emails"
-    repeated string notify_emails = 12; // list of emails to send notifications about successfully completed payment operations
-    // @inject_tag: bson:"is_products_checkout" structure:"is_products_checkout"
-    bool is_products_checkout = 13; // is allow create order only with amounts from fixed packages list
-    // @inject_tag: bson:"secret_key" structure:"secret_key"
-    string secret_key = 14; // secret key for create check hash for request about order statuses changes
-    // @inject_tag: bson:"signature_required"
+    // @inject_tag: json:"merchant_id" validate:"omitempty,hexadecimal,len=24"
+    string merchant_id = 2;
+    // @inject_tag: json:"name" validate:"required"
+    map<string, string> name = 3;
+    //@inject_tag: json:"callback_currency" validate:"omitempty,len=3"
+    string callback_currency = 4;
+    //@inject_tag: json:"callback_protocol" validate:"omitempty,oneof=default empty"
+    string callback_protocol = 5;
+    //@inject_tag: json:"create_order_allowed_urls" validate:"omitempty,dive,url"
+    repeated string create_order_allowed_urls = 6;
+    //@inject_tag: json:"allow_dynamic_notify_urls"
+    bool allow_dynamic_notify_urls = 7;
+    //@inject_tag: json:"allow_dynamic_redirect_urls"
+    bool allow_dynamic_redirect_urls = 8;
+    //@inject_tag: json:"limits_currency" validate:"omitempty,len=3"
+    string limits_currency = 9;
+    // @inject_tag: json:"min_payment_amount" validate:"omitempty,numeric,gte=0"
+    double min_payment_amount = 10;
+    // @inject_tag: json:"max_payment_amount" validate:"omitempty,numeric,gte=0"
+    double max_payment_amount = 11;
+    // @inject_tag: json:"notify_emails" validate:"omitempty,dive,email"
+    repeated string notify_emails = 12;
+    // @inject_tag: json:"is_products_checkout"
+    bool is_products_checkout = 13;
+    // @inject_tag: json:"secret_key" validate:"omitempty,max=255"
+    string secret_key = 14;
+    // @inject_tag: json:"signature_required"
     bool signature_required = 15;
-    // @inject_tag: bson:"send_notify_email" structure:"send_notify_email"
-    bool send_notify_email = 16; // is allow send notifications about successfully completed payment operations to user's emails
-    // @inject_tag: bson:"url_check_account" structure:"url_check_account"
-    string url_check_account = 17; // default url to send request for verification payment data to project
-    // @inject_tag: bson:"url_process_payment" structure:"url_process_payment"
-    string url_process_payment = 18; // default url to send request for notification about successfully completed payment to project
-    // @inject_tag: bson:"url_redirect_fail" structure:"url_redirect_fail"
-    string url_redirect_fail = 19; // default url to redirect user after failed payment
-    // @inject_tag: bson:"url_redirect_success" structure:"url_redirect_success"
-    string url_redirect_success = 20; // default url to redirect user after successfully completed payment
-    // @inject_tag: bson:"fixed_package" structure:"fixed_package"
-    map<string, FixedPackages> fixed_package = 21; // list of project's fixed packages
-    // @inject_tag: bson:"payment_methods" structure:"payment_methods"
-    map<string, ProjectPaymentMethod> payment_methods = 22; // list of payment methods allowed to project
-    // @inject_tag: bson:"is_active" structure:"is_active"
-    bool is_active = 23; // is project active
-    // @inject_tag: bson:"created_at"
-    google.protobuf.Timestamp created_at = 24;
-    // @inject_tag: bson:"updated_at"
-    google.protobuf.Timestamp updated_at = 25;
+    // @inject_tag: json:"send_notify_email"
+    bool send_notify_email = 16;
+    // @inject_tag: json:"url_check_account" validate:"omitempty,url"
+    string url_check_account = 17;
+    // @inject_tag: json:"url_process_payment" validate:"omitempty,url"
+    string url_process_payment = 18;
+    // @inject_tag: json:"url_redirect_fail" validate:"omitempty,url"
+    string url_redirect_fail = 19;
+    // @inject_tag: json:"url_redirect_success" validate:"omitempty,url"
+    string url_redirect_success = 20;
+    // @inject_tag: json:"status" validate:"required,numeric,oneof=0 1 2 3 4"
+    int32 status = 21;
+    // @inject_tag: json:"created_at"
+    google.protobuf.Timestamp created_at = 22;
+    // @inject_tag: json:"updated_at"
+    google.protobuf.Timestamp updated_at = 23;
 }
 
 message ProjectOrder {
