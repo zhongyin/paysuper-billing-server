@@ -270,7 +270,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	req *grpc.PaymentFormJsonDataRequest,
 	rsp *grpc.PaymentFormJsonDataResponse,
 ) error {
-	order, err := s.getOrderById(req.OrderId)
+	order, err := s.getOrderByUuid(req.OrderId)
 
 	if err != nil {
 		return err
