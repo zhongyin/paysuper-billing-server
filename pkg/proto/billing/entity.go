@@ -44,6 +44,10 @@ func (m *Merchant) CanChangeStatusToSigning() bool {
 		m.Contacts != nil && m.Contacts.Authorized != nil
 }
 
+func (m *Merchant) IsDeleted() bool {
+	return m.Status == pkg.MerchantStatusDeleted
+}
+
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
 	return m.PaymentSystem.AccountingCurrency
 }
@@ -84,4 +88,12 @@ func (m *Order) GetUserAddress() *OrderBillingAddress {
 
 func (m *Order) HasCustomer() bool {
 	return m.User != nil && m.User.Token != ""
+}
+
+func (m *Project) IsProduction() bool {
+	return m.Status == pkg.ProjectStatusInProduction
+}
+
+func (m *Project) IsDeleted() bool {
+	return m.Status == pkg.ProjectStatusDeleted
 }

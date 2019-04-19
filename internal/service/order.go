@@ -35,6 +35,8 @@ import (
 const (
 	orderErrorProjectNotFound                          = "project with specified identifier not found"
 	orderErrorProjectInactive                          = "project with specified identifier is inactive"
+	orderErrorProjectMerchantNotFound                  = "merchant for project with specified identifier not found"
+	orderErrorProjectMerchantInactive                  = "merchant for project with specified identifier is inactive"
 	orderErrorPaymentMethodNotAllowed                  = "payment method not specified for project"
 	orderErrorPaymentMethodNotFound                    = "payment method with specified not found"
 	orderErrorPaymentMethodInactive                    = "payment method with specified is inactive"
@@ -99,6 +101,7 @@ const (
 type orderCreateRequestProcessorChecked struct {
 	id              string
 	project         *billing.Project
+	merchant        *billing.Merchant
 	currency        *billing.Currency
 	amount          float64
 	payerData       *billing.PayerData
@@ -486,10 +489,13 @@ func (s *Service) PaymentCreateProcess(
 		return nil
 	}
 
-	if s.isProductionEnvironment() == true {
-		order.PaymentMethod.Params.Terminal = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Terminal
-		order.PaymentMethod.Params.Password = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Password
-		order.PaymentMethod.Params.CallbackPassword = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].CallbackPassword
+	if processor.checked.project.IsProduction() == true {
+		merchantId := processor.GetMerchantId()
+		pmId := order.PaymentMethod.Id
+
+		order.PaymentMethod.Params.Terminal, _ = s.getMerchantPaymentMethodTerminalId(merchantId, pmId)
+		order.PaymentMethod.Params.Password, _ = s.getMerchantPaymentMethodTerminalPassword(merchantId, pmId)
+		order.PaymentMethod.Params.CallbackPassword, _ = s.getMerchantPaymentMethodTerminalCallbackPassword(merchantId, pmId)
 	}
 
 	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, order)
@@ -970,7 +976,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	id := bson.NewObjectId().Hex()
 	amount := tools.FormatAmount(v.checked.amount)
 	merAccAmount := amount
-	merchantPayoutCurrency := v.checked.project.Merchant.GetPayoutCurrency()
+	merchantPayoutCurrency := v.checked.merchant.GetPayoutCurrency()
 
 	if (v.request.UrlVerify != "" || v.request.UrlNotify != "") && v.checked.project.AllowDynamicNotifyUrls == false {
 		return nil, errors.New(orderErrorDynamicNotifyUrlsNotAllowed)
@@ -994,7 +1000,6 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		Id: id,
 		Project: &billing.ProjectOrder{
 			Id:                v.checked.project.Id,
-			Name:              v.checked.project.Name,
 			UrlSuccess:        v.checked.project.UrlRedirectSuccess,
 			UrlFail:           v.checked.project.UrlRedirectFail,
 			SendNotifyEmail:   v.checked.project.SendNotifyEmail,
@@ -1003,7 +1008,6 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			UrlCheckAccount:   v.checked.project.UrlCheckAccount,
 			UrlProcessPayment: v.checked.project.UrlProcessPayment,
 			CallbackProtocol:  v.checked.project.CallbackProtocol,
-			Merchant:          v.checked.project.Merchant,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     v.request.OrderId,
@@ -1034,7 +1038,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 
 	if v.request.User != nil {
 		v.request.User.ProjectId = order.Project.Id
-		v.request.User.MerchantId = order.Project.Merchant.Id
+		v.request.User.MerchantId = v.checked.merchant.Id
 
 		customer, err := v.changeCustomer(v.request.User)
 
@@ -1098,11 +1102,22 @@ func (v *OrderCreateRequestProcessor) processProject() error {
 		return errors.New(orderErrorProjectNotFound)
 	}
 
-	if project.IsActive == false {
+	if project.IsDeleted() == true {
 		return errors.New(orderErrorProjectInactive)
 	}
 
+	merchant, ok := v.merchantCache[project.MerchantId]
+
+	if !ok {
+		return errors.New(orderErrorProjectMerchantNotFound)
+	}
+
+	if merchant.IsDeleted() == true {
+		return errors.New(orderErrorProjectMerchantInactive)
+	}
+
 	v.checked.project = project
+	v.checked.merchant = merchant
 
 	return nil
 }
@@ -1176,7 +1191,7 @@ func (v *OrderCreateRequestProcessor) processProducts() error {
 
 	currency := v.Service.accountingCurrency
 
-	merchantPayoutCurrency := v.checked.project.Merchant.GetPayoutCurrency()
+	merchantPayoutCurrency := v.checked.merchant.GetPayoutCurrency()
 	if merchantPayoutCurrency != nil {
 		currency = merchantPayoutCurrency
 	}
@@ -1230,22 +1245,18 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 		return errors.New(orderErrorPaymentSystemInactive)
 	}
 
-	if v.isProductionEnvironment() == true {
-		if len(v.checked.project.PaymentMethods) <= 0 {
-			return errors.New(orderErrorPaymentMethodNotAllowed)
+	if v.checked.project.IsProduction() == true {
+		mpm, err := v.getMerchantPaymentMethod(v.checked.merchant.Id, pm.Id)
+
+		if err != nil {
+			return err
 		}
 
-		ppm, ok := v.checked.project.PaymentMethods[pm.Group]
-
-		if !ok {
-			return errors.New(orderErrorPaymentMethodNotAllowed)
-		}
-
-		if ppm.Id != pm.Id {
+		if mpm.PaymentMethod.Id != pm.Id {
 			return errors.New(orderErrorPaymentMethodIncompatible)
 		}
 
-		if ppm.Terminal == "" || ppm.Password == "" {
+		if mpm.Integration == nil || mpm.Integration.Integrated == false {
 			return errors.New(orderErrorPaymentMethodEmptySettings)
 		}
 	}
@@ -1794,6 +1805,10 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 	}
 
 	return
+}
+
+func (v *PaymentCreateProcessor) GetMerchantId() string {
+	return v.checked.project.MerchantId
 }
 
 func (s *Service) GetOrderProducts(projectId string, productIds []string) ([]*grpc.Product, error) {

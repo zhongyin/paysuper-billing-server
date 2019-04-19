@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"github.com/globalsign/mgo/bson"
+	"github.com/go-errors/errors"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 )
@@ -177,6 +178,7 @@ func newMerchantHandler(svc *Service) Cacher {
 
 func (h *Merchant) setCache(recs []interface{}) {
 	h.svc.merchantPaymentMethods = make(map[string]map[string]*billing.MerchantPaymentMethod)
+	h.svc.merchantCache = make(map[string]*billing.Merchant)
 
 	if len(recs) <= 0 {
 		return
@@ -184,6 +186,7 @@ func (h *Merchant) setCache(recs []interface{}) {
 
 	for _, r := range recs {
 		m := r.(*billing.Merchant)
+		h.svc.merchantCache[m.Id] = m
 
 		if _, ok := h.svc.merchantPaymentMethods[m.Id]; !ok {
 			h.svc.merchantPaymentMethods[m.Id] = make(map[string]*billing.MerchantPaymentMethod)
@@ -235,4 +238,62 @@ func (h *Merchant) getAll() (recs []interface{}, err error) {
 	}
 
 	return
+}
+
+func (s *Service) getMerchantPaymentMethod(merchantId, pmId string) (*billing.MerchantPaymentMethod, error) {
+	pms, ok := s.merchantPaymentMethods[merchantId]
+
+	if !ok {
+		return nil, errors.New(orderErrorPaymentMethodNotAllowed)
+	}
+
+	pm, ok := pms[pmId]
+
+	if !ok {
+		return nil, errors.New(orderErrorPaymentMethodNotAllowed)
+	}
+
+	return pm, nil
+}
+
+func (s *Service) getMerchantPaymentMethodTerminalId(merchantId, pmId string) (string, error) {
+	pm, err := s.getMerchantPaymentMethod(merchantId, pmId)
+
+	if err != nil {
+		return "", err
+	}
+
+	if pm.Integration == nil || pm.Integration.TerminalId == "" {
+		return "", errors.New(orderErrorPaymentMethodEmptySettings)
+	}
+
+	return pm.Integration.TerminalId, nil
+}
+
+func (s *Service) getMerchantPaymentMethodTerminalPassword(merchantId, pmId string) (string, error) {
+	pm, err := s.getMerchantPaymentMethod(merchantId, pmId)
+
+	if err != nil {
+		return "", err
+	}
+
+	if pm.Integration == nil || pm.Integration.TerminalPassword == "" {
+		return "", errors.New(orderErrorPaymentMethodEmptySettings)
+	}
+
+	return pm.Integration.TerminalPassword, nil
+}
+
+func (s *Service) getMerchantPaymentMethodTerminalCallbackPassword(merchantId, pmId string) (string, error) {
+	pm, err := s.getMerchantPaymentMethod(merchantId, pmId)
+
+	if err != nil {
+		return "", err
+	}
+
+	if pm.Integration == nil || pm.Integration.TerminalCallbackPassword == "" {
+		return "", errors.New(orderErrorPaymentMethodEmptySettings)
+	}
+
+	return pm.Integration.TerminalCallbackPassword, nil
 }
