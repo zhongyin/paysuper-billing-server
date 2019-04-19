@@ -416,6 +416,12 @@ func (s *Service) CreateNotification(
 	req *grpc.NotificationRequest,
 	rsp *billing.Notification,
 ) error {
+	_, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
+
+	if err != nil {
+		return err
+	}
+
 	if req.UserId == "" || bson.IsObjectIdHex(req.UserId) == false {
 		return errors.New(notificationErrorUserIdIncorrect)
 	}
