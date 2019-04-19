@@ -62,7 +62,7 @@ func newCurrencyRateHandler(svc *Service) Cacher {
 }
 
 func (h *CurrencyRate) setCache(recs []interface{}) {
-	h.svc.currencyRateCache = make(map[int32]map[int32]*billing.CurrencyRate, len(recs))
+	h.svc.currencyRateCache = make(map[string]map[string]*billing.CurrencyRate, len(recs))
 
 	if len(recs) <= 0 {
 		return

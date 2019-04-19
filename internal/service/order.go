@@ -390,13 +390,19 @@ func (s *Service) PaymentFormJsonDataProcess(
 	expire := time.Now().Add(time.Minute * 30).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": order.Id, "exp": expire})
 
+	projectName, ok := order.Project.Name[order.User.Locale]
+
+	if !ok {
+		projectName = order.Project.Name[DefaultLanguage]
+	}
+
 	rsp.Id = order.Uuid
 	rsp.Account = order.ProjectAccount
 	rsp.HasVat = order.Tax.Amount > 0
 	rsp.Vat = order.Tax.Amount
 	rsp.Currency = order.ProjectIncomeCurrency.CodeA3
 	rsp.Project = &grpc.PaymentFormJsonDataProject{
-		Name:       order.Project.Name,
+		Name:       projectName,
 		UrlSuccess: order.Project.UrlSuccess,
 		UrlFail:    order.Project.UrlFail,
 	}
@@ -870,7 +876,7 @@ func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
 		Token:      order.User.Token,
 		ProjectId:  order.Project.Id,
-		MerchantId: order.Project.Merchant.Id,
+		MerchantId: order.Project.MerchantId,
 		MaskedPan:  order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
 		Expire: &entity.CardExpire{
 			Month: order.PaymentRequisites[pkg.PaymentCreateFieldMonth],
@@ -1269,7 +1275,7 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 func (v *OrderCreateRequestProcessor) processLimitAmounts() (err error) {
 	amount := v.checked.amount
 
-	if v.checked.project.LimitsCurrency.CodeInt != v.checked.currency.CodeInt {
+	if v.checked.project.LimitsCurrency != v.checked.currency.CodeInt {
 		amount, err = v.Convert(v.checked.currency.CodeInt, v.checked.project.LimitsCurrency.CodeInt, amount)
 
 		if err != nil {

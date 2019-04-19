@@ -107,8 +107,8 @@ type MgoMerchant struct {
 
 type MgoCurrencyRate struct {
 	Id           bson.ObjectId `bson:"_id"`
-	CurrencyFrom int32         `bson:"currency_from"`
-	CurrencyTo   int32         `bson:"currency_to"`
+	CurrencyFrom string        `bson:"currency_from"`
+	CurrencyTo   string        `bson:"currency_to"`
 	Rate         float64       `bson:"rate"`
 	Date         time.Time     `bson:"date"`
 	IsActive     bool          `bson:"is_active"`

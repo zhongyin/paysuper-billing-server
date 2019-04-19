@@ -549,19 +549,12 @@ message ProjectPaymentMethod {
 }
 
 message CurrencyRate {
-    // @inject_tag: bson:"_id"
     string id = 1;
-    // @inject_tag: bson:"currency_from"
-    int32 currency_from = 2;
-    // @inject_tag: bson:"currency_to"
-    int32 currency_to = 3;
-    // @inject_tag: bson:"rate"
+    string currency_from = 2;
+    string currency_to = 3;
     double rate = 4;
-    // @inject_tag: bson:"is_active"
     bool is_active = 5;
-    // @inject_tag: bson:"date"
     google.protobuf.Timestamp date = 6;
-    // @inject_tag: bson:"created_at"
     google.protobuf.Timestamp created_at = 7;
 }
 

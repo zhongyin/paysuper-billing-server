@@ -45,10 +45,8 @@ const (
 	DefaultPaymentMethodPerTransactionFee = float64(0)
 	DefaultPaymentMethodCurrency          = ""
 
-	CountryCodeUSA = "US"
-
-	DefaultLanguage = "en"
-
+	CountryCodeUSA    = "US"
+	DefaultLanguage   = "en"
 	centrifugoChannel = "paysuper-billing-server"
 )
 
@@ -81,7 +79,7 @@ type Service struct {
 	currencyCache        map[string]*billing.Currency
 	countryCache         map[string]*billing.Country
 	projectCache         map[string]*billing.Project
-	currencyRateCache    map[int32]map[int32]*billing.CurrencyRate
+	currencyRateCache    map[string]map[string]*billing.CurrencyRate
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
 
