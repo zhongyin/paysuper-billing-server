@@ -113,24 +113,17 @@ message Project {
 }
 
 message ProjectOrder {
-    // @inject_tag: bson:"_id" structure:"_id,bsonobjectid"
     string id = 1;
-    // @inject_tag: bson:"url_redirect_success" structure:"url_redirect_success"
-    string url_success = 3;
-    // @inject_tag: bson:"url_redirect_fail" structure:"url_redirect_fail"
-    string url_fail = 4;
-    // @inject_tag: bson:"notify_emails" structure:"notify_emails"
-    repeated string notify_emails = 5;
-    // @inject_tag: bson:"secret_key" structure:"secret_key"
-    string secret_key = 6;
-    // @inject_tag: bson:"send_notify_email" structure:"send_notify_email"
-    bool send_notify_email = 7;
-    // @inject_tag: bson:"url_check_account" structure:"url_check_account"
-    string url_check_account = 8;
-    // @inject_tag: bson:"url_process_payment" structure:"url_process_payment"
-    string url_process_payment = 9;
-    // @inject_tag: bson:"callback_protocol" structure:"callback_protocol"
-    string callback_protocol = 10;
+    string merchant_id = 2;
+    map<string, string> name = 3;
+    string url_success = 4;
+    string url_fail = 5;
+    repeated string notify_emails = 6;
+    string secret_key = 7;
+    bool send_notify_email = 8;
+    string url_check_account = 9;
+    string url_process_payment = 10;
+    string callback_protocol = 11;
 }
 
 message MerchantContact {

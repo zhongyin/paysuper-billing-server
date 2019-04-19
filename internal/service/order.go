@@ -56,7 +56,7 @@ const (
 	orderErrorSignatureInvalid                         = "request signature is invalid"
 	orderErrorNotFound                                 = "order with specified identifier not found"
 	orderErrorOrderAlreadyComplete                     = "order with specified identifier payed early"
-	orderErrorFormInputTimeExpired                     = "time to enter date on payment form expired"
+	orderErrorFormInputTimeExpired                     = "time to fill out payment form has been expired"
 	orderErrorCurrencyIsRequired                       = "parameter currency in create order request is required"
 	orderErrorUnknown                                  = "unknown error. try request later"
 	orderCurrencyConvertationError                     = "unknown error in process currency conversion. try request later"
@@ -339,7 +339,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 		customer = &billing.Customer{
 			Id:         bson.NewObjectId().Hex(),
 			ProjectId:  order.Project.Id,
-			MerchantId: order.Project.Merchant.Id,
+			MerchantId: order.Project.MerchantId,
 			Ip:         p1.checked.payerData.Ip,
 			Locale:     loc,
 			Address: &billing.OrderBillingAddress{

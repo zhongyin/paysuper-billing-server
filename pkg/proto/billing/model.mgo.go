@@ -139,15 +139,17 @@ type MgoCommissionBilling struct {
 }
 
 type MgoOrderProject struct {
-	Id                bson.ObjectId `bson:"_id" `
-	UrlSuccess        string        `bson:"url_success"`
-	UrlFail           string        `bson:"url_fail"`
-	NotifyEmails      []string      `bson:"notify_emails"`
-	SecretKey         string        `bson:"secret_key"`
-	SendNotifyEmail   bool          `bson:"send_notify_email"`
-	UrlCheckAccount   string        `bson:"url_check_account"`
-	UrlProcessPayment string        `bson:"url_process_payment"`
-	CallbackProtocol  string        `bson:"callback_protocol"`
+	Id                bson.ObjectId     `bson:"_id" `
+	MerchantId        bson.ObjectId     `bson:"merchant_id"`
+	Name              map[string]string `bson:"name"`
+	UrlSuccess        string            `bson:"url_success"`
+	UrlFail           string            `bson:"url_fail"`
+	NotifyEmails      []string          `bson:"notify_emails"`
+	SecretKey         string            `bson:"secret_key"`
+	SendNotifyEmail   bool              `bson:"send_notify_email"`
+	UrlCheckAccount   string            `bson:"url_check_account"`
+	UrlProcessPayment string            `bson:"url_process_payment"`
+	CallbackProtocol  string            `bson:"callback_protocol"`
 }
 
 type MgoOrderPaymentMethod struct {
@@ -651,6 +653,8 @@ func (m *Order) GetBSON() (interface{}, error) {
 	st := &MgoOrder{
 		Project: &MgoOrderProject{
 			Id:                bson.ObjectIdHex(m.Project.Id),
+			MerchantId:        bson.ObjectIdHex(m.Project.MerchantId),
+			Name:              m.Project.Name,
 			UrlSuccess:        m.Project.UrlSuccess,
 			UrlFail:           m.Project.UrlFail,
 			NotifyEmails:      m.Project.NotifyEmails,
@@ -816,6 +820,8 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.Id = decoded.Id.Hex()
 	m.Project = &ProjectOrder{
 		Id:                decoded.Project.Id.Hex(),
+		MerchantId:        decoded.Project.MerchantId.Hex(),
+		Name:              decoded.Project.Name,
 		UrlSuccess:        decoded.Project.UrlSuccess,
 		UrlFail:           decoded.Project.UrlFail,
 		NotifyEmails:      decoded.Project.NotifyEmails,
