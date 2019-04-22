@@ -49,8 +49,9 @@ service BillingService {
     rpc GetProductsForOrder (GetProductsForOrderRequest) returns (ListProductsResponse) {}
 
     rpc ChangeCustomer (billing.Customer) returns (ChangeCustomerResponse) {}
-
     rpc CheckProjectRequestSignature (CheckProjectRequestSignatureRequest) returns (CheckProjectRequestSignatureResponse) {}
+
+    rpc ChangeProject (billing.Project) returns (ChangeProjectResponse) {}
 }
 
 message EmptyRequest {
@@ -542,4 +543,10 @@ message CheckProjectRequestSignatureRequest {
 message CheckProjectRequestSignatureResponse {
     int32 status = 1;
     string message = 2;
+}
+
+message ChangeProjectResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Project item = 3;
 }

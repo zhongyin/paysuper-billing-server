@@ -64,6 +64,7 @@ It has these top-level messages:
 	ChangeCustomerResponse
 	CheckProjectRequestSignatureRequest
 	CheckProjectRequestSignatureResponse
+	ChangeProjectResponse
 */
 package grpc
 
@@ -83,7 +84,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.Customer{}
+var _ = billing.Project{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -134,6 +135,7 @@ type BillingService interface {
 	GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, opts ...client.CallOption) (*ListProductsResponse, error)
 	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*ChangeCustomerResponse, error)
 	CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
+	ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error)
 }
 
 type billingService struct {
@@ -504,6 +506,16 @@ func (c *billingService) CheckProjectRequestSignature(ctx context.Context, in *C
 	return out, nil
 }
 
+func (c *billingService) ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ChangeProject", in)
+	out := new(ChangeProjectResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -542,6 +554,7 @@ type BillingServiceHandler interface {
 	GetProductsForOrder(context.Context, *GetProductsForOrderRequest, *ListProductsResponse) error
 	ChangeCustomer(context.Context, *billing.Customer, *ChangeCustomerResponse) error
 	CheckProjectRequestSignature(context.Context, *CheckProjectRequestSignatureRequest, *CheckProjectRequestSignatureResponse) error
+	ChangeProject(context.Context, *billing.Project, *ChangeProjectResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -581,6 +594,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error
 		ChangeCustomer(ctx context.Context, in *billing.Customer, out *ChangeCustomerResponse) error
 		CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error
+		ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -731,4 +745,8 @@ func (h *billingServiceHandler) ChangeCustomer(ctx context.Context, in *billing.
 
 func (h *billingServiceHandler) CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error {
 	return h.BillingServiceHandler.CheckProjectRequestSignature(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error {
+	return h.BillingServiceHandler.ChangeProject(ctx, in, out)
 }

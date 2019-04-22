@@ -65,6 +65,7 @@ message OrderCreateRequest {
 }
 
 message Project {
+    // @inject_tag: json:"id" validate:"omitempty,hexadecimal,len=24"
     string id = 1;
     // @inject_tag: json:"merchant_id" validate:"required,hexadecimal,len=24"
     string merchant_id = 2;
