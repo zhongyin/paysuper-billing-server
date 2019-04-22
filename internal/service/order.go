@@ -168,7 +168,7 @@ func (s *Service) OrderCreateProcess(
 	}
 
 	if processor.checked.project.IsProductsCheckout == true {
-		if err := processor.processProducts(); err != nil {
+		if err := processor.processPaylinkProducts(); err != nil {
 			if pid := req.PrivateMetadata["PaylinkId"]; pid != "" {
 				s.notifyPaylinkError(pid, err, req, nil)
 			}
@@ -1044,7 +1044,7 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	return nil
 }
 
-func (v *OrderCreateRequestProcessor) processProducts() error {
+func (v *OrderCreateRequestProcessor) processPaylinkProducts() error {
 	if len(v.request.Products) == 0 {
 		return nil
 	}
@@ -1054,12 +1054,22 @@ func (v *OrderCreateRequestProcessor) processProducts() error {
 		return err
 	}
 
+	pid := v.request.PrivateMetadata["PaylinkId"]
+
+	logInfo := "[PAYONE_BILLING] [processPaylinkProducts] %s"
+
 	currency := v.Service.accountingCurrency
+	zap.S().Infow(fmt.Sprintf(logInfo, "accountingCurrency"), "currency", currency.CodeA3, "paylink", pid)
 
 	merchantPayoutCurrency := v.checked.project.Merchant.GetPayoutCurrency()
 	if merchantPayoutCurrency != nil {
 		currency = merchantPayoutCurrency
+		zap.S().Infow(fmt.Sprintf(logInfo, "merchant payout currency"), "currency", currency.CodeA3, "paylink", pid)
+	} else {
+		zap.S().Infow(fmt.Sprintf(logInfo, "no merchant payout currency set"), "paylink", pid)
 	}
+
+	zap.S().Infow(fmt.Sprintf(logInfo, "use currency"), "currency", currency.CodeA3, "paylink", pid)
 
 	amount, err := v.Service.GetOrderProductsAmount(orderProducts, currency.CodeA3)
 	if err != nil {
@@ -1779,11 +1789,17 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		return nil
 	}
 
+	orderProducts, err := s.GetOrderProducts(project.Id, order.Products)
+	if err != nil {
+		return err
+	}
+
 	var (
 		country       string
 		currency      *billing.Currency
 		itemsCurrency string
 		locale        string
+		logInfo       = "[PAYONE_BILLING] [ProcessOrderProducts] %s"
 	)
 
 	if order.BillingAddress != nil && order.BillingAddress.Country != "" {
@@ -1793,27 +1809,31 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 	}
 
 	defaultCurrency := s.accountingCurrency
+	zap.S().Infow(fmt.Sprintf(logInfo, "accountingCurrency"), "currency", defaultCurrency.CodeA3, "order.Uuid", order.Uuid)
 
 	merchantPayoutCurrency := project.Merchant.GetPayoutCurrency()
 	if merchantPayoutCurrency != nil {
 		defaultCurrency = merchantPayoutCurrency
+		zap.S().Infow(fmt.Sprintf(logInfo, "merchant payout currency"), "currency", defaultCurrency.CodeA3, "order.Uuid", order.Uuid)
+	} else {
+		zap.S().Infow(fmt.Sprintf(logInfo, "no merchant payout currency set"))
 	}
+
 	currency = defaultCurrency
 
 	if country != "" {
 		curr, ok := CountryToCurrency[country]
 		if ok {
 			currency, err = s.GetCurrencyByCodeA3(curr)
-			if err != nil {
+			if err == nil {
+				zap.S().Infow(fmt.Sprintf(logInfo, "currency by country"), "currency", currency.CodeA3, "country", country, "order.Uuid", order.Uuid)
+			} else {
 				currency = defaultCurrency
 			}
 		}
 	}
 
-	orderProducts, err := s.GetOrderProducts(project.Id, order.Products)
-	if err != nil {
-		return err
-	}
+	zap.S().Infow(fmt.Sprintf(logInfo, "try to use detected currency for order amount"), "currency", currency.CodeA3, "order.Uuid", order.Uuid)
 
 	itemsCurrency = currency.CodeA3
 
@@ -1828,6 +1848,8 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		if err != nil {
 			return err
 		}
+		zap.S().Infow(fmt.Sprintf(logInfo, "try to use default currency for order amount"), "currency", defaultCurrency.CodeA3, "order.Uuid", order.Uuid)
+
 		itemsCurrency = defaultCurrency.CodeA3
 		// converting Amount from default currency to requested
 		amount, err = s.Convert(defaultCurrency.CodeInt, currency.CodeInt, amount)
