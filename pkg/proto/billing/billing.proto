@@ -298,10 +298,6 @@ message Order {
     double project_income_amount = 6; // order amount received from project
     // @inject_tag: bson:"project_income_currency" structure:"project_income_currency"
     Currency project_income_currency = 7; // order currency received from project
-    // @inject_tag: bson:"project_outcome_amount" structure:"project_outcome_amount"
-    double project_outcome_amount = 8; // order amount send to project in notification request
-    // @inject_tag: bson:"project_outcome_currency" structure:"project_outcome_currency"
-    Currency project_outcome_currency = 9; // order currency send to project in notification request
     // @inject_tag: bson:"project_last_requested_at" structure:"project_last_requested_at,timestamp"
     google.protobuf.Timestamp project_last_requested_at = 10; // date of last notification request to project
     // @inject_tag: bson:"project_params" structure:"project_params"

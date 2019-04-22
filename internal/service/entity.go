@@ -240,7 +240,7 @@ func (h *Merchant) getAll() (recs []interface{}, err error) {
 	return
 }
 
-func (s *Service) getMerchantPaymentMethod(merchantId, pmId string) (*billing.MerchantPaymentMethod, error) {
+func (s *Service) getMerchantPaymentMethods(merchantId, pmId string) (*billing.MerchantPaymentMethod, error) {
 	pms, ok := s.merchantPaymentMethods[merchantId]
 
 	if !ok {
@@ -257,7 +257,7 @@ func (s *Service) getMerchantPaymentMethod(merchantId, pmId string) (*billing.Me
 }
 
 func (s *Service) getMerchantPaymentMethodTerminalId(merchantId, pmId string) (string, error) {
-	pm, err := s.getMerchantPaymentMethod(merchantId, pmId)
+	pm, err := s.getMerchantPaymentMethods(merchantId, pmId)
 
 	if err != nil {
 		return "", err
@@ -271,7 +271,7 @@ func (s *Service) getMerchantPaymentMethodTerminalId(merchantId, pmId string) (s
 }
 
 func (s *Service) getMerchantPaymentMethodTerminalPassword(merchantId, pmId string) (string, error) {
-	pm, err := s.getMerchantPaymentMethod(merchantId, pmId)
+	pm, err := s.getMerchantPaymentMethods(merchantId, pmId)
 
 	if err != nil {
 		return "", err
@@ -285,7 +285,7 @@ func (s *Service) getMerchantPaymentMethodTerminalPassword(merchantId, pmId stri
 }
 
 func (s *Service) getMerchantPaymentMethodTerminalCallbackPassword(merchantId, pmId string) (string, error) {
-	pm, err := s.getMerchantPaymentMethod(merchantId, pmId)
+	pm, err := s.getMerchantPaymentMethods(merchantId, pmId)
 
 	if err != nil {
 		return "", err

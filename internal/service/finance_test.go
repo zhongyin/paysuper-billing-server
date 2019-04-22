@@ -65,8 +65,8 @@ func (suite *FinanceTestSuite) SetupTest() {
 
 	rate := []interface{}{
 		&billing.CurrencyRate{
-			CurrencyFrom: 643,
-			CurrencyTo:   840,
+			CurrencyFrom: "RUB",
+			CurrencyTo:   "USD",
 			Rate:         64,
 			Date:         ptypes.TimestampNow(),
 			IsActive:     true,
@@ -168,16 +168,16 @@ func (suite *FinanceTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "default",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "test project 1",
+		Name:               map[string]string{"en": "test project 1"},
 		IsProductsCheckout: true,
 		SecretKey:          "test project 1 secret key",
-		IsActive:           true,
-		Merchant:           merchant,
+		Status:             pkg.ProjectStatusInProduction,
+		MerchantId:         merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
@@ -306,7 +306,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertOk() {
 	origin := float64(1000)
 	expect := 15.63
 
-	amount, err := suite.service.Convert(643, 840, origin)
+	amount, err := suite.service.Convert("RUB", "USD", origin)
 
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), amount > 0)
@@ -314,7 +314,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertOk() {
 }
 
 func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyFromError() {
-	amount, err := suite.service.Convert(960, 840, 1000)
+	amount, err := suite.service.Convert("XSD", "USD", 1000)
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
@@ -322,7 +322,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyFromError() {
 }
 
 func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyToError() {
-	amount, err := suite.service.Convert(643, 960, 1000)
+	amount, err := suite.service.Convert("RUB", "XSD", 1000)
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)

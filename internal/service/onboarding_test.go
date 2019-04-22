@@ -63,8 +63,8 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Insert currency test data failed")
 
 	rate := &billing.CurrencyRate{
-		CurrencyFrom: 643,
-		CurrencyTo:   840,
+		CurrencyFrom: "RUB",
+		CurrencyTo:   "USD",
 		Rate:         64,
 		Date:         ptypes.TimestampNow(),
 		IsActive:     true,
@@ -280,25 +280,17 @@ func (suite *OnboardingTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           rub,
+		LimitsCurrency:           rub.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusInProduction,
+		MerchantId:               merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)

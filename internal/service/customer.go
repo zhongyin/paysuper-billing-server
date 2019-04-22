@@ -160,7 +160,7 @@ func (s *Service) createCustomer(req *billing.Customer) (*billing.Customer, erro
 			return nil, ErrCustomerProjectNotFound
 		}
 
-		customer.MerchantId = processor.checked.project.Merchant.Id
+		customer.MerchantId = processor.checked.project.MerchantId
 	} else {
 		customer.MerchantId = req.MerchantId
 	}

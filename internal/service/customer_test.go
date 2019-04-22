@@ -67,8 +67,8 @@ func (suite *CustomerTestSuite) SetupTest() {
 
 	rate := []interface{}{
 		&billing.CurrencyRate{
-			CurrencyFrom: 643,
-			CurrencyTo:   643,
+			CurrencyFrom: "RUB",
+			CurrencyTo:   "RUB",
 			Rate:         1,
 			Date:         ptypes.TimestampNow(),
 			IsActive:     true,
@@ -189,39 +189,16 @@ func (suite *CustomerTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           rub,
+		LimitsCurrency:           rub.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		FixedPackage: map[string]*billing.FixedPackages{
-			"RU": {
-				FixedPackage: []*billing.FixedPackage{
-					{
-						Id:       "id_0",
-						Name:     "package 0",
-						Currency: rub,
-						Price:    10,
-						IsActive: true,
-					},
-				},
-			},
-			"US": {FixedPackage: []*billing.FixedPackage{}},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		MerchantId:               merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
@@ -329,7 +306,7 @@ func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_Ok() {
 func (suite *CustomerTestSuite) TestCustomer_ChangeCustomer_WithHistory_Ok() {
 	req := &billing.Customer{
 		ProjectId:  suite.project.Id,
-		MerchantId: suite.project.Merchant.Id,
+		MerchantId: suite.project.MerchantId,
 		ExternalId: bson.NewObjectId().Hex(),
 		Email:      "test@unit.test",
 		Ip:         "127.0.0.1",

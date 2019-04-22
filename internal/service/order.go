@@ -248,8 +248,6 @@ func (s *Service) OrderCreateProcess(
 	rsp.ProjectAccount = order.ProjectAccount
 	rsp.ProjectIncomeAmount = order.ProjectIncomeAmount
 	rsp.ProjectIncomeCurrency = order.ProjectIncomeCurrency
-	rsp.ProjectOutcomeAmount = order.ProjectOutcomeAmount
-	rsp.ProjectOutcomeCurrency = order.ProjectOutcomeCurrency
 	rsp.ProjectParams = order.ProjectParams
 	rsp.PayerData = order.PayerData
 	rsp.Status = order.Status
@@ -993,7 +991,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	}
 
 	if merchantPayoutCurrency != nil && v.checked.currency.CodeInt != merchantPayoutCurrency.CodeInt {
-		amnt, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, amount)
+		amnt, err := v.Service.Convert(v.checked.currency.CodeA3, merchantPayoutCurrency.CodeA3, amount)
 
 		if err != nil {
 			return nil, err
@@ -1006,6 +1004,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		Id: id,
 		Project: &billing.ProjectOrder{
 			Id:                v.checked.project.Id,
+			MerchantId:        v.checked.merchant.Id,
 			UrlSuccess:        v.checked.project.UrlRedirectSuccess,
 			UrlFail:           v.checked.project.UrlRedirectFail,
 			SendNotifyEmail:   v.checked.project.SendNotifyEmail,
@@ -1020,8 +1019,6 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		ProjectAccount:                     v.request.Account,
 		ProjectIncomeAmount:                amount,
 		ProjectIncomeCurrency:              v.checked.currency,
-		ProjectOutcomeAmount:               amount,
-		ProjectOutcomeCurrency:             v.checked.project.CallbackCurrency,
 		ProjectParams:                      v.request.Other,
 		PayerData:                          v.checked.payerData,
 		Status:                             constant.OrderStatusNew,
@@ -1252,7 +1249,7 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 	}
 
 	if v.checked.project.IsProduction() == true {
-		mpm, err := v.getMerchantPaymentMethod(v.checked.merchant.Id, pm.Id)
+		mpm, err := v.getMerchantPaymentMethods(v.checked.merchant.Id, pm.Id)
 
 		if err != nil {
 			return err
@@ -1275,8 +1272,8 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 func (v *OrderCreateRequestProcessor) processLimitAmounts() (err error) {
 	amount := v.checked.amount
 
-	if v.checked.project.LimitsCurrency != v.checked.currency.CodeInt {
-		amount, err = v.Convert(v.checked.currency.CodeInt, v.checked.project.LimitsCurrency.CodeInt, amount)
+	if v.checked.project.LimitsCurrency != v.checked.currency.CodeA3 {
+		amount, err = v.Convert(v.checked.currency.CodeA3, v.checked.project.LimitsCurrency, amount)
 
 		if err != nil {
 			return
@@ -1390,8 +1387,10 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
-	mAccCur := o.Project.Merchant.GetPayoutCurrency()
-	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
+	merchant, _ := v.merchantCache[o.Project.MerchantId]
+
+	mAccCur := merchant.GetPayoutCurrency()
+	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeA3
 	amount := float64(0)
 
 	// calculate commissions to selected payment method
@@ -1407,7 +1406,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	}
 
 	// convert payment system amount of fee to accounting currency of payment system
-	amount, err = v.Service.Convert(pmOutCur, o.PaymentMethod.PaymentSystem.AccountingCurrency.CodeInt, commission)
+	amount, err = v.Service.Convert(pmOutCur, o.PaymentMethod.PaymentSystem.AccountingCurrency.CodeA3, commission)
 
 	if err != nil {
 		return err
@@ -1417,7 +1416,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 
 	if mAccCur != nil {
 		// convert payment system amount of fee to accounting currency of merchant
-		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission)
+		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeA3, commission)
 		o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
 	}
 
@@ -1446,20 +1445,19 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 			continue
 		}
 
-		if v.order.ProjectIncomeAmount < pm.MinPaymentAmount ||
-			(pm.MaxPaymentAmount > 0 && v.order.ProjectIncomeAmount > pm.MaxPaymentAmount) {
+		if v.order.Amount < pm.MinPaymentAmount ||
+			(pm.MaxPaymentAmount > 0 && v.order.Amount > pm.MaxPaymentAmount) {
 			continue
 		}
 
-		if v.service.isProductionEnvironment() == true {
-			if len(project.PaymentMethods) <= 0 {
-				return projectPms, errors.New(orderErrorPaymentMethodNotAllowed)
+		if project.IsProduction() == true {
+			mpm, err := v.service.getMerchantPaymentMethods(v.order.Project.MerchantId, k)
+
+			if err != nil {
+				continue
 			}
 
-			ppm, ok := project.PaymentMethods[k]
-
-			if !ok || ppm.Id != pm.Id ||
-				ppm.Terminal == "" || ppm.Password == "" {
+			if mpm.Integration == nil || mpm.Integration.Integrated == false {
 				continue
 			}
 		}
@@ -1728,30 +1726,10 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 	order := v.checked.order
 
-	order.ProjectOutcomeAmount, err = v.service.Convert(
-		order.PaymentMethodIncomeCurrency.CodeInt,
-		order.ProjectOutcomeCurrency.CodeInt,
-		order.PaymentMethodOutcomeAmount,
-	)
-
-	if err != nil {
-		v.service.logError(
-			"Convert to project outcome currency failed",
-			[]interface{}{
-				"error", err.Error(),
-				"from", order.PaymentMethodIncomeCurrency.CodeInt,
-				"to", order.ProjectOutcomeCurrency.CodeInt,
-				"order_id", order.Id,
-			},
-		)
-
-		return
-	}
-
 	order.AmountInPspAccountingCurrency, err = v.service.Convert(
-		order.PaymentMethodIncomeCurrency.CodeInt,
-		v.service.accountingCurrency.CodeInt,
-		order.PaymentMethodOutcomeAmount,
+		order.Currency,
+		v.service.accountingCurrency.CodeA3,
+		order.Amount,
 	)
 
 	if err != nil {
@@ -1759,8 +1737,8 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 			"Convert to PSP accounting currency failed",
 			[]interface{}{
 				"error", err.Error(),
-				"from", order.PaymentMethodIncomeCurrency.CodeInt,
-				"to", v.service.accountingCurrency.CodeInt,
+				"from", order.Currency,
+				"to", v.service.accountingCurrency.CodeA3,
 				"order_id", order.Id,
 			},
 		)
@@ -1768,13 +1746,14 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 		return
 	}
 
-	merchantPayoutCurrency := order.Project.Merchant.GetPayoutCurrency()
+	merchant, _ := v.service.merchantCache[order.Project.MerchantId]
+	merchantPayoutCurrency := merchant.GetPayoutCurrency()
 
 	if merchantPayoutCurrency != nil {
 		order.AmountOutMerchantAccountingCurrency, err = v.service.Convert(
-			order.PaymentMethodIncomeCurrency.CodeInt,
-			merchantPayoutCurrency.CodeInt,
-			order.PaymentMethodOutcomeAmount,
+			order.Currency,
+			merchantPayoutCurrency.CodeA3,
+			order.Amount,
 		)
 
 		if err != nil {
@@ -1782,8 +1761,8 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 				"Convert to merchant accounting currency failed",
 				[]interface{}{
 					"error", err.Error(),
-					"from", order.PaymentMethodIncomeCurrency.CodeInt,
-					"to", merchantPayoutCurrency.CodeInt,
+					"from", order.Currency,
+					"to", merchantPayoutCurrency.CodeA3,
 					"order_id", order.Id,
 				},
 			)
@@ -1793,8 +1772,8 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 	}
 
 	order.AmountInPaymentSystemAccountingCurrency, err = v.service.Convert(
-		order.PaymentMethodIncomeCurrency.CodeInt,
-		order.PaymentMethod.GetAccountingCurrency().CodeInt,
+		order.Currency,
+		order.PaymentMethod.GetAccountingCurrency().CodeA3,
 		order.PaymentMethodOutcomeAmount,
 	)
 
@@ -1803,8 +1782,8 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 			"Convert to payment system accounting currency failed",
 			[]interface{}{
 				"error", err.Error(),
-				"from", order.PaymentMethodIncomeCurrency.CodeInt,
-				"to", order.PaymentMethod.GetAccountingCurrency().CodeInt,
+				"from", order.Currency,
+				"to", order.PaymentMethod.GetAccountingCurrency().CodeA3,
 				"order_id", order.Id,
 			},
 		)
@@ -1928,7 +1907,7 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 	if err != nil {
 		return err
 	}
-	if project.IsActive == false {
+	if project.IsDeleted() == true {
 		return errors.New(orderErrorProjectInactive)
 	}
 
@@ -1951,10 +1930,13 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 
 	defaultCurrency := s.accountingCurrency
 
-	merchantPayoutCurrency := project.Merchant.GetPayoutCurrency()
+	merchant, _ := s.merchantCache[project.MerchantId]
+	merchantPayoutCurrency := merchant.GetPayoutCurrency()
+
 	if merchantPayoutCurrency != nil {
 		defaultCurrency = merchantPayoutCurrency
 	}
+
 	currency = defaultCurrency
 
 	if country != "" {
@@ -1987,7 +1969,7 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		}
 		itemsCurrency = defaultCurrency.CodeA3
 		// converting Amount from default currency to requested
-		amount, err = s.Convert(defaultCurrency.CodeInt, currency.CodeInt, amount)
+		amount, err = s.Convert(defaultCurrency.CodeA3, currency.CodeA3, amount)
 		if err != nil {
 			return err
 		}
@@ -2004,27 +1986,13 @@ func (s *Service) ProcessOrderProducts(order *billing.Order) error {
 		return err
 	}
 
-	merAccAmount := amount
-	projectOutcomeCurrency := currency
-	if merchantPayoutCurrency != nil && currency.CodeInt != merchantPayoutCurrency.CodeInt {
-		amount, err := s.Convert(currency.CodeInt, merchantPayoutCurrency.CodeInt, amount)
-
-		if err != nil {
-			return err
-		}
-		merAccAmount = amount
-		projectOutcomeCurrency = merchantPayoutCurrency
-	}
-
 	order.Currency = currency.CodeA3
-	order.ProjectOutcomeCurrency = projectOutcomeCurrency
 	order.ProjectIncomeCurrency = currency
 	order.PaymentMethodOutcomeCurrency = currency
 	order.PaymentMethodIncomeCurrency = currency
 
 	order.Amount = amount
 	order.ProjectIncomeAmount = amount
-	order.ProjectOutcomeAmount = merAccAmount
 	order.PaymentMethodOutcomeAmount = amount
 	order.PaymentMethodIncomeAmount = amount
 

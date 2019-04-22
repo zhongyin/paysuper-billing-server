@@ -72,7 +72,7 @@ func (h *CurrencyRate) setCache(recs []interface{}) {
 		rate := c.(*billing.CurrencyRate)
 
 		if _, ok := h.svc.currencyRateCache[rate.CurrencyFrom]; !ok {
-			h.svc.currencyRateCache[rate.CurrencyFrom] = make(map[int32]*billing.CurrencyRate, len(recs))
+			h.svc.currencyRateCache[rate.CurrencyFrom] = make(map[string]*billing.CurrencyRate, len(recs))
 		}
 
 		h.svc.currencyRateCache[rate.CurrencyFrom][rate.CurrencyTo] = rate
@@ -93,7 +93,7 @@ func (h *CurrencyRate) getAll() (recs []interface{}, err error) {
 	return
 }
 
-func (s *Service) Convert(from int32, to int32, value float64) (float64, error) {
+func (s *Service) Convert(from string, to string, value float64) (float64, error) {
 	fRates, ok := s.currencyRateCache[from]
 
 	if !ok {
@@ -138,7 +138,7 @@ func (h *Commission) getAll() (recs []interface{}, err error) {
 	}
 
 	for _, v := range merchants {
-		query := bson.M{"merchant._id": bson.ObjectIdHex(v.Id)}
+		query := bson.M{"merchant_id": bson.ObjectIdHex(v.Id)}
 		err = h.svc.db.Collection(pkg.CollectionProject).Find(query).All(&projects)
 
 		if err != nil {
