@@ -5,22 +5,24 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
+type JsonRefund struct {
+	Id         string               `json:"id"`
+	OrderId    string               `json:"order_id"`
+	ExternalId string               `json:"external_id"`
+	Amount     float64              `json:"amount"`
+	CreatorId  string               `json:"creator_id"`
+	Reason     string               `json:"reason"`
+	Currency   string               `json:"currency"`
+	Status     int32                `json:"status"`
+	CreatedAt  *timestamp.Timestamp `json:"created_at"`
+	UpdatedAt  *timestamp.Timestamp `json:"updated_at"`
+	PayerData  *RefundPayerData     `json:"payer_data"`
+	SalesTax   float32              `json:"sales_tax"`
+}
+
 func (m *Refund) MarshalJSON() ([]byte, error) {
 	return json.Marshal(
-		&struct {
-			Id         string               `json:"id"`
-			OrderId    string               `json:"order_id"`
-			ExternalId string               `json:"external_id"`
-			Amount     float64              `json:"amount"`
-			CreatorId  string               `json:"creator_id"`
-			Reason     string               `json:"reason"`
-			Currency   string               `json:"currency"`
-			Status     int32                `json:"status"`
-			CreatedAt  *timestamp.Timestamp `json:"created_at"`
-			UpdatedAt  *timestamp.Timestamp `json:"updated_at"`
-			PayerData  *RefundPayerData     `json:"payer_data"`
-			SalesTax   float32              `json:"sales_tax"`
-		}{
+		&JsonRefund{
 			Id:         m.Id,
 			OrderId:    m.Order.Uuid,
 			ExternalId: m.ExternalId,
