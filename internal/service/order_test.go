@@ -1471,7 +1471,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessProjectOrderId_Duplicate_Error() {
 	err = processor.processPayerData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	id := bson.NewObjectId().Hex()
@@ -2123,7 +2123,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processProjectOrderId()
@@ -2168,7 +2168,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processProjectOrderId()
@@ -2230,7 +2230,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlVerify_Error() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processProjectOrderId()
@@ -2275,7 +2275,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlRedirect_Error() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processProjectOrderId()
@@ -2319,7 +2319,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processProjectOrderId()
@@ -2367,7 +2367,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Commission_Error() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processProjectOrderId()
@@ -2408,7 +2408,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
@@ -2499,7 +2499,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
@@ -2581,7 +2581,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_CommissionNotFoun
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processProducts()
+	err = processor.processPaylinkProducts()
 	assert.Nil(suite.T(), err)
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
