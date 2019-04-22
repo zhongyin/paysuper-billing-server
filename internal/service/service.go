@@ -24,11 +24,9 @@ import (
 )
 
 const (
-	errorNotFound                          = "[PAYONE_BILLING] %s not found"
-	errorQueryMask                         = "[PAYONE_BILLING] Query from collection \"%s\" failed"
-	errorAccountingCurrencyNotFound        = "[PAYONE_BILLING] Accounting currency not found"
-	errorSystemFeeNotFound                 = "[PAYONE_BILLING] System fee not found"
-	errorSystemFeeMatchedMinAmountNotFound = "[PAYONE_BILLING] System fee matched min amount not found"
+	errorNotFound                   = "[PAYONE_BILLING] %s not found"
+	errorQueryMask                  = "[PAYONE_BILLING] Query from collection \"%s\" failed"
+	errorAccountingCurrencyNotFound = "[PAYONE_BILLING] Accounting currency not found"
 
 	errorBbNotFoundMessage = "not found"
 

@@ -853,7 +853,7 @@ message GetSystemFeesRequest {
     string region = 2;
     // @inject_tag: json:"card_brand" validate:"omitempty,alpha"
     string card_brand = 3;
-    // @inject_tag: json:"amount" validate:"required,numeric,gt=0"
+    // @inject_tag: json:"amount" validate:"required,numeric,gte=0"
     double amount = 4;
     // @inject_tag: json:"currency" validate:"required,alpha,len=3"
     string currency = 5;
@@ -864,7 +864,7 @@ message CalculatedFeeItem {
     double fee_amount = 1;
     // @inject_tag: json:"fee_currency" validate:"required,alpha,len=3"
     string fee_currency = 2;
-    // @inject_tag: json:"fee_name" validate:"omitempty"
+    // @inject_tag: json:"fee_name"
     string fee_name = 3;
 }
 

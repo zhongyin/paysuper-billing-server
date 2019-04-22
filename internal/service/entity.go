@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -15,11 +14,6 @@ type PaymentMethod Currency
 type Country Currency
 type Merchant Currency
 type SystemFee Currency
-
-type kv struct {
-	Key   int
-	Value float64
-}
 
 func newProjectHandler(svc *Service) Cacher {
 	c := &Project{svc: svc}
@@ -253,8 +247,8 @@ func newSystemFeeHandler(svc *Service) Cacher {
 }
 
 func (h *SystemFee) getAll() (recs []interface{}, err error) {
-	var list billing.SystemFeesList
-	e := h.svc.GetActualSystemFeesList(context.TODO(), &grpc.EmptyRequest{}, &list)
+	list := &billing.SystemFeesList{}
+	e := h.svc.GetActualSystemFeesList(context.TODO(), &grpc.EmptyRequest{}, list)
 	if e != nil {
 		h.svc.logError("Get System fees failed", []interface{}{"err", e.Error()})
 		return nil, e
@@ -285,8 +279,7 @@ func (h *SystemFee) setCache(recs []interface{}) {
 		}
 
 		if ff, ok := h.svc.systemFeesCache[f.MethodId][f.Region][f.CardBrand]; ok && ff != nil {
-			e := errors.New("duplicate active system fee")
-			h.svc.logError("Get System fees failed", []interface{}{"err", e.Error(), "fee", ff})
+			h.svc.logError(errorSystemFeeDuplicatedActive, []interface{}{"fee", ff})
 			return
 		}
 

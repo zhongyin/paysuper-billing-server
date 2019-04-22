@@ -19,16 +19,19 @@ import (
 
 type SystemFeesTestSuite struct {
 	suite.Suite
-	service *Service
-	log     *zap.Logger
+	service       *Service
+	log           *zap.Logger
+	project       *billing.Project
+	paymentMethod *billing.PaymentMethod
+	pmWebMoney    *billing.PaymentMethod
+	AdminUserId   string
+}
 
-	project                                *billing.Project
-	paymentMethod                          *billing.PaymentMethod
-	inactivePaymentMethod                  *billing.PaymentMethod
-	paymentMethodWithInactivePaymentSystem *billing.PaymentMethod
-	pmWebMoney                             *billing.PaymentMethod
-	pmBitcoin1                             *billing.PaymentMethod
-	AdminUserId                            string
+var systemFeeExample = &billing.SystemFee{
+	Percent:         0.3,
+	PercentCurrency: "EUR",
+	FixAmount:       0.20,
+	FixCurrency:     "EUR",
 }
 
 func Test_SystemFees(t *testing.T) {
@@ -66,77 +69,11 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 		Name:     &billing.Name{Ru: "Доллар США", En: "US Dollar"},
 		IsActive: true,
 	}
-	uah := &billing.Currency{
-		CodeInt:  980,
-		CodeA3:   "UAH",
-		Name:     &billing.Name{Ru: "Украинская гривна", En: "Ukrainian Hryvnia"},
-		IsActive: true,
-	}
-	eur := &billing.Currency{
-		CodeInt:  978,
-		CodeA3:   "EUR",
-		Name:     &billing.Name{Ru: "Евро", En: "Euro"},
-		IsActive: true,
-	}
-	amd := &billing.Currency{
-		CodeInt:  51,
-		CodeA3:   "AMD",
-		Name:     &billing.Name{Ru: "Армянский драм", En: "Armenian dram"},
-		IsActive: true,
-	}
 
-	currency := []interface{}{rub, usd, uah, amd}
+	currency := []interface{}{rub, usd}
 
 	err = db.Collection(pkg.CollectionCurrency).Insert(currency...)
 
-	if err != nil {
-		suite.FailNow("Insert currency test data failed", "%v", err)
-	}
-
-	rate := []interface{}{
-		&billing.CurrencyRate{
-			CurrencyFrom: 840,
-			CurrencyTo:   643,
-			Rate:         0.015625,
-			Date:         ptypes.TimestampNow(),
-			IsActive:     true,
-		},
-		&billing.CurrencyRate{
-			CurrencyFrom: 643,
-			CurrencyTo:   840,
-			Rate:         64,
-			Date:         ptypes.TimestampNow(),
-			IsActive:     true,
-		},
-		&billing.CurrencyRate{
-			CurrencyFrom: 643,
-			CurrencyTo:   643,
-			Rate:         1,
-			Date:         ptypes.TimestampNow(),
-			IsActive:     true,
-		},
-		&billing.CurrencyRate{
-			CurrencyFrom: 643,
-			CurrencyTo:   51,
-			Rate:         1,
-			Date:         ptypes.TimestampNow(),
-			IsActive:     true,
-		},
-	}
-
-	err = db.Collection(pkg.CollectionCurrencyRate).Insert(rate...)
-
-	if err != nil {
-		suite.FailNow("Insert rates test data failed", "%v", err)
-	}
-
-	ru := &billing.Country{
-		CodeInt:  643,
-		CodeA2:   "RU",
-		CodeA3:   "RUS",
-		Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-		IsActive: true,
-	}
 	us := &billing.Country{
 		CodeInt:  840,
 		CodeA2:   "US",
@@ -144,16 +81,13 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 		Name:     &billing.Name{Ru: "США", En: "USA"},
 		IsActive: true,
 	}
-	by := &billing.Country{
-		CodeInt:  111,
-		CodeA2:   "BY",
-		CodeA3:   "BYR",
-		Name:     &billing.Name{Ru: "Белоруссия", En: "Belarus"},
-		IsActive: true,
-	}
 
-	err = db.Collection(pkg.CollectionCountry).Insert([]interface{}{ru, us, by}...)
+	err = db.Collection(pkg.CollectionCountry).Insert([]interface{}{us}...)
 	assert.NoError(suite.T(), err, "Insert country test data failed")
+
+	if err != nil {
+		suite.FailNow("Insert currency test data failed", "%v", err)
+	}
 
 	pmBankCard := &billing.PaymentMethod{
 		Id:               bson.NewObjectId().Hex(),
@@ -163,74 +97,12 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 		MaxPaymentAmount: 15000,
 		Currency:         rub,
 		Currencies:       []int32{643, 840, 980},
-		Params: &billing.PaymentMethodParams{
-			Handler:          "cardpay",
-			Terminal:         "15985",
-			Password:         "A1tph4I6BD0f",
-			CallbackPassword: "0V1rJ7t4jCRv",
-			ExternalId:       "BANKCARD",
-		},
-		Type:          "bank_card",
-		IsActive:      true,
-		AccountRegexp: "^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$",
+		Params:           &billing.PaymentMethodParams{},
+		Type:             "bank_card",
+		IsActive:         true,
+		AccountRegexp:    "^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$",
 		PaymentSystem: &billing.PaymentSystem{
-			Id:                 bson.NewObjectId().Hex(),
-			Name:               "CardPay",
-			AccountingCurrency: rub,
-			AccountingPeriod:   "every-day",
-			Country:            &billing.Country{},
-			IsActive:           true,
-		},
-	}
-
-	pmBitcoin1 := &billing.PaymentMethod{
-		Id:               bson.NewObjectId().Hex(),
-		Name:             "Bitcoin",
-		Group:            "BITCOIN_1",
-		MinPaymentAmount: 0,
-		MaxPaymentAmount: 0,
-		Currency:         rub,
-		Currencies:       []int32{643, 840, 980},
-		Params: &billing.PaymentMethodParams{
-			Handler:    "unit_test",
-			Terminal:   "16007",
-			ExternalId: "BITCOIN",
-		},
-		Type:     "crypto",
-		IsActive: true,
-		PaymentSystem: &billing.PaymentSystem{
-			Id:                 bson.NewObjectId().Hex(),
-			Name:               "CardPay",
-			AccountingCurrency: rub,
-			AccountingPeriod:   "every-day",
-			Country:            &billing.Country{},
-			IsActive:           true,
-		},
-	}
-
-	pmQiwi := &billing.PaymentMethod{
-		Id:               bson.NewObjectId().Hex(),
-		Name:             "Qiwi",
-		Group:            "QIWI",
-		MinPaymentAmount: 0,
-		MaxPaymentAmount: 0,
-		Currency:         rub,
-		Currencies:       []int32{643, 840, 980},
-		Params: &billing.PaymentMethodParams{
-			Handler:    "cardpay",
-			Terminal:   "15993",
-			ExternalId: "QIWI",
-		},
-		Type:          "ewallet",
-		IsActive:      true,
-		AccountRegexp: "^\\d{1,15}",
-		PaymentSystem: &billing.PaymentSystem{
-			Id:                 bson.NewObjectId().Hex(),
-			Name:               "CardPay 2",
-			AccountingCurrency: uah,
-			AccountingPeriod:   "every-day",
-			Country:            &billing.Country{},
-			IsActive:           false,
+			Id: bson.NewObjectId().Hex(),
 		},
 	}
 
@@ -242,64 +114,15 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 		MaxPaymentAmount: 0,
 		Currency:         rub,
 		Currencies:       []int32{643, 840, 980},
-		Params: &billing.PaymentMethodParams{
-			Handler:    "cardpay",
-			Terminal:   "15985",
-			ExternalId: "WEBMONEY",
-		},
-		Type:     "ewallet",
-		IsActive: true,
+		Params:           &billing.PaymentMethodParams{},
+		Type:             "ewallet",
+		IsActive:         true,
 		PaymentSystem: &billing.PaymentSystem{
-			Id:                 bson.NewObjectId().Hex(),
-			Name:               "CardPay",
-			AccountingCurrency: rub,
-			AccountingPeriod:   "every-day",
-			Country:            &billing.Country{},
-			IsActive:           true,
+			Id: bson.NewObjectId().Hex(),
 		},
-	}
-	pmWebMoneyWME := &billing.PaymentMethod{
-		Id:               bson.NewObjectId().Hex(),
-		Name:             "WebMoney WME",
-		Group:            "WEBMONEY_WME",
-		MinPaymentAmount: 0,
-		MaxPaymentAmount: 0,
-		Currency:         eur,
-		Currencies:       []int32{978},
-		Params: &billing.PaymentMethodParams{
-			Handler:    "cardpay",
-			Terminal:   "15985",
-			ExternalId: "WEBMONEY",
-		},
-		Type:     "ewallet",
-		IsActive: true,
-		PaymentSystem: &billing.PaymentSystem{
-			Id:                 bson.NewObjectId().Hex(),
-			Name:               "CardPay",
-			AccountingCurrency: rub,
-			AccountingPeriod:   "every-day",
-			Country:            &billing.Country{},
-			IsActive:           true,
-		},
-	}
-	pmBitcoin := &billing.PaymentMethod{
-		Id:               bson.NewObjectId().Hex(),
-		Name:             "Bitcoin",
-		Group:            "BITCOIN",
-		MinPaymentAmount: 0,
-		MaxPaymentAmount: 0,
-		Currency:         rub,
-		Currencies:       []int32{643, 840, 980},
-		Params: &billing.PaymentMethodParams{
-			Handler:    "cardpay",
-			Terminal:   "16007",
-			ExternalId: "BITCOIN",
-		},
-		Type:     "crypto",
-		IsActive: false,
 	}
 
-	pms := []interface{}{pmBankCard, pmQiwi, pmBitcoin, pmWebMoney, pmWebMoneyWME, pmBitcoin1}
+	pms := []interface{}{pmBankCard, pmWebMoney}
 
 	err = db.Collection(pkg.CollectionPaymentMethod).Insert(pms...)
 
@@ -357,7 +180,7 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 				},
 			}
 
-			if pm.Group == "BANKCARD" {
+			if pm.IsBankCard() {
 				for _, cb := range cardBrands {
 					systemFee.Id = bson.NewObjectId().Hex()
 					systemFee.CardBrand = cb
@@ -395,10 +218,7 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 
 	suite.AdminUserId = adminUserId
 	suite.paymentMethod = pmBankCard
-	suite.inactivePaymentMethod = pmBitcoin
-	suite.paymentMethodWithInactivePaymentSystem = pmQiwi
 	suite.pmWebMoney = pmWebMoney
-	suite.pmBitcoin1 = pmBitcoin1
 }
 
 func (suite *SystemFeesTestSuite) TearDownTest() {
@@ -442,12 +262,7 @@ func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees() {
 					FixAmount:       0.20,
 					FixCurrency:     "EUR",
 				},
-				AuthorizationFee: &billing.SystemFee{
-					Percent:         0,
-					PercentCurrency: "EUR",
-					FixAmount:       0.10,
-					FixCurrency:     "EUR",
-				},
+				AuthorizationFee: systemFeeExample,
 			},
 		},
 		UserId: suite.AdminUserId,
@@ -465,36 +280,126 @@ func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees() {
 
 	assert.True(suite.T(), len(fees[0].Fees) == 1)
 	assert.True(suite.T(), fees[0].Fees[0].TransactionCost.Percent == float64(2.35))
+}
 
-	// add new fees for card method without card_brand returns error
+func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees_Ok() {
 
-	req2 := &billing.AddSystemFeesRequest{
+	req := &billing.AddSystemFeesRequest{
 		MethodId:  suite.paymentMethod.Id,
-		Region:    "",
-		CardBrand: "",
+		Region:    "US",
+		CardBrand: "MASTERCARD",
 		Fees: []*billing.FeeSet{
 			{
 				MinAmounts: map[string]float64{"EUR": 0, "USD": 0},
 				TransactionCost: &billing.SystemFee{
-					Percent:         0.3,
+					Percent:         2.35,
 					PercentCurrency: "EUR",
 					FixAmount:       0.20,
 					FixCurrency:     "EUR",
 				},
-				AuthorizationFee: &billing.SystemFee{
-					Percent:         0,
-					PercentCurrency: "EUR",
-					FixAmount:       0.10,
-					FixCurrency:     "EUR",
-				},
+				AuthorizationFee: systemFeeExample,
 			},
 		},
 		UserId: suite.AdminUserId,
 	}
 
-	err = suite.service.AddSystemFees(context.TODO(), req2, &grpc.EmptyResponse{})
+	err := suite.service.AddSystemFees(context.TODO(), req, &grpc.EmptyResponse{})
 
-	assert.Error(suite.T(), err)
+	assert.NoError(suite.T(), err)
+}
+
+func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees_Fail_CardBrandRequired() {
+
+	req := &billing.AddSystemFeesRequest{
+		MethodId:  suite.paymentMethod.Id,
+		Region:    "",
+		CardBrand: "",
+		Fees: []*billing.FeeSet{
+			{
+				MinAmounts:       map[string]float64{"EUR": 0, "USD": 0},
+				TransactionCost:  systemFeeExample,
+				AuthorizationFee: systemFeeExample,
+			},
+		},
+		UserId: suite.AdminUserId,
+	}
+
+	err := suite.service.AddSystemFees(context.TODO(), req, &grpc.EmptyResponse{})
+
+	assert.EqualError(suite.T(), err, errorSystemFeeCardBrandRequired)
+}
+
+func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees_Fail_CardBrandInvalid() {
+
+	req := &billing.AddSystemFeesRequest{
+		MethodId:  suite.paymentMethod.Id,
+		CardBrand: "BLA-BLA-BLA",
+		Fees: []*billing.FeeSet{
+			{
+				MinAmounts:       map[string]float64{"EUR": 0, "USD": 0},
+				TransactionCost:  systemFeeExample,
+				AuthorizationFee: systemFeeExample,
+			},
+		},
+		UserId: suite.AdminUserId,
+	}
+
+	err := suite.service.AddSystemFees(context.TODO(), req, &grpc.EmptyResponse{})
+
+	assert.EqualError(suite.T(), err, errorSystemFeeCardBrandInvalid)
+}
+
+func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees_Fail_CardBrandNotAllowed() {
+
+	req := &billing.AddSystemFeesRequest{
+		MethodId:  suite.pmWebMoney.Id,
+		CardBrand: "VISA",
+		Fees: []*billing.FeeSet{
+			{
+				MinAmounts:       map[string]float64{"EUR": 0, "USD": 0},
+				TransactionCost:  systemFeeExample,
+				AuthorizationFee: systemFeeExample,
+			},
+		},
+		UserId: suite.AdminUserId,
+	}
+
+	err := suite.service.AddSystemFees(context.TODO(), req, &grpc.EmptyResponse{})
+
+	assert.EqualError(suite.T(), err, errorSystemFeeCardBrandNotAllowed)
+}
+
+func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees_Fail_RegionInvalid() {
+
+	req := &billing.AddSystemFeesRequest{
+		MethodId: suite.pmWebMoney.Id,
+		Region:   "BLAH",
+		Fees: []*billing.FeeSet{
+			{
+				MinAmounts:       map[string]float64{"EUR": 0, "USD": 0},
+				TransactionCost:  systemFeeExample,
+				AuthorizationFee: systemFeeExample,
+			},
+		},
+		UserId: suite.AdminUserId,
+	}
+
+	err := suite.service.AddSystemFees(context.TODO(), req, &grpc.EmptyResponse{})
+
+	assert.EqualError(suite.T(), err, errorSystemFeeRegionInvalid)
+}
+
+func (suite *SystemFeesTestSuite) TestSystemFees_AddSystemFees_Fail_FeesetRequired() {
+
+	req := &billing.AddSystemFeesRequest{
+		MethodId: suite.pmWebMoney.Id,
+		Fees:     []*billing.FeeSet{},
+		UserId:   suite.AdminUserId,
+	}
+
+	err := suite.service.AddSystemFees(context.TODO(), req, &grpc.EmptyResponse{})
+
+	assert.EqualError(suite.T(), err, errorSystemFeeRequiredFeeset)
 }
 
 func (suite *SystemFeesTestSuite) TestSystemFees_GetSystemFeesForPayment() {
@@ -553,7 +458,36 @@ func (suite *SystemFeesTestSuite) TestSystemFees_GetSystemFeesForPayment() {
 		Currency:  "USD",
 	}
 	err = suite.service.GetSystemFeesForPayment(context.TODO(), req, &sf)
-	assert.Error(suite.T(), err)
+	assert.EqualError(suite.T(), err, errorSystemFeeNotFound)
+
+	req = &billing.GetSystemFeesRequest{
+		MethodId:  suite.pmWebMoney.Id,
+		Region:    "US",
+		CardBrand: "QWERTY",
+		Amount:    200,
+		Currency:  "USD",
+	}
+	err = suite.service.GetSystemFeesForPayment(context.TODO(), req, &sf)
+	assert.EqualError(suite.T(), err, errorSystemFeeNotFound)
+
+	req = &billing.GetSystemFeesRequest{
+		MethodId:  suite.pmWebMoney.Id,
+		Region:    "US",
+		CardBrand: "QWERTY",
+		Amount:    200,
+		Currency:  "BLA",
+	}
+	err = suite.service.GetSystemFeesForPayment(context.TODO(), req, &sf)
+	assert.EqualError(suite.T(), err, errorSystemFeeNotFound)
+
+	req = &billing.GetSystemFeesRequest{
+		MethodId:  suite.pmWebMoney.Id,
+		Region:    "BLAH",
+		CardBrand: "VISA",
+		Amount:    200,
+		Currency:  "USD",
+	}
+	err = suite.service.GetSystemFeesForPayment(context.TODO(), req, &sf)
 	assert.EqualError(suite.T(), err, errorSystemFeeNotFound)
 
 	req = &billing.GetSystemFeesRequest{
@@ -564,6 +498,5 @@ func (suite *SystemFeesTestSuite) TestSystemFees_GetSystemFeesForPayment() {
 		Currency:  "BYR",
 	}
 	err = suite.service.GetSystemFeesForPayment(context.TODO(), req, &sf)
-	assert.Error(suite.T(), err)
 	assert.EqualError(suite.T(), err, errorSystemFeeMatchedMinAmountNotFound)
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -11,11 +12,79 @@ import (
 	"sort"
 )
 
+type kv struct {
+	Key   int
+	Value float64
+}
+
+const (
+	errorSystemFeeCardBrandRequired        = "card brand required for this method"
+	errorSystemFeeCardBrandNotAllowed      = "card brand not allowed for this method"
+	errorSystemFeeCardBrandInvalid         = "card brand invalid or not supported"
+	errorSystemFeeNotFound                 = "system fee not found"
+	errorSystemFeeMatchedMinAmountNotFound = "system fee matched min amount not found"
+	errorSystemFeeDuplicatedActive         = "duplicated active system fee"
+	errorSystemFeeRegionInvalid            = "system fee region invalid"
+	errorSystemFeeRequiredFeeset           = "system fees require alt least one fee set in request"
+)
+
+var CardBrands = []string{
+	"JCB",
+	"MASTERCARD",
+	"UNIONPAY",
+	"VISA",
+}
+
+func contains(slice []string, item string) bool {
+	set := make(map[string]struct{}, len(slice))
+	for _, s := range slice {
+		set[s] = struct{}{}
+	}
+
+	_, ok := set[item]
+	return ok
+}
+
 func (s *Service) AddSystemFees(
 	ctx context.Context,
 	req *billing.AddSystemFeesRequest,
 	res *grpc.EmptyResponse,
 ) error {
+
+	if req.Region != "" && req.Region != "EU" {
+		_, err := s.GetCountryByCodeA2(req.Region)
+		if err != nil {
+			s.logError(errorSystemFeeRegionInvalid, []interface{}{"data", req})
+			return errors.New(errorSystemFeeRegionInvalid)
+		}
+	}
+
+	method, err := s.GetPaymentMethodById(req.MethodId)
+	if err != nil {
+		s.logError("GetPaymentMethodById failed", []interface{}{"err", err.Error(), "data", req})
+		return err
+	}
+
+	if method.IsBankCard() == true {
+		if req.CardBrand == "" {
+			s.logError(errorSystemFeeCardBrandRequired, []interface{}{"data", req})
+			return errors.New(errorSystemFeeCardBrandRequired)
+		}
+		if !contains(CardBrands, req.CardBrand) {
+			s.logError(errorSystemFeeCardBrandInvalid, []interface{}{"data", req})
+			return errors.New(errorSystemFeeCardBrandInvalid)
+		}
+	} else {
+		if req.CardBrand != "" {
+			s.logError(errorSystemFeeCardBrandNotAllowed, []interface{}{"data", req})
+			return errors.New(errorSystemFeeCardBrandNotAllowed)
+		}
+	}
+
+	if len(req.Fees) == 0 {
+		s.logError(errorSystemFeeRequiredFeeset, []interface{}{"data", req})
+		return errors.New(errorSystemFeeRequiredFeeset)
+	}
 
 	fees := &billing.SystemFees{
 		Id:        bson.NewObjectId().Hex(),
@@ -28,27 +97,11 @@ func (s *Service) AddSystemFees(
 		IsActive:  true,
 	}
 
-	method, err := s.GetPaymentMethodById(req.MethodId)
-	if err != nil {
-		s.logError("GetPaymentMethodById failed", []interface{}{"err", err.Error(), "data", req})
-		return err
-	}
-
-	if method.IsBankCard() == true {
-		if fees.CardBrand == "" {
-			err = errors.New("card brand required for this method")
-			s.logError("Card brand required for this method", []interface{}{"err", err.Error(), "data", req})
-			return err
-		}
-	} else {
-		fees.CardBrand = ""
-	}
-
 	query := bson.M{"method_id": bson.ObjectIdHex(req.MethodId), "region": req.Region, "card_brand": req.CardBrand, "is_active": true}
 	err = s.db.Collection(pkg.CollectionSystemFees).Update(query, bson.M{"$set": bson.M{"is_active": false}})
 
-	if err != nil && !s.IsDbNotFoundError(err) {
-		s.logError("Query to disable old fees failed", []interface{}{"err", err.Error(), "data", req})
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Query to disable old fees failed", []interface{}{"err", err.Error(), "query", query, "req", req})
 		return err
 	}
 
@@ -79,13 +132,22 @@ func (s *Service) GetSystemFeesForPayment(
 	req *billing.GetSystemFeesRequest,
 	res *billing.FeeSet,
 ) error {
-	systemFees, ok := s.systemFeesCache[req.MethodId][req.Region][req.CardBrand]
-
+	sf, ok := s.systemFeesCache[req.MethodId]
 	if !ok {
 		return errors.New(errorSystemFeeNotFound)
 	}
 
-	var matchedAmounts []kv
+	sfr, ok := sf[req.Region]
+	if !ok {
+		return errors.New(errorSystemFeeNotFound)
+	}
+
+	systemFees, ok := sfr[req.CardBrand]
+	if !ok {
+		return errors.New(errorSystemFeeNotFound)
+	}
+
+	var matchedAmounts []*kv
 
 	for k, f := range systemFees.Fees {
 		minA, ok := f.MinAmounts[req.Currency]
@@ -93,7 +155,7 @@ func (s *Service) GetSystemFeesForPayment(
 			continue
 		}
 		if req.Amount >= minA {
-			matchedAmounts = append(matchedAmounts, kv{k, minA})
+			matchedAmounts = append(matchedAmounts, &kv{k, minA})
 		}
 	}
 
@@ -117,10 +179,13 @@ func (s *Service) GetActualSystemFeesList(
 	req *grpc.EmptyRequest,
 	res *billing.SystemFeesList,
 ) error {
-	var fees []*billing.SystemFees
-	e := s.db.Collection(pkg.CollectionSystemFees).Find(bson.M{"is_active": true}).All(&fees)
+	var (
+		fees  []*billing.SystemFees
+		query = bson.M{"is_active": true}
+	)
+	e := s.db.Collection(pkg.CollectionSystemFees).Find(query).All(&fees)
 	if e != nil {
-		s.logError("Get System fees failed", []interface{}{"err", e.Error()})
+		s.logError("Get System fees failed", []interface{}{"err", e.Error(), "query", query})
 		return e
 	}
 	res.SystemFees = fees

@@ -25,27 +25,27 @@ type MgoVat struct {
 }
 
 type MgoSystemFee struct {
-	Percent         float64 `bson:"percent" json:"percent"`
-	PercentCurrency string  `bson:"percent_currency" json:"percent_currency"`
-	FixAmount       float64 `bson:"fix_amount" json:"fix_amount"`
-	FixCurrency     string  `bson:"fix_currency" json:"fix_currency"`
+	Percent         float64 `bson:"percent"`
+	PercentCurrency string  `bson:"percent_currency"`
+	FixAmount       float64 `bson:"fix_amount"`
+	FixCurrency     string  `bson:"fix_currency"`
 }
 
 type MgoFeeSet struct {
-	MinAmounts       []*MinAmount  `bson:"min_amounts" json:"min_amounts"`
-	TransactionCost  *MgoSystemFee `bson:"transaction_cost" json:"transaction_cost"`
-	AuthorizationFee *MgoSystemFee `bson:"authorization_fee" json:"authorization_fee"`
+	MinAmounts       []*MinAmount  `bson:"min_amounts"`
+	TransactionCost  *MgoSystemFee `bson:"transaction_cost"`
+	AuthorizationFee *MgoSystemFee `bson:"authorization_fee"`
 }
 
 type MgoSystemFees struct {
-	Id        bson.ObjectId `bson:"_id" json:"id"`
-	MethodId  bson.ObjectId `bson:"method_id" json:"method_id"`
-	Region    string        `bson:"region" json:"region"`
-	CardBrand string        `bson:"card_brand" json:"card_brand"`
-	Fees      []*MgoFeeSet  `bson:"fees" json:"fees"`
-	UserId    bson.ObjectId `bson:"user_id" json:"user_id"`
-	CreatedAt time.Time     `bson:"created_at" json:"created_at"`
-	IsActive  bool          `bson:"is_active" json:"is_active"`
+	Id        bson.ObjectId `bson:"_id"`
+	MethodId  bson.ObjectId `bson:"method_id"`
+	Region    string        `bson:"region"`
+	CardBrand string        `bson:"card_brand"`
+	Fees      []*MgoFeeSet  `bson:"fees"`
+	UserId    bson.ObjectId `bson:"user_id"`
+	CreatedAt time.Time     `bson:"created_at"`
+	IsActive  bool          `bson:"is_active"`
 }
 
 type MgoProject struct {
