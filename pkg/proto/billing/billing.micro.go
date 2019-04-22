@@ -52,6 +52,7 @@ It has these top-level messages:
 	MerchantPaymentMethodIdentification
 	MerchantPaymentMethod
 	RefundPayerData
+	RefundOrder
 	Refund
 */
 package billing

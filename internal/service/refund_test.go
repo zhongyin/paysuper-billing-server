@@ -8,6 +8,7 @@ import (
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
 	"github.com/paysuper/paysuper-billing-server/internal/mock"
@@ -809,7 +810,7 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Ok() {
 	assert.NotEmpty(suite.T(), rsp2.Item)
 
 	req3 := &grpc.ListRefundsRequest{
-		OrderId: order.Id,
+		OrderId: order.Uuid,
 		Limit:   100,
 		Offset:  0,
 	}
@@ -890,7 +891,7 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Limit_Ok() {
 	assert.NotEmpty(suite.T(), rsp2.Item)
 
 	req3 := &grpc.ListRefundsRequest{
-		OrderId: order.Id,
+		OrderId: order.Uuid,
 		Limit:   1,
 		Offset:  0,
 	}
@@ -971,7 +972,7 @@ func (suite *RefundTestSuite) TestRefund_GetRefund_Ok() {
 	assert.NotEmpty(suite.T(), rsp2.Item)
 
 	req3 := &grpc.GetRefundRequest{
-		OrderId:  order.Id,
+		OrderId:  order.Uuid,
 		RefundId: rsp2.Item.Id,
 	}
 	rsp3 := &grpc.CreateRefundResponse{}
@@ -979,7 +980,7 @@ func (suite *RefundTestSuite) TestRefund_GetRefund_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp3.Status)
 	assert.Empty(suite.T(), rsp3.Message)
-	assert.Equal(suite.T(), req3.OrderId, rsp3.Item.OrderId)
+	assert.Equal(suite.T(), req3.OrderId, rsp3.Item.Order.Uuid)
 	assert.Equal(suite.T(), req3.RefundId, rsp3.Item.Id)
 }
 
@@ -1473,7 +1474,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Err
 	err = suite.service.db.Collection(pkg.CollectionRefund).FindId(bson.ObjectIdHex(rsp2.Item.Id)).One(&refund)
 	assert.NotNil(suite.T(), refund)
 
-	refund.OrderId = bson.NewObjectId().Hex()
+	refund.Order = &billing.RefundOrder{Id: bson.NewObjectId().Hex(), Uuid: uuid.New().String()}
 	err = suite.service.db.Collection(pkg.CollectionRefund).UpdateId(bson.ObjectIdHex(refund.Id), refund)
 
 	refundReq := &billing.CardPayRefundCallback{

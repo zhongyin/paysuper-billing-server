@@ -290,8 +290,11 @@ message CreateRefundResponse {
 }
 
 message ListRefundsRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 7;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
     int32 offset = 8;
 }
 
@@ -301,7 +304,9 @@ message ListRefundsResponse {
 }
 
 message GetRefundRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string refund_id = 2;
 }
 

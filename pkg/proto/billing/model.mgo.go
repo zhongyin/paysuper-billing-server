@@ -253,9 +253,14 @@ type MgoNotification struct {
 	Statuses   *SystemNotificationStatuses `bson:"statuses"`
 }
 
+type MgoRefundOrder struct {
+	Id   bson.ObjectId `bson:"id"`
+	Uuid string        `bson:"uuid"`
+}
+
 type MgoRefund struct {
 	Id         bson.ObjectId    `bson:"_id"`
-	OrderId    bson.ObjectId    `bson:"order_id"`
+	Order      *MgoRefundOrder  `bson:"order"`
 	ExternalId string           `bson:"external_id"`
 	Amount     float64          `bson:"amount"`
 	CreatorId  bson.ObjectId    `bson:"creator_id"`
@@ -1547,7 +1552,10 @@ func (m *Notification) SetBSON(raw bson.Raw) error {
 
 func (m *Refund) GetBSON() (interface{}, error) {
 	st := &MgoRefund{
-		OrderId:    bson.ObjectIdHex(m.OrderId),
+		Order: &MgoRefundOrder{
+			Id:   bson.ObjectIdHex(m.Order.Id),
+			Uuid: m.Order.Uuid,
+		},
 		ExternalId: m.ExternalId,
 		Amount:     m.Amount,
 		CreatorId:  bson.ObjectIdHex(m.CreatorId),
@@ -1603,7 +1611,10 @@ func (m *Refund) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Id = decoded.Id.Hex()
-	m.OrderId = decoded.OrderId.Hex()
+	m.Order = &RefundOrder{
+		Id:   decoded.Order.Id.Hex(),
+		Uuid: decoded.Order.Uuid,
+	}
 	m.ExternalId = decoded.ExternalId
 	m.Amount = decoded.Amount
 	m.CreatorId = decoded.CreatorId.Hex()

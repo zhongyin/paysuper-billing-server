@@ -762,9 +762,14 @@ message RefundPayerData {
     string state = 3;
 }
 
+message RefundOrder {
+    string id = 1;
+    string uuid = 2;
+}
+
 message Refund {
     string id = 1;
-    string order_id = 2;
+    RefundOrder order = 2;
     string external_id = 3;
     double amount = 4;
     string creatorId = 5;
