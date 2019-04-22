@@ -323,7 +323,7 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 }
 
 func (p *createRefundProcessor) processOrder() error {
-	order, err := p.service.getOrderById(p.request.OrderId)
+	order, err := p.service.getOrderByUuid(p.request.OrderId)
 
 	if err != nil {
 		return p.service.NewRefundError(err.Error(), pkg.ResponseStatusNotFound)

@@ -409,7 +409,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_Ok() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -474,7 +474,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_AmountLess_Error() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   order.Id,
+		OrderId:   order.Uuid,
 		Amount:    50,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -542,7 +542,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_PaymentSystemNotExists_Err
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -599,7 +599,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_PaymentSystemReturnError_E
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -673,7 +673,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_RefundNotAllowed_Error() {
 	assert.NotNil(suite.T(), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -728,7 +728,7 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_WasRefunded_Error() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -784,7 +784,7 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Ok() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -865,7 +865,7 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Limit_Ok() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -958,7 +958,7 @@ func (suite *RefundTestSuite) TestRefund_GetRefund_Ok() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1045,7 +1045,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_Ok() {
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1158,7 +1158,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnmarshalError() 
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1239,7 +1239,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownHandler_Er
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1347,7 +1347,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_RefundNotFound_Er
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1455,7 +1455,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Err
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1570,7 +1570,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownPaymentSys
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1678,7 +1678,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_ProcessRefundErro
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1786,7 +1786,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_TemporaryStatus_O
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    10,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
@@ -1899,7 +1899,7 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderFullyRefunde
 	err = suite.service.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	req2 := &grpc.CreateRefundRequest{
-		OrderId:   rsp.Id,
+		OrderId:   rsp.Uuid,
 		Amount:    100,
 		CreatorId: bson.NewObjectId().Hex(),
 		Reason:    "unit test",
