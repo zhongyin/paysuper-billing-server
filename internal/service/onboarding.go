@@ -193,7 +193,7 @@ func (s *Service) ChangeMerchant(
 		}
 	}
 
-	if isNew {
+	if isNew || merchant == nil {
 		merchant = &billing.Merchant{
 			Id:        bson.NewObjectId().Hex(),
 			User:      req.User,
@@ -260,7 +260,7 @@ func (s *Service) ChangeMerchant(
 	}
 
 	s.mapMerchantData(rsp, merchant)
-	s.cacheMerchant(merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return
 }
@@ -323,7 +323,7 @@ func (s *Service) ChangeMerchantStatus(
 	}
 
 	s.mapMerchantData(rsp, merchant)
-	s.cacheMerchant(merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return nil
 }
@@ -381,7 +381,7 @@ func (s *Service) ChangeMerchantData(
 	rsp.Status = pkg.ResponseStatusOk
 	rsp.Item = merchant
 
-	s.cacheMerchant(merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return nil
 }
@@ -412,7 +412,7 @@ func (s *Service) SetMerchantS3Agreement(
 	rsp.Status = pkg.ResponseStatusOk
 	rsp.Item = merchant
 
-	s.cacheMerchant(merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return nil
 }
@@ -717,8 +717,7 @@ func (s *Service) ChangeMerchantPaymentMethod(
 	rsp.Status = pkg.ResponseStatusOk
 	rsp.Item = merchant.PaymentMethods[pm.Id]
 
-	s.cacheMerchant(merchant)
-	s.cacheMerchant(merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return
 }
@@ -837,11 +836,4 @@ func (s *Service) mapNotificationData(rsp *billing.Notification, notification *b
 	rsp.IsRead = notification.IsRead
 	rsp.CreatedAt = notification.CreatedAt
 	rsp.UpdatedAt = notification.UpdatedAt
-}
-
-func (s *Service) cacheMerchant(merchant *billing.Merchant) {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
-	s.merchantCache[merchant.Id] = merchant
 }
