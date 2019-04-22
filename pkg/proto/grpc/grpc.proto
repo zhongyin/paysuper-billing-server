@@ -275,7 +275,7 @@ message GetNotificationRequest {
 }
 
 message CreateRefundRequest {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,numeric,gt=0"
     double amount = 2;
