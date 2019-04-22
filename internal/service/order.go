@@ -1249,7 +1249,7 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 	}
 
 	if v.checked.project.IsProduction() == true {
-		mpm, err := v.getMerchantPaymentMethods(v.checked.merchant.Id, pm.Id)
+		mpm, err := v.getMerchantPaymentMethod(v.checked.merchant.Id, pm.Id)
 
 		if err != nil {
 			return err
@@ -1437,7 +1437,7 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		return projectPms, nil
 	}
 
-	for k, val := range v.service.paymentMethodCache {
+	for _, val := range v.service.paymentMethodCache {
 		pm, ok := val[v.order.PaymentMethodOutcomeCurrency.CodeInt]
 
 		if !ok || pm.IsActive == false ||
@@ -1451,7 +1451,7 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		}
 
 		if project.IsProduction() == true {
-			mpm, err := v.service.getMerchantPaymentMethods(v.order.Project.MerchantId, k)
+			mpm, err := v.service.getMerchantPaymentMethod(v.order.Project.MerchantId, pm.Id)
 
 			if err != nil {
 				continue

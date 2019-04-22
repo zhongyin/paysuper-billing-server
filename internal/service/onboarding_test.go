@@ -1891,7 +1891,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_CreateNotification_MessageEmpty
 
 func (suite *OnboardingTestSuite) TestOnboarding_CreateNotification_AddNotification_Error() {
 	req := &grpc.NotificationRequest{
-		MerchantId: "bad_bson_id",
+		MerchantId: "ffffffffffffffffffffffff",
 		UserId:     bson.NewObjectId().Hex(),
 		Title:      "Unit test title",
 		Message:    "Unit test message",
@@ -1900,7 +1900,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_CreateNotification_AddNotificat
 
 	err := suite.service.CreateNotification(context.TODO(), req, rsp)
 	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), notificationErrorMerchantIdIncorrect, err.Error())
+	assert.Equal(suite.T(), merchantErrorNotFound, err.Error())
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetNotification_Ok() {
@@ -2019,7 +2019,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 	userId := bson.NewObjectId().Hex()
 
 	req1 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     userId,
 		Title:      "Unit test title 1",
 		Message:    "Unit test message 1",
@@ -2031,7 +2031,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 	assert.True(suite.T(), len(rsp1.Id) > 0)
 
 	req2 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     userId,
 		Title:      "Unit test title 2",
 		Message:    "Unit test message 2",
@@ -2043,7 +2043,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 	assert.True(suite.T(), len(rsp1.Id) > 0)
 
 	req3 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     userId,
 		Title:      "Unit test title 3",
 		Message:    "Unit test message 3",
@@ -2070,7 +2070,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 
 func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_Ok() {
 	req1 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     bson.NewObjectId().Hex(),
 		Title:      "Unit test title 1",
 		Message:    "Unit test message 1",
@@ -2102,7 +2102,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_Ok() {
 
 func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_NotFound_Error() {
 	req1 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     bson.NewObjectId().Hex(),
 		Title:      "Unit test title 1",
 		Message:    "Unit test message 1",
