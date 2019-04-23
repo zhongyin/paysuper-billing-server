@@ -55,6 +55,10 @@ service BillingService {
     rpc GetProject (GetProjectRequest) returns (ChangeProjectResponse) {}
     rpc ListProjects (ListProjectsRequest) returns (ListProjectsResponse) {}
     rpc DeleteProject(GetProjectRequest) returns (ChangeProjectResponse) {}
+
+    rpc AddSystemFees(billing.AddSystemFeesRequest) returns (EmptyResponse) {}
+    rpc GetSystemFeesForPayment(billing.GetSystemFeesRequest) returns (billing.FeeSet) {}
+    rpc GetActualSystemFeesList(EmptyRequest) returns (billing.SystemFeesList) {}
 }
 
 message EmptyRequest {
@@ -272,6 +276,8 @@ message MerchantPaymentMethodRequest {
     billing.MerchantPaymentMethodIntegration integration = 5;
     // @inject_tag: validate:"required"
     bool is_active = 6;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string user_id = 7;
 }
 
 message MerchantPaymentMethodResponse {
@@ -292,7 +298,7 @@ message GetNotificationRequest {
 }
 
 message CreateRefundRequest {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,numeric,gt=0"
     double amount = 2;
@@ -307,8 +313,11 @@ message CreateRefundResponse {
 }
 
 message ListRefundsRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 7;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
     int32 offset = 8;
 }
 
@@ -318,7 +327,9 @@ message ListRefundsResponse {
 }
 
 message GetRefundRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string refund_id = 2;
 }
 

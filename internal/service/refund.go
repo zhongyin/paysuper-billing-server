@@ -102,7 +102,7 @@ func (s *Service) ListRefunds(
 ) error {
 	var refunds []*billing.Refund
 
-	query := bson.M{"order_id": bson.ObjectIdHex(req.OrderId)}
+	query := bson.M{"order.uuid": req.OrderId}
 	err := s.db.Collection(pkg.CollectionRefund).Find(query).Limit(int(req.Limit)).Skip(int(req.Offset)).All(&refunds)
 
 	if err != nil {
@@ -135,7 +135,7 @@ func (s *Service) GetRefund(
 ) error {
 	var refund *billing.Refund
 
-	query := bson.M{"_id": bson.ObjectIdHex(req.RefundId), "order_id": bson.ObjectIdHex(req.OrderId)}
+	query := bson.M{"_id": bson.ObjectIdHex(req.RefundId), "order.uuid": req.OrderId}
 	err := s.db.Collection(pkg.CollectionRefund).Find(query).One(&refund)
 
 	if err != nil {
@@ -199,7 +199,7 @@ func (s *Service) ProcessRefundCallback(
 		return nil
 	}
 
-	order, err := s.getOrderById(refund.OrderId)
+	order, err := s.getOrderById(refund.Order.Id)
 
 	if err != nil {
 		rsp.Status = pkg.ResponseStatusNotFound
@@ -288,8 +288,11 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 	order := p.checked.order
 
 	refund := &billing.Refund{
-		Id:        bson.NewObjectId().Hex(),
-		OrderId:   order.Id,
+		Id: bson.NewObjectId().Hex(),
+		Order: &billing.RefundOrder{
+			Id:   order.Id,
+			Uuid: order.Uuid,
+		},
 		Amount:    p.request.Amount,
 		CreatorId: p.request.CreatorId,
 		Reason:    fmt.Sprintf(refundDefaultReasonMask, p.checked.order.Id),
@@ -323,7 +326,7 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 }
 
 func (p *createRefundProcessor) processOrder() error {
-	order, err := p.service.getOrderById(p.request.OrderId)
+	order, err := p.service.getOrderByUuid(p.request.OrderId)
 
 	if err != nil {
 		return p.service.NewRefundError(err.Error(), pkg.ResponseStatusNotFound)
@@ -366,10 +369,10 @@ func (p *createRefundProcessor) getRefundedAmount(order *billing.Order) (float64
 		{
 			"$match": bson.M{
 				"status":   bson.M{"$nin": []int32{pkg.RefundStatusRejected}},
-				"order_id": bson.ObjectIdHex(order.Id),
+				"order.id": bson.ObjectIdHex(order.Id),
 			},
 		},
-		{"$group": bson.M{"_id": "$order_id", "amount": bson.M{"$sum": "$amount"}}},
+		{"$group": bson.M{"_id": "$order.id", "amount": bson.M{"$sum": "$amount"}}},
 	}
 
 	err := p.service.db.Collection(pkg.CollectionRefund).Pipe(query).One(&res)

@@ -693,11 +693,31 @@ func (s *Service) ChangeMerchantPaymentMethod(
 		merchant.PaymentMethods = make(map[string]*billing.MerchantPaymentMethod)
 	}
 
-	merchant.PaymentMethods[pm.Id] = &billing.MerchantPaymentMethod{
+	mpm := &billing.MerchantPaymentMethod{
 		PaymentMethod: req.PaymentMethod,
 		Commission:    req.Commission,
 		Integration:   req.Integration,
 		IsActive:      req.IsActive,
+	}
+
+	merchant.PaymentMethods[pm.Id] = mpm
+
+	// insert in history collection first than really update merchant
+	history := &billing.MerchantPaymentMethodHistory{
+		Id:            bson.NewObjectId().Hex(),
+		MerchantId:    merchant.Id,
+		UserId:        req.UserId,
+		CreatedAt:     ptypes.TimestampNow(),
+		PaymentMethod: mpm,
+	}
+	err = s.db.Collection(pkg.CollectionMerchantPaymentMethodHistory).Insert(history)
+	if err != nil {
+		s.logError("Query to update merchant payment methods history", []interface{}{"error", err.Error(), "query", merchant})
+
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = orderErrorUnknown
+
+		return
 	}
 
 	err = s.db.Collection(pkg.CollectionMerchant).UpdateId(bson.ObjectIdHex(merchant.Id), merchant)

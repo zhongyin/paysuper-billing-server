@@ -87,7 +87,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.Project{}
+var _ = billing.SystemFeesList{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -142,6 +142,9 @@ type BillingService interface {
 	GetProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
 	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error)
 	DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
+	AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, opts ...client.CallOption) (*EmptyResponse, error)
+	GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, opts ...client.CallOption) (*billing.FeeSet, error)
+	GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*billing.SystemFeesList, error)
 }
 
 type billingService struct {
@@ -552,6 +555,36 @@ func (c *billingService) DeleteProject(ctx context.Context, in *GetProjectReques
 	return out, nil
 }
 
+func (c *billingService) AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.AddSystemFees", in)
+	out := new(EmptyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, opts ...client.CallOption) (*billing.FeeSet, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetSystemFeesForPayment", in)
+	out := new(billing.FeeSet)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*billing.SystemFeesList, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetActualSystemFeesList", in)
+	out := new(billing.SystemFeesList)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -594,6 +627,9 @@ type BillingServiceHandler interface {
 	GetProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
 	ListProjects(context.Context, *ListProjectsRequest, *ListProjectsResponse) error
 	DeleteProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
+	AddSystemFees(context.Context, *billing.AddSystemFeesRequest, *EmptyResponse) error
+	GetSystemFeesForPayment(context.Context, *billing.GetSystemFeesRequest, *billing.FeeSet) error
+	GetActualSystemFeesList(context.Context, *EmptyRequest, *billing.SystemFeesList) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -637,6 +673,9 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		GetProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
 		ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error
 		DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
+		AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, out *EmptyResponse) error
+		GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, out *billing.FeeSet) error
+		GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, out *billing.SystemFeesList) error
 	}
 	type BillingService struct {
 		billingService
@@ -803,4 +842,16 @@ func (h *billingServiceHandler) ListProjects(ctx context.Context, in *ListProjec
 
 func (h *billingServiceHandler) DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error {
 	return h.BillingServiceHandler.DeleteProject(ctx, in, out)
+}
+
+func (h *billingServiceHandler) AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, out *EmptyResponse) error {
+	return h.BillingServiceHandler.AddSystemFees(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, out *billing.FeeSet) error {
+	return h.BillingServiceHandler.GetSystemFeesForPayment(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, out *billing.SystemFeesList) error {
+	return h.BillingServiceHandler.GetActualSystemFeesList(ctx, in, out)
 }

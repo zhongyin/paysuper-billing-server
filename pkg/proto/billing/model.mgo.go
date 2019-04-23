@@ -29,6 +29,30 @@ type MgoVat struct {
 	UpdatedAt   time.Time     `bson:"updated_at" json:"updated_at,omitempty"`
 }
 
+type MgoSystemFee struct {
+	Percent         float64 `bson:"percent"`
+	PercentCurrency string  `bson:"percent_currency"`
+	FixAmount       float64 `bson:"fix_amount"`
+	FixCurrency     string  `bson:"fix_currency"`
+}
+
+type MgoFeeSet struct {
+	MinAmounts       []*MinAmount  `bson:"min_amounts"`
+	TransactionCost  *MgoSystemFee `bson:"transaction_cost"`
+	AuthorizationFee *MgoSystemFee `bson:"authorization_fee"`
+}
+
+type MgoSystemFees struct {
+	Id        bson.ObjectId `bson:"_id"`
+	MethodId  bson.ObjectId `bson:"method_id"`
+	Region    string        `bson:"region"`
+	CardBrand string        `bson:"card_brand"`
+	Fees      []*MgoFeeSet  `bson:"fees"`
+	UserId    bson.ObjectId `bson:"user_id"`
+	CreatedAt time.Time     `bson:"created_at"`
+	IsActive  bool          `bson:"is_active"`
+}
+
 type MgoProject struct {
 	Id                       bson.ObjectId   `bson:"_id"`
 	MerchantId               bson.ObjectId   `bson:"merchant_id"`
@@ -256,9 +280,14 @@ type MgoNotification struct {
 	Statuses   *SystemNotificationStatuses `bson:"statuses"`
 }
 
+type MgoRefundOrder struct {
+	Id   bson.ObjectId `bson:"id"`
+	Uuid string        `bson:"uuid"`
+}
+
 type MgoRefund struct {
 	Id         bson.ObjectId    `bson:"_id"`
-	OrderId    bson.ObjectId    `bson:"order_id"`
+	Order      *MgoRefundOrder  `bson:"order"`
 	ExternalId string           `bson:"external_id"`
 	Amount     float64          `bson:"amount"`
 	CreatorId  bson.ObjectId    `bson:"creator_id"`
@@ -297,6 +326,14 @@ type MgoCustomerHistory struct {
 	CustomerId bson.ObjectId          `bson:"customer_id"`
 	Changes    map[string]interface{} `bson:"changes"`
 	CreatedAt  time.Time              `bson:"created_at"`
+}
+
+type MgoMerchantPaymentMethodHistory struct {
+	Id            bson.ObjectId             `bson:"_id"`
+	MerchantId    bson.ObjectId             `bson:"merchant_id"`
+	PaymentMethod *MgoMerchantPaymentMethod `bson:"payment_method"`
+	CreatedAt     time.Time                 `bson:"created_at" json:"created_at"`
+	UserId        bson.ObjectId             `bson:"user_id"`
 }
 
 func (m *Vat) GetBSON() (interface{}, error) {
@@ -370,6 +407,105 @@ func (m *Vat) SetBSON(raw bson.Raw) error {
 		return err
 	}
 
+	return nil
+}
+
+func (m *SystemFees) GetBSON() (interface{}, error) {
+	st := &MgoSystemFees{
+		Id:        bson.ObjectIdHex(m.Id),
+		MethodId:  bson.ObjectIdHex(m.MethodId),
+		Region:    m.Region,
+		CardBrand: m.CardBrand,
+		IsActive:  m.IsActive,
+		UserId:    bson.ObjectIdHex(m.UserId),
+	}
+
+	for _, f := range m.Fees {
+		fs := &MgoFeeSet{}
+
+		for c, a := range f.MinAmounts {
+			fs.MinAmounts = append(fs.MinAmounts, &MinAmount{Amount: a, Currency: c})
+		}
+
+		fs.TransactionCost = &MgoSystemFee{
+			Percent:         f.TransactionCost.Percent,
+			PercentCurrency: f.TransactionCost.PercentCurrency,
+			FixAmount:       f.TransactionCost.FixAmount,
+			FixCurrency:     f.TransactionCost.FixCurrency,
+		}
+
+		fs.AuthorizationFee = &MgoSystemFee{
+			Percent:         f.AuthorizationFee.Percent,
+			PercentCurrency: f.AuthorizationFee.PercentCurrency,
+			FixAmount:       f.AuthorizationFee.FixAmount,
+			FixCurrency:     f.AuthorizationFee.FixCurrency,
+		}
+
+		st.Fees = append(st.Fees, fs)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *SystemFees) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoSystemFees)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.MethodId = decoded.MethodId.Hex()
+	m.Region = decoded.Region
+	m.CardBrand = decoded.CardBrand
+	m.IsActive = decoded.IsActive
+
+	m.Fees = []*FeeSet{}
+
+	for _, f := range decoded.Fees {
+
+		fs := &FeeSet{}
+
+		fs.MinAmounts = make(map[string]float64)
+		for _, i := range f.MinAmounts {
+			fs.MinAmounts[i.Currency] = i.Amount
+		}
+
+		fs.TransactionCost = &SystemFee{
+			Percent:         f.TransactionCost.Percent,
+			PercentCurrency: f.TransactionCost.PercentCurrency,
+			FixAmount:       f.TransactionCost.FixAmount,
+			FixCurrency:     f.TransactionCost.FixCurrency,
+		}
+
+		fs.AuthorizationFee = &SystemFee{
+			Percent:         f.AuthorizationFee.Percent,
+			PercentCurrency: f.AuthorizationFee.PercentCurrency,
+			FixAmount:       f.AuthorizationFee.FixAmount,
+			FixCurrency:     f.AuthorizationFee.FixCurrency,
+		}
+
+		m.Fees = append(m.Fees, fs)
+	}
+
+	m.UserId = decoded.UserId.Hex()
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1433,7 +1569,10 @@ func (m *Notification) SetBSON(raw bson.Raw) error {
 
 func (m *Refund) GetBSON() (interface{}, error) {
 	st := &MgoRefund{
-		OrderId:    bson.ObjectIdHex(m.OrderId),
+		Order: &MgoRefundOrder{
+			Id:   bson.ObjectIdHex(m.Order.Id),
+			Uuid: m.Order.Uuid,
+		},
 		ExternalId: m.ExternalId,
 		Amount:     m.Amount,
 		CreatorId:  bson.ObjectIdHex(m.CreatorId),
@@ -1489,7 +1628,10 @@ func (m *Refund) SetBSON(raw bson.Raw) error {
 	}
 
 	m.Id = decoded.Id.Hex()
-	m.OrderId = decoded.OrderId.Hex()
+	m.Order = &RefundOrder{
+		Id:   decoded.Order.Id.Hex(),
+		Uuid: decoded.Order.Uuid,
+	}
 	m.ExternalId = decoded.ExternalId
 	m.Amount = decoded.Amount
 	m.CreatorId = decoded.CreatorId.Hex()
