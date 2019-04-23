@@ -47,6 +47,10 @@ service BillingService {
     rpc GetProduct(RequestProduct) returns (Product) {}
     rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
     rpc GetProductsForOrder(GetProductsForOrderRequest) returns (ListProductsResponse) {}
+
+    rpc AddSystemFees(billing.AddSystemFeesRequest) returns (EmptyResponse) {}
+    rpc GetSystemFeesForPayment(billing.GetSystemFeesRequest) returns (billing.FeeSet) {}
+    rpc GetActualSystemFeesList(EmptyRequest) returns (billing.SystemFeesList) {}
 }
 
 message EmptyRequest {
@@ -255,6 +259,8 @@ message MerchantPaymentMethodRequest {
     billing.MerchantPaymentMethodIntegration integration = 5;
     // @inject_tag: validate:"required"
     bool is_active = 6;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string user_id = 7;
 }
 
 message MerchantPaymentMethodResponse {
