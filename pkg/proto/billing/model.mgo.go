@@ -50,9 +50,10 @@ type MgoProject struct {
 	UrlProcessPayment        string          `bson:"url_process_payment"`
 	UrlRedirectFail          string          `bson:"url_redirect_fail"`
 	UrlRedirectSuccess       string          `bson:"url_redirect_success"`
-	Status                   int32           `bson:"is_active"`
+	Status                   int32           `bson:"status"`
 	CreatedAt                time.Time       `bson:"created_at"`
 	UpdatedAt                time.Time       `bson:"updated_at"`
+	ProductsCount            int32           `bson:"products_count"`
 }
 
 type MgoMerchantLastPayout struct {
@@ -376,6 +377,7 @@ func (m *Project) GetBSON() (interface{}, error) {
 	st := &MgoProject{
 		MerchantId:               bson.ObjectIdHex(m.MerchantId),
 		CallbackCurrency:         m.CallbackCurrency,
+		CallbackProtocol:         m.CallbackProtocol,
 		CreateOrderAllowedUrls:   m.CreateOrderAllowedUrls,
 		AllowDynamicNotifyUrls:   m.AllowDynamicNotifyUrls,
 		AllowDynamicRedirectUrls: m.AllowDynamicRedirectUrls,
@@ -474,6 +476,10 @@ func (m *Project) SetBSON(raw bson.Raw) error {
 		for _, v := range decoded.Name {
 			m.Name[v.Lang] = v.Value
 		}
+	}
+
+	if decoded.ProductsCount > 0 {
+		m.ProductsCount = decoded.ProductsCount
 	}
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)

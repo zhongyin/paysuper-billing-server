@@ -82,11 +82,14 @@ const (
 	RefundStatusPaymentSystemDeclined = int32(4)
 	RefundStatusPaymentSystemCanceled = int32(5)
 
-	ProjectStatusCreated       = int32(0)
+	ProjectStatusDraft         = int32(0)
 	ProjectStatusTestCompleted = int32(1)
-	ProjectStatusTestRejected  = int32(2)
+	ProjectStatusTestFailed    = int32(2)
 	ProjectStatusInProduction  = int32(3)
 	ProjectStatusDeleted       = int32(4)
+
+	ProjectCallbackProtocolEmpty   = "empty"
+	ProjectCallbackProtocolDefault = "default"
 
 	PaymentSystemErrorCreateRefundFailed   = "refund can't be create. try request later"
 	PaymentSystemErrorCreateRefundRejected = "refund create request rejected"

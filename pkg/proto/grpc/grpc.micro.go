@@ -65,6 +65,9 @@ It has these top-level messages:
 	CheckProjectRequestSignatureRequest
 	CheckProjectRequestSignatureResponse
 	ChangeProjectResponse
+	GetProjectRequest
+	ListProjectsRequest
+	ListProjectsResponse
 */
 package grpc
 
@@ -136,6 +139,9 @@ type BillingService interface {
 	ChangeCustomer(ctx context.Context, in *billing.Customer, opts ...client.CallOption) (*ChangeCustomerResponse, error)
 	CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
 	ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error)
+	GetProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
+	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error)
+	DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
 }
 
 type billingService struct {
@@ -516,6 +522,36 @@ func (c *billingService) ChangeProject(ctx context.Context, in *billing.Project,
 	return out, nil
 }
 
+func (c *billingService) GetProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetProject", in)
+	out := new(ChangeProjectResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ListProjects", in)
+	out := new(ListProjectsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.DeleteProject", in)
+	out := new(ChangeProjectResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -555,6 +591,9 @@ type BillingServiceHandler interface {
 	ChangeCustomer(context.Context, *billing.Customer, *ChangeCustomerResponse) error
 	CheckProjectRequestSignature(context.Context, *CheckProjectRequestSignatureRequest, *CheckProjectRequestSignatureResponse) error
 	ChangeProject(context.Context, *billing.Project, *ChangeProjectResponse) error
+	GetProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
+	ListProjects(context.Context, *ListProjectsRequest, *ListProjectsResponse) error
+	DeleteProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -595,6 +634,9 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ChangeCustomer(ctx context.Context, in *billing.Customer, out *ChangeCustomerResponse) error
 		CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error
 		ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error
+		GetProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
+		ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error
+		DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -749,4 +791,16 @@ func (h *billingServiceHandler) CheckProjectRequestSignature(ctx context.Context
 
 func (h *billingServiceHandler) ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error {
 	return h.BillingServiceHandler.ChangeProject(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error {
+	return h.BillingServiceHandler.GetProject(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error {
+	return h.BillingServiceHandler.ListProjects(ctx, in, out)
+}
+
+func (h *billingServiceHandler) DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error {
+	return h.BillingServiceHandler.DeleteProject(ctx, in, out)
 }

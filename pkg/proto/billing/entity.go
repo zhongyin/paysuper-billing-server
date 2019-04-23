@@ -97,3 +97,27 @@ func (m *Project) IsProduction() bool {
 func (m *Project) IsDeleted() bool {
 	return m.Status == pkg.ProjectStatusDeleted
 }
+
+func (m *Project) NeedChangeStatusToDraft(req *Project) bool {
+	if m.Status != pkg.ProjectStatusTestCompleted &&
+		m.Status != pkg.ProjectStatusInProduction {
+		return false
+	}
+
+	if m.CallbackProtocol == pkg.ProjectCallbackProtocolEmpty &&
+		req.CallbackProtocol == pkg.ProjectCallbackProtocolDefault {
+		return true
+	}
+
+	if req.UrlCheckAccount != "" &&
+		req.UrlCheckAccount != m.UrlCheckAccount {
+		return true
+	}
+
+	if req.UrlProcessPayment != "" &&
+		req.UrlProcessPayment != m.UrlProcessPayment {
+		return true
+	}
+
+	return false
+}

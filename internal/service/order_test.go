@@ -450,7 +450,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		Status:                   pkg.ProjectStatusCreated,
+		Status:                   pkg.ProjectStatusDraft,
 		MerchantId:               merchant.Id,
 	}
 	projectUahLimitCurrency := &billing.Project{

@@ -71,46 +71,50 @@ message Project {
     string merchant_id = 2;
     // @inject_tag: json:"name" validate:"required"
     map<string, string> name = 3;
+    // @inject_tag: json:"image" validate:"omitempty,url"
+    string image = 4;
     //@inject_tag: json:"callback_currency" validate:"omitempty,len=3"
-    string callback_currency = 4;
+    string callback_currency = 5;
     //@inject_tag: json:"callback_protocol" validate:"omitempty,oneof=default empty"
-    string callback_protocol = 5;
+    string callback_protocol = 6;
     //@inject_tag: json:"create_order_allowed_urls" validate:"omitempty,dive,url"
-    repeated string create_order_allowed_urls = 6;
+    repeated string create_order_allowed_urls = 7;
     //@inject_tag: json:"allow_dynamic_notify_urls"
-    bool allow_dynamic_notify_urls = 7;
+    bool allow_dynamic_notify_urls = 8;
     //@inject_tag: json:"allow_dynamic_redirect_urls"
-    bool allow_dynamic_redirect_urls = 8;
+    bool allow_dynamic_redirect_urls = 9;
     //@inject_tag: json:"limits_currency" validate:"omitempty,len=3"
-    string limits_currency = 9;
+    string limits_currency = 10;
     // @inject_tag: json:"min_payment_amount" validate:"omitempty,numeric,gte=0"
-    double min_payment_amount = 10;
+    double min_payment_amount = 11;
     // @inject_tag: json:"max_payment_amount" validate:"omitempty,numeric,gte=0"
-    double max_payment_amount = 11;
+    double max_payment_amount = 12;
     // @inject_tag: json:"notify_emails" validate:"omitempty,dive,email"
-    repeated string notify_emails = 12;
+    repeated string notify_emails = 13;
     // @inject_tag: json:"is_products_checkout"
-    bool is_products_checkout = 13;
+    bool is_products_checkout = 14;
     // @inject_tag: json:"secret_key" validate:"omitempty,max=255"
-    string secret_key = 14;
+    string secret_key = 15;
     // @inject_tag: json:"signature_required"
-    bool signature_required = 15;
+    bool signature_required = 16;
     // @inject_tag: json:"send_notify_email"
-    bool send_notify_email = 16;
+    bool send_notify_email = 17;
     // @inject_tag: json:"url_check_account" validate:"omitempty,url"
-    string url_check_account = 17;
+    string url_check_account = 18;
     // @inject_tag: json:"url_process_payment" validate:"omitempty,url"
-    string url_process_payment = 18;
+    string url_process_payment = 19;
     // @inject_tag: json:"url_redirect_fail" validate:"omitempty,url"
-    string url_redirect_fail = 19;
+    string url_redirect_fail = 20;
     // @inject_tag: json:"url_redirect_success" validate:"omitempty,url"
-    string url_redirect_success = 20;
+    string url_redirect_success = 21;
     // @inject_tag: json:"status" validate:"required,numeric,oneof=0 1 2 3 4"
-    int32 status = 21;
+    int32 status = 22;
     // @inject_tag: json:"created_at"
-    google.protobuf.Timestamp created_at = 22;
+    google.protobuf.Timestamp created_at = 23;
     // @inject_tag: json:"updated_at"
-    google.protobuf.Timestamp updated_at = 23;
+    google.protobuf.Timestamp updated_at = 24;
+    // @inject_tag: json:"products_count"
+    int32 products_count = 25;
 }
 
 message ProjectOrder {

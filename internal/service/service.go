@@ -334,3 +334,30 @@ func (s *Service) CheckProjectRequestSignature(
 
 	return nil
 }
+
+func (s *Service) mgoPipeSort(query []bson.M, sort []string) []bson.M {
+	pipeSort := make(bson.M)
+
+	for _, field := range sort {
+		n := 1
+
+		if field == "" {
+			continue
+		}
+
+		sField := strings.Split(field, "")
+
+		if sField[0] == "-" {
+			n = -1
+			field = field[1:]
+		}
+
+		pipeSort[field] = n
+	}
+
+	if len(pipeSort) > 0 {
+		query = append(query, bson.M{"$sort": pipeSort})
+	}
+
+	return query
+}
