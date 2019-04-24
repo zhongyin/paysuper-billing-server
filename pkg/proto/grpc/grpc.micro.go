@@ -133,6 +133,9 @@ type BillingService interface {
 	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
 	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
 	GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, opts ...client.CallOption) (*ListProductsResponse, error)
+	AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, opts ...client.CallOption) (*EmptyResponse, error)
+	GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, opts ...client.CallOption) (*billing.FeeSet, error)
+	GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*billing.SystemFeesList, error)
 	ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error)
 	GetProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
 	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error)
@@ -487,6 +490,36 @@ func (c *billingService) GetProductsForOrder(ctx context.Context, in *GetProduct
 	return out, nil
 }
 
+func (c *billingService) AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, opts ...client.CallOption) (*EmptyResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.AddSystemFees", in)
+	out := new(EmptyResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, opts ...client.CallOption) (*billing.FeeSet, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetSystemFeesForPayment", in)
+	out := new(billing.FeeSet)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, opts ...client.CallOption) (*billing.SystemFeesList, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetActualSystemFeesList", in)
+	out := new(billing.SystemFeesList)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *billingService) ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.ChangeProject", in)
 	out := new(ChangeProjectResponse)
@@ -563,6 +596,9 @@ type BillingServiceHandler interface {
 	GetProduct(context.Context, *RequestProduct, *Product) error
 	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
 	GetProductsForOrder(context.Context, *GetProductsForOrderRequest, *ListProductsResponse) error
+	AddSystemFees(context.Context, *billing.AddSystemFeesRequest, *EmptyResponse) error
+	GetSystemFeesForPayment(context.Context, *billing.GetSystemFeesRequest, *billing.FeeSet) error
+	GetActualSystemFeesList(context.Context, *EmptyRequest, *billing.SystemFeesList) error
 	ChangeProject(context.Context, *billing.Project, *ChangeProjectResponse) error
 	GetProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
 	ListProjects(context.Context, *ListProjectsRequest, *ListProjectsResponse) error
@@ -604,6 +640,9 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
 		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
 		GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error
+		AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, out *EmptyResponse) error
+		GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, out *billing.FeeSet) error
+		GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, out *billing.SystemFeesList) error
 		ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error
 		GetProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
 		ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error
@@ -750,6 +789,18 @@ func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestPr
 
 func (h *billingServiceHandler) GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error {
 	return h.BillingServiceHandler.GetProductsForOrder(ctx, in, out)
+}
+
+func (h *billingServiceHandler) AddSystemFees(ctx context.Context, in *billing.AddSystemFeesRequest, out *EmptyResponse) error {
+	return h.BillingServiceHandler.AddSystemFees(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetSystemFeesForPayment(ctx context.Context, in *billing.GetSystemFeesRequest, out *billing.FeeSet) error {
+	return h.BillingServiceHandler.GetSystemFeesForPayment(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetActualSystemFeesList(ctx context.Context, in *EmptyRequest, out *billing.SystemFeesList) error {
+	return h.BillingServiceHandler.GetActualSystemFeesList(ctx, in, out)
 }
 
 func (h *billingServiceHandler) ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error {

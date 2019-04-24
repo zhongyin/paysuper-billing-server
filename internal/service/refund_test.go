@@ -172,25 +172,17 @@ func (suite *RefundTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           rub,
+		LimitsCurrency:           rub.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       false,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusInProduction,
+		MerchantId:               merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
@@ -368,8 +360,9 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_Ok() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -439,8 +432,9 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_AmountLess_Error() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -507,8 +501,9 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_PaymentSystemNotExists_Err
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -564,8 +559,9 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_PaymentSystemReturnError_E
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -642,8 +638,9 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_RefundNotAllowed_Error() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -694,8 +691,9 @@ func (suite *RefundTestSuite) TestRefund_CreateRefund_WasRefunded_Error() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -749,8 +747,9 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Ok() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -830,8 +829,9 @@ func (suite *RefundTestSuite) TestRefund_ListRefunds_Limit_Ok() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -923,8 +923,9 @@ func (suite *RefundTestSuite) TestRefund_GetRefund_Ok() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1004,8 +1005,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_Ok() {
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1117,8 +1119,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnmarshalError() 
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1198,8 +1201,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownHandler_Er
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1306,8 +1310,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_RefundNotFound_Er
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1414,8 +1419,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Err
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1529,8 +1535,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownPaymentSys
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1637,8 +1644,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_ProcessRefundErro
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1745,8 +1753,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_TemporaryStatus_O
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}
@@ -1858,8 +1867,9 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderFullyRefunde
 		Account:     "unit test",
 		Description: "unit test",
 		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
+		PayerEmail:  "some_email@unit.com",
 		PayerIp:     "127.0.0.1",
+		PayerPhone:  "123456789",
 	}
 
 	rsp := &billing.Order{}

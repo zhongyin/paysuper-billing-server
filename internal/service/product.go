@@ -212,3 +212,14 @@ func (s *Service) DeleteProduct(ctx context.Context, req *grpc.RequestProduct, r
 
 	return nil
 }
+
+func (s *Service) getProductsCountByProject(projectId string) int32 {
+	query := bson.M{"project_id": bson.ObjectIdHex(projectId), "deleted": false}
+	count, err := s.db.Collection(pkg.CollectionProduct).Find(query).Count()
+
+	if err != nil {
+		s.logError("Query to get project products count failed", []interface{}{"err", err.Error(), "query", query})
+	}
+
+	return int32(count)
+}

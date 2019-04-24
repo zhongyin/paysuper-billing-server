@@ -59,6 +59,7 @@ var (
 		pkg.CollectionPaymentMethod: newPaymentMethodHandler,
 		pkg.CollectionCommission:    newCommissionHandler,
 		pkg.CollectionMerchant:      newMerchantHandler,
+		pkg.CollectionSystemFees:    newSystemFeeHandler,
 	}
 )
 
@@ -88,6 +89,7 @@ type Service struct {
 
 	commissionCache           map[string]map[string]*billing.MerchantPaymentMethodCommissions
 	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
+	systemFeesCache           map[string]map[string]map[string]*billing.SystemFees
 
 	rebuild      bool
 	rebuildError error
@@ -156,6 +158,7 @@ func (s *Service) reBuildCache() {
 	paymentMethodTicker := time.NewTicker(time.Second * time.Duration(s.cfg.PaymentMethodTimeout))
 	commissionTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CommissionTimeout))
 	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectPaymentMethodTimeout))
+	systemFeesTimer := time.NewTicker(time.Second * time.Duration(s.cfg.SystemFeesTimeout))
 
 	s.rebuild = true
 
@@ -182,6 +185,10 @@ func (s *Service) reBuildCache() {
 		case <-projectPaymentMethodTimer.C:
 			s.mx.Lock()
 			s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
+			s.mx.Unlock()
+		case <-systemFeesTimer.C:
+			s.mx.Lock()
+			s.systemFeesCache = make(map[string]map[string]map[string]*billing.SystemFees)
 			s.mx.Unlock()
 		case <-s.exitCh:
 			s.rebuild = false
@@ -296,4 +303,31 @@ func (s *Service) sendCentrifugoMessage(msg map[string]interface{}) error {
 	}
 
 	return nil
+}
+
+func (s *Service) mgoPipeSort(query []bson.M, sort []string) []bson.M {
+	pipeSort := make(bson.M)
+
+	for _, field := range sort {
+		n := 1
+
+		if field == "" {
+			continue
+		}
+
+		sField := strings.Split(field, "")
+
+		if sField[0] == "-" {
+			n = -1
+			field = field[1:]
+		}
+
+		pipeSort[field] = n
+	}
+
+	if len(pipeSort) > 0 {
+		query = append(query, bson.M{"$sort": pipeSort})
+	}
+
+	return query
 }

@@ -2,10 +2,12 @@ package service
 
 import (
 	"errors"
+	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
+	"github.com/paysuper/paysuper-billing-server/internal/mock"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/stretchr/testify/assert"
@@ -17,10 +19,13 @@ import (
 
 type BillingServiceTestSuite struct {
 	suite.Suite
-	db   *database.Source
-	log  *zap.Logger
-	cfg  *config.Config
-	exCh chan bool
+	db      *database.Source
+	log     *zap.Logger
+	cfg     *config.Config
+	exCh    chan bool
+	service *Service
+
+	project *billing.Project
 }
 
 type getAllErrorTest Currency
@@ -197,63 +202,43 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 
 	projectDefault := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           rub,
+		LimitsCurrency:           rub.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		FixedPackage: map[string]*billing.FixedPackages{
-			"RU": {
-				FixedPackage: []*billing.FixedPackage{
-					{
-						Id:       "id_0",
-						Name:     "package 0",
-						Currency: rub,
-						Price:    10,
-						IsActive: true,
-					},
-				},
-			},
-			"US": {FixedPackage: []*billing.FixedPackage{}},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusInProduction,
+		MerchantId:               merchant.Id,
 	}
 	projectXsolla := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		MerchantId:         bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "xsolla",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "test project 2",
+		Name:               map[string]string{"en": "test project 2"},
 		IsProductsCheckout: true,
 		SecretKey:          "test project 2 secret key",
-		IsActive:           true,
+		Status:             pkg.ProjectStatusInProduction,
 	}
 	projectCardpay := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		MerchantId:         bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "cardpay",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "test project 3",
+		Name:               map[string]string{"en": "test project 3"},
 		IsProductsCheckout: true,
 		SecretKey:          "test project 3 secret key",
-		IsActive:           true,
+		Status:             pkg.ProjectStatusInProduction,
 	}
 
 	project := []interface{}{projectDefault, projectXsolla, projectCardpay}
@@ -274,7 +259,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		},
 		&billing.CurrencyRate{
 			CurrencyFrom: 980,
-			CurrencyTo:   840,
+			CurrencyTo:   980,
 			Rate:         27.13085922,
 			Date:         ptypes.TimestampNow(),
 			IsActive:     true,
@@ -468,7 +453,34 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
+	broker, err := rabbitmq.NewBroker(cfg.BrokerAddress)
+
+	if err != nil {
+		suite.FailNow("Creating RabbitMQ publisher failed", "%v", err)
+	}
+
+	suite.service = NewBillingService(
+		db,
+		cfg,
+		make(chan bool, 1),
+		mock.NewGeoIpServiceTestOk(),
+		mock.NewRepositoryServiceOk(),
+		mock.NewTaxServiceOkMock(),
+		broker,
+	)
+
+	if _, ok := handlers["unit"]; ok {
+		delete(handlers, "unit")
+	}
+
+	err = suite.service.Init()
+
+	if err != nil {
+		suite.FailNow("Billing service initialization failed", "%v", err)
+	}
+
 	suite.exCh = make(chan bool, 1)
+	suite.project = projectDefault
 }
 
 func (suite *BillingServiceTestSuite) TearDownTest() {

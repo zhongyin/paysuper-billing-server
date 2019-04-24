@@ -146,7 +146,7 @@ func (h *Commission) getAll() (recs []interface{}, err error) {
 	}
 
 	for _, v := range merchants {
-		query := bson.M{"merchant._id": bson.ObjectIdHex(v.Id)}
+		query := bson.M{"merchant_id": bson.ObjectIdHex(v.Id)}
 		err = h.svc.db.Collection(pkg.CollectionProject).Find(query).All(&projects)
 
 		if err != nil {
