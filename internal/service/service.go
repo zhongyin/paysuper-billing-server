@@ -83,6 +83,7 @@ type Service struct {
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
 
+	merchantCache          map[string]*billing.Merchant
 	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
 
 	commissionCache           map[string]map[string]*billing.MerchantPaymentMethodCommissions
