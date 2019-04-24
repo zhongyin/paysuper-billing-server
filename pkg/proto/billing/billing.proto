@@ -107,7 +107,7 @@ message Project {
     string url_redirect_fail = 20;
     // @inject_tag: json:"url_redirect_success" validate:"omitempty,url"
     string url_redirect_success = 21;
-    // @inject_tag: json:"status" validate:"required,numeric,oneof=0 1 2 3 4"
+    // @inject_tag: json:"status" validate:"omitempty,numeric,oneof=0 1 2 3 4"
     int32 status = 22;
     // @inject_tag: json:"created_at"
     google.protobuf.Timestamp created_at = 23;
