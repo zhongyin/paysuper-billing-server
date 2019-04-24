@@ -99,10 +99,12 @@ func (s *Service) GetProject(
 	req *grpc.GetProjectRequest,
 	rsp *grpc.ChangeProjectResponse,
 ) error {
-	query := bson.M{
-		"_id":         bson.ObjectIdHex(req.ProjectId),
-		"merchant_id": bson.ObjectIdHex(req.MerchantId),
+	query := bson.M{"_id": bson.ObjectIdHex(req.ProjectId)}
+
+	if req.MerchantId != "" {
+		query["merchant_id"] = bson.ObjectIdHex(req.MerchantId)
 	}
+
 	project, err := s.getProjectBy(query)
 
 	if err != nil {
@@ -215,10 +217,12 @@ func (s *Service) DeleteProject(
 	req *grpc.GetProjectRequest,
 	rsp *grpc.ChangeProjectResponse,
 ) error {
-	query := bson.M{
-		"_id":         bson.ObjectIdHex(req.ProjectId),
-		"merchant_id": bson.ObjectIdHex(req.MerchantId),
+	query := bson.M{"_id": bson.ObjectIdHex(req.ProjectId)}
+
+	if req.MerchantId != "" {
+		query["merchant_id"] = bson.ObjectIdHex(req.MerchantId)
 	}
+
 	project, err := s.getProjectBy(query)
 
 	if err != nil {
