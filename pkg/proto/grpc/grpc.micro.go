@@ -61,6 +61,10 @@ It has these top-level messages:
 	ListProductsResponse
 	RequestProduct
 	I18NTextSearchable
+	ChangeProjectResponse
+	GetProjectRequest
+	ListProjectsRequest
+	ListProjectsResponse
 */
 package grpc
 
@@ -80,7 +84,7 @@ import (
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = billing.MerchantPaymentMethod{}
+var _ = billing.Project{}
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -129,6 +133,10 @@ type BillingService interface {
 	GetProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*Product, error)
 	DeleteProduct(ctx context.Context, in *RequestProduct, opts ...client.CallOption) (*EmptyResponse, error)
 	GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, opts ...client.CallOption) (*ListProductsResponse, error)
+	ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error)
+	GetProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
+	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error)
+	DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
 }
 
 type billingService struct {
@@ -479,6 +487,46 @@ func (c *billingService) GetProductsForOrder(ctx context.Context, in *GetProduct
 	return out, nil
 }
 
+func (c *billingService) ChangeProject(ctx context.Context, in *billing.Project, opts ...client.CallOption) (*ChangeProjectResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ChangeProject", in)
+	out := new(ChangeProjectResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) GetProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.GetProject", in)
+	out := new(ChangeProjectResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ListProjects", in)
+	out := new(ListProjectsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.DeleteProject", in)
+	out := new(ChangeProjectResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -515,6 +563,10 @@ type BillingServiceHandler interface {
 	GetProduct(context.Context, *RequestProduct, *Product) error
 	DeleteProduct(context.Context, *RequestProduct, *EmptyResponse) error
 	GetProductsForOrder(context.Context, *GetProductsForOrderRequest, *ListProductsResponse) error
+	ChangeProject(context.Context, *billing.Project, *ChangeProjectResponse) error
+	GetProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
+	ListProjects(context.Context, *ListProjectsRequest, *ListProjectsResponse) error
+	DeleteProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -552,6 +604,10 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		GetProduct(ctx context.Context, in *RequestProduct, out *Product) error
 		DeleteProduct(ctx context.Context, in *RequestProduct, out *EmptyResponse) error
 		GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error
+		ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error
+		GetProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
+		ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error
+		DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -694,4 +750,20 @@ func (h *billingServiceHandler) DeleteProduct(ctx context.Context, in *RequestPr
 
 func (h *billingServiceHandler) GetProductsForOrder(ctx context.Context, in *GetProductsForOrderRequest, out *ListProductsResponse) error {
 	return h.BillingServiceHandler.GetProductsForOrder(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ChangeProject(ctx context.Context, in *billing.Project, out *ChangeProjectResponse) error {
+	return h.BillingServiceHandler.ChangeProject(ctx, in, out)
+}
+
+func (h *billingServiceHandler) GetProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error {
+	return h.BillingServiceHandler.GetProject(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error {
+	return h.BillingServiceHandler.ListProjects(ctx, in, out)
+}
+
+func (h *billingServiceHandler) DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error {
+	return h.BillingServiceHandler.DeleteProject(ctx, in, out)
 }

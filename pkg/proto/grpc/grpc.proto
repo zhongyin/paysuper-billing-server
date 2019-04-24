@@ -47,6 +47,11 @@ service BillingService {
     rpc GetProduct(RequestProduct) returns (Product) {}
     rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
     rpc GetProductsForOrder(GetProductsForOrderRequest) returns (ListProductsResponse) {}
+
+    rpc ChangeProject (billing.Project) returns (ChangeProjectResponse) {}
+    rpc GetProject (GetProjectRequest) returns (ChangeProjectResponse) {}
+    rpc ListProjects (ListProjectsRequest) returns (ListProjectsResponse) {}
+    rpc DeleteProject(GetProjectRequest) returns (ChangeProjectResponse) {}
 }
 
 message EmptyRequest {
@@ -508,4 +513,37 @@ message I18NTextSearchable {
     string lang = 1;
     //@inject_tag: validate:"required" json:"value"
     string value = 2;
+}
+
+message ChangeProjectResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Project item = 3;
+}
+
+message GetProjectRequest {
+    //@inject_tag: validate:"omitempty,hexadecimal,len=24"
+    string merchant_id = 1;
+    //@inject_tag: validate:"required,hexadecimal,len=24"
+    string project_id = 2;
+}
+
+message ListProjectsRequest {
+    //@inject_tag: validate:"omitempty,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
+    int32 limit = 2;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
+    int32 offset = 3;
+    // @inject_tag: query:"quick_search"
+    string quick_search = 4;
+    // @inject_tag: query:"status[]"
+    repeated int32 statuses = 5;
+    // @inject_tag: query:"sort[]"
+    repeated string sort = 6;
+}
+
+message ListProjectsResponse {
+    int32 count = 1;
+    repeated billing.Project items = 2;
 }
