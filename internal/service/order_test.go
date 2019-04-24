@@ -1490,35 +1490,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	assert.Equal(suite.T(), orderErrorPaymentMethodEmptySettings, err.Error())
 }
 
-func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodNotAllowed_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.project.Id,
-		PaymentMethod: "WEBMONEY",
-		Currency:      "RUB",
-	}
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-
-	err := processor.processProject()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), pm)
-
-	err = processor.processPaymentMethod(pm)
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-	assert.Equal(suite.T(), orderErrorPaymentMethodEmptySettings, err.Error())
-}
-
 func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_Ok() {
 	req := &billing.OrderCreateRequest{
 		ProjectId:     suite.project.Id,
