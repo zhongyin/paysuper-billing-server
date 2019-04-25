@@ -143,7 +143,10 @@ func (s *Service) ListProjects(
 	}
 
 	if req.QuickSearch != "" {
-		query["name"] = bson.M{"$elemMatch": bson.M{"value": bson.RegEx{Pattern: req.QuickSearch, Options: "i"}}}
+		query["$or"] = []bson.M{
+			{"name": bson.M{"$elemMatch": bson.M{"value": bson.RegEx{Pattern: req.QuickSearch, Options: "i"}}}},
+			{"id_string": bson.RegEx{Pattern: req.QuickSearch, Options: "i"}},
+		}
 	}
 
 	if len(req.Statuses) > 0 {

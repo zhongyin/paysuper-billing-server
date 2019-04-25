@@ -78,6 +78,7 @@ type MgoProject struct {
 	CreatedAt                time.Time       `bson:"created_at"`
 	UpdatedAt                time.Time       `bson:"updated_at"`
 	ProductsCount            int32           `bson:"products_count"`
+	IdString                 string          `bson:"id_string"`
 }
 
 type MgoMerchantLastPayout struct {
@@ -520,6 +521,8 @@ func (m *Project) GetBSON() (interface{}, error) {
 
 		st.Id = bson.ObjectIdHex(m.Id)
 	}
+
+	st.IdString = st.Id.Hex()
 
 	if m.CreatedAt != nil {
 		t, err := ptypes.Timestamp(m.CreatedAt)
