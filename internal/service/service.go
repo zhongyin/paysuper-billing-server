@@ -250,10 +250,10 @@ func (s *Service) RebuildCache(ctx context.Context, req *grpc.EmptyRequest, res 
 }
 
 func (s *Service) UpdateOrder(ctx context.Context, req *billing.Order, rsp *grpc.EmptyResponse) error {
-	err := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(req.Id), req)
+	err := s.updateOrder(req)
 
 	if err != nil {
-		s.logError("Update order failed", []interface{}{"error", err.Error(), "order", req})
+		return err
 	}
 
 	return nil

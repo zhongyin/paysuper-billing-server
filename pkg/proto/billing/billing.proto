@@ -59,9 +59,17 @@ message OrderCreateRequest {
     map<string, string> metadata = 23;
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 24;
+    // @inject_tag: json:"receipt_number"
+    string receipt_number = 25; // payer receipt number from create order request
+    // @inject_tag: json:"receipt_url"
+    string receipt_url = 26; // payer receipt url from create order request
+    // @inject_tag: json:"issuer_url"
+    string issuer_url = 27;
+    // @inject_tag: json:"issuer_embedded"
+    bool issuer_embedded = 28;
 
-    string token = 25;
-    OrderUser user = 26;
+    string token = 29;
+    OrderUser user = 30;
 }
 
 message Project {
@@ -115,6 +123,14 @@ message Project {
     google.protobuf.Timestamp updated_at = 24;
     // @inject_tag: json:"products_count"
     int32 products_count = 25;
+    // @inject_tag: json:"url_chargeback_payment" validate:"omitempty,url"
+    string url_chargeback_payment = 26;
+    // @inject_tag: json:"url_cancel_payment" validate:"omitempty,url"
+    string url_cancel_payment = 27;
+    // @inject_tag: json:"url_fraud_payment" validate:"omitempty,url"
+    string url_fraud_payment = 28;
+    // @inject_tag: json:"url_refund_payment" validate:"omitempty,url"
+    string url_refund_payment = 29;
 }
 
 message ProjectOrder {
@@ -129,6 +145,10 @@ message ProjectOrder {
     string url_check_account = 9;
     string url_process_payment = 10;
     string callback_protocol = 11;
+    string url_chargeback_payment = 12;
+    string url_cancel_payment = 13;
+    string url_fraud_payment = 14;
+    string url_refund_payment = 15;
 }
 
 message MerchantContact {
@@ -413,6 +433,26 @@ message Order {
 
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 52;
+
+    //@inject_tag: validate:"required" json:"issuer"
+    OrderIssuer issuer = 53;
+
+    //@inject_tag: json:"canceled_at"
+    google.protobuf.Timestamp canceled_at = 54;
+    //@inject_tag: json:"cancellation_reason"
+    string cancellation_reason = 55;
+    //@inject_tag: validate:"required" json:"agreement_version"
+    string agreement_version = 56;
+    //@inject_tag: validate:"required" json:"agreement_accepted"
+    bool agreement_accepted = 57;
+    //@inject_tag: validate:"required" json:"notify_sale"
+    bool notify_sale = 58;
+    //@inject_tag: json:"notify_sale_email"
+    string notify_sale_email = 59;
+    //@inject_tag: json:"refunded_at"
+    google.protobuf.Timestamp refunded_at = 60;
+    //@inject_tag: validate:"omitempty,dive" json:"refund"
+    OrderNotificationRefund refund = 61;
 }
 
 message OrderItem {
@@ -476,6 +516,10 @@ message PayerData {
     string phone = 10; // payer phone from create order request
     // @inject_tag: bson:"email" structure:"email"
     string email = 11; // payer email from create order request
+    // @inject_tag: bson:"receipt_number" structure:"receipt_number"
+    string receipt_number = 12; // payer receipt number from create order request
+    // @inject_tag: bson:"receipt_url" structure:"receipt_url"
+    string receipt_url = 13; // payer receipt url from create order request
 }
 
 message PaymentMethodOrder {
@@ -546,6 +590,10 @@ message OrderFee {
     double AmountPaymentMethodCurrency = 1; // amount of fee of payment system in payment currency
     // @inject_tag: bson:"amount_merchant_currency" structure:"amount_merchant_currency"
     double AmountMerchantCurrency = 2; // amount of fee of payment system in accounting currency of merchant
+    // @inject_tag: bson:"merchant_currency"
+    string merchant_currency_a3 = 3;
+    // @inject_tag: bson:"effective_rate_merchant_currency"
+    double effective_rate_merchant_currency = 4;
 }
 
 message OrderFeePsp {
@@ -856,11 +904,13 @@ message GetSystemFeesRequest {
 
 message CalculatedFeeItem {
     // @inject_tag: json:"fee_amount" validate:"required,numeric,gte=0"
-    double fee_amount = 1;
+    double amount = 1;
     // @inject_tag: json:"fee_currency" validate:"required,alpha,len=3"
-    string fee_currency = 2;
+    string currency = 2;
+    // @inject_tag: json:"effective_rate"
+    double effective_rate = 3;
     // @inject_tag: json:"fee_name"
-    string fee_name = 3;
+    string fee_name = 4;
 }
 
 
@@ -1012,4 +1062,162 @@ message TokenSettings {
     repeated string products_ids = 9;
     //@inject_tag: json:"metadata"
     map<string, string> metadata = 10;
+}
+
+message OrderNotificationMessage {
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"id"
+    string id = 1;
+    //@inject_tag: validate:"required" json:"type"
+    string type = 2;
+    //@inject_tag: validate:"required" json:"event"
+    string event = 3;
+    //@inject_tag: validate:"required" json:"live"
+    bool live = 4;
+    // @inject_tag: validate:"required" json:"created_at"
+    google.protobuf.Timestamp created_at = 5;
+    // @inject_tag: validate:"required" json:"expires_at"
+    google.protobuf.Timestamp expires_at = 6;
+    // @inject_tag: validate:"required,numeric,gte=0" json:"delivery_try"
+    int32 delivery_try = 7;
+    //@inject_tag: validate:"required" json:"object"
+    OrderNotification object = 8;
+}
+
+message OrderNotification {
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"id" bson:"_id"
+    string id = 1;
+    // @inject_tag: json:"uuid"
+    string uuid = 2;
+    //@inject_tag: validate:"required" json:"transaction"
+    string transaction = 3;
+    //@inject_tag: validate:"required" json:"object"
+    string object = 4;
+    //@inject_tag: validate:"required" json:"status"
+    string status = 5;
+    //@inject_tag: validate:"required" json:"description"
+    string description = 6;
+    //@inject_tag: validate:"required" json:"created_at"
+    google.protobuf.Timestamp created_at = 7;
+    //@inject_tag: validate:"required" json:"updated_at"
+    google.protobuf.Timestamp updated_at = 8;
+    //@inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 9;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 10;
+    // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
+    repeated OrderItem items = 12;
+    //@inject_tag: json:"receipt_email"
+    string receipt_email = 13;
+    //@inject_tag: json:"receipt_phone"
+    string receipt_phone = 14;
+    //@inject_tag: json:"receipt_number"
+    string receipt_number = 15;
+    //@inject_tag: json:"receipt_url"
+    string receipt_url = 16;
+    //@inject_tag: validate:"required" json:"agreement_version"
+    string agreement_version = 17;
+    //@inject_tag: validate:"required" json:"agreement_accepted"
+    bool agreement_accepted = 18;
+    //@inject_tag: validate:"required" json:"notify_sale"
+    bool notify_sale = 19;
+    //@inject_tag: json:"notify_sale_email"
+    string notify_sale_email = 20;
+    //@inject_tag: json:"issuer"
+    OrderIssuer issuer = 21;
+    //@inject_tag: validate:"omitempty,dive" json:"user"
+    OrderUser user = 22;
+    //@inject_tag: validate:"omitempty,dive" json:"platform_fee"
+    CalculatedFeeItem platform_fee = 23;
+    //@inject_tag: validate:"omitempty,dive" json:"billing_address"
+    OrderBillingAddress billing_address = 26;
+    //@inject_tag: validate:"omitempty,dive" json:"tax"
+    OrderTax tax = 27;
+    // @inject_tag: json:"method"
+    OrderNotificationPaymentMethod method = 28;
+    //@inject_tag: validate:"required" json:"canceled"
+    bool canceled = 29;
+    //@inject_tag: json:"canceled_at"
+    google.protobuf.Timestamp canceled_at = 30;
+    //@inject_tag: json:"cancellation_reason"
+    string cancellation_reason = 31;
+    //@inject_tag: validate:"required" json:"refunded"
+    bool refunded = 32;
+    //@inject_tag: json:"refunded_at"
+    google.protobuf.Timestamp refunded_at = 33;
+    //@inject_tag: validate:"omitempty,dive" json:"refund"
+    OrderNotificationRefund refund = 34;
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 35;
+}
+
+message OrderIssuer {
+    //@inject_tag: json:"url"
+    string url = 1;
+    //@inject_tag: json:"embedded"
+    bool embedded = 2;
+}
+
+message OrderNotificationPaymentMethod {
+    //@inject_tag: json:"type"
+    string type = 1;
+    //@inject_tag: json:"title"
+    string title = 2;
+    //@inject_tag: json:"saved"
+    bool saved = 3;
+    //@inject_tag: json:"fee"
+    CalculatedFeeItem fee = 4;
+    //@inject_tag: json:"card;omitempty"
+    OrderNotificationPaymentMethodCard card = 5;
+    //@inject_tag: json:"wallet;omitempty"
+    OrderNotificationPaymentMethodWallet wallet = 6;
+    //@inject_tag: json:"crypto_currency;omitempty"
+    OrderNotificationPaymentMethodCrypto crypto_currency = 7;
+}
+
+message OrderNotificationPaymentMethodCard {
+    //@inject_tag: json:"first6"
+    string first6 = 1;
+    //@inject_tag: json:"last4"
+    string last4 = 2;
+    //@inject_tag: json:"masked"
+    string masked = 3;
+    //@inject_tag: json:"expiry_month"
+    string expiry_month = 4;
+    //@inject_tag: json:"expiry_year"
+    string expiry_year = 5;
+    //@inject_tag: json:"brand"
+    string brand = 6;
+    //@inject_tag: json:"fingerprint"
+    string fingerprint = 7;
+    //@inject_tag: json:"secure3d"
+    bool secure3d = 8;
+}
+
+message OrderNotificationPaymentMethodWallet {
+    //@inject_tag: json:"brand"
+    string brand = 1;
+    //@inject_tag: json:"account"
+    string account = 2;
+}
+
+message OrderNotificationPaymentMethodCrypto {
+    //@inject_tag: json:"brand"
+    string brand = 1;
+    //@inject_tag: json:"address"
+    string address = 2;
+}
+
+message OrderNotificationRefund {
+    //@inject_tag: validate:"required,numeric,gt=0" json:"amount"
+    double amount = 1;
+    //@inject_tag: validate:"required,alpha,len=3" json:"currency"
+    string currency = 2;
+    //@inject_tag: json:"reason"
+    string reason = 3;
+    //@inject_tag: json:"code"
+    string code = 4;
+    //@inject_tag: json:"receipt_number"
+    string receipt_number = 5;
+    //@inject_tag: json:"receipt_url"
+    string receipt_url = 6;
 }

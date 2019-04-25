@@ -389,6 +389,7 @@ func (h *cardPay) ProcessPayment(message proto.Message, raw, signature string) (
 		break
 	case pkg.CardPayPaymentResponseStatusCancelled:
 		order.Status = constant.OrderStatusPaymentSystemCanceled
+		order.CanceledAt = ptypes.TimestampNow()
 		break
 	case pkg.CardPayPaymentResponseStatusCompleted:
 		order.Status = constant.OrderStatusPaymentSystemComplete

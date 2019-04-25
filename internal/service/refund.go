@@ -258,8 +258,15 @@ func (s *Service) ProcessRefundCallback(
 		if refundedAmount == order.PaymentMethodIncomeAmount {
 			order.Status = constant.OrderStatusRefund
 			order.UpdatedAt = ptypes.TimestampNow()
+			order.RefundedAt = ptypes.TimestampNow()
+			order.Refund = &billing.OrderNotificationRefund{
+				Amount:        refundedAmount,
+				Currency:      order.PaymentMethodIncomeCurrency.CodeA3,
+				Reason:        refund.Reason,
+				ReceiptNumber: refund.Id,
+			}
 
-			err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+			err = s.updateOrder(order)
 
 			if err != nil {
 				s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})

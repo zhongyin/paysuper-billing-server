@@ -289,6 +289,15 @@ func (s *Service) OrderCreateProcess(
 	rsp.Currency = order.Currency
 	rsp.Metadata = order.Metadata
 	rsp.User = order.User
+	rsp.PrivateMetadata = order.PrivateMetadata
+	rsp.CanceledAt = order.CanceledAt
+	rsp.CancellationReason = order.CancellationReason
+	rsp.AgreementVersion = order.AgreementVersion
+	rsp.AgreementAccepted = order.AgreementAccepted
+	rsp.NotifySale = order.NotifySale
+	rsp.NotifySaleEmail = order.NotifySaleEmail
+	rsp.Issuer = order.Issuer
+	rsp.Refund = order.Refund
 
 	return nil
 }
@@ -495,7 +504,7 @@ func (s *Service) PaymentCreateProcess(
 		delete(order.PaymentRequisites, pkg.PaymentCreateFieldRecurringId)
 	}
 
-	err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+	err = s.updateOrder(order)
 
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
@@ -525,7 +534,7 @@ func (s *Service) PaymentCreateProcess(
 	}
 
 	url, err := h.CreatePayment(req.Data)
-	errDb := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+	errDb := s.updateOrder(order)
 
 	if errDb != nil {
 		s.logError("Update order data failed", []interface{}{"err", errDb.Error(), "order", order})
@@ -606,7 +615,7 @@ func (s *Service) PaymentCallbackProcess(
 		}
 	}
 
-	err = s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
+	err = s.updateOrder(order)
 
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
@@ -869,15 +878,66 @@ func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 				"request", req,
 			},
 		)
+	} else {
+		order.PaymentRequisites["saved"] = "1"
+		err = s.updateOrder(order)
+		if err != nil {
+			s.logError("Failed to update order after save recurruing card", []interface{}{
+				"err", err.Error(),
+			})
+		}
 	}
 }
 
+func (s *Service) orderNotifyMerchant(order *billing.Order) {
+
+	ps := order.GetPublicStatus()
+	if (ps == "processed" || ps == "refunded") && order.GetCountry() == CountryCodeUSA {
+
+		topicName := constant.TaxjarTransactionsTopicName
+		if ps == "refunded" {
+			topicName = constant.TaxjarRefundsTopicName
+		}
+
+		err := s.broker.Publish(topicName, order, amqp.Table{"x-retry-count": int32(0)})
+
+		if err != nil {
+			s.logError("Publish notify message to queue failed", []interface{}{
+				"err", err.Error(), "order", order, "topic", topicName,
+			})
+		}
+	}
+
+	err := s.broker.Publish(constant.PayOneTopicNotifyMerchantName, order, amqp.Table{"x-retry-count": int32(0)})
+
+	if err != nil {
+		s.logError("Publish notify message to queue failed", []interface{}{
+			"err", err.Error(), "order", order, "topic", constant.PayOneTopicNotifyMerchantName,
+		})
+	}
+
+	return
+}
+
 func (s *Service) updateOrder(order *billing.Order) error {
+	originalOrder, _ := s.getOrderById(order.Id)
+
+	ps := order.GetPublicStatus()
+
+	statusChanged := false
+	if originalOrder != nil {
+		statusChanged = originalOrder.GetPublicStatus() != ps
+	}
+
 	err := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"error", err.Error(), "order", order})
 		return errors.New(orderErrorUnknown)
+	}
+
+	if statusChanged && ps != constant.OrderPublicStatusCreated && ps != constant.OrderPublicStatusPending {
+		s.orderNotifyMerchant(order)
 	}
 
 	return nil
@@ -1016,6 +1076,10 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		Items:           v.checked.items,
 		Metadata:        v.checked.metadata,
 		PrivateMetadata: v.checked.privateMetadata,
+		Issuer: &billing.OrderIssuer{
+			Url:      v.request.IssuerUrl,
+			Embedded: v.request.IssuerEmbedded,
+		},
 	}
 
 	if order.User != nil && order.User.Address != nil {
