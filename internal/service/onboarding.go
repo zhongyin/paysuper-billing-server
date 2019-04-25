@@ -260,6 +260,7 @@ func (s *Service) ChangeMerchant(
 	}
 
 	s.mapMerchantData(rsp, merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return
 }
@@ -322,6 +323,7 @@ func (s *Service) ChangeMerchantStatus(
 	}
 
 	s.mapMerchantData(rsp, merchant)
+	s.merchantCache[merchant.Id] = merchant
 
 	return nil
 }
@@ -378,6 +380,7 @@ func (s *Service) ChangeMerchantData(
 
 	rsp.Status = pkg.ResponseStatusOk
 	rsp.Item = merchant
+	s.merchantCache[merchant.Id] = merchant
 
 	return nil
 }
@@ -407,6 +410,7 @@ func (s *Service) SetMerchantS3Agreement(
 
 	rsp.Status = pkg.ResponseStatusOk
 	rsp.Item = merchant
+	s.merchantCache[merchant.Id] = merchant
 
 	return nil
 }
@@ -732,6 +736,7 @@ func (s *Service) ChangeMerchantPaymentMethod(
 		s.merchantPaymentMethods[merchant.Id] = make(map[string]*billing.MerchantPaymentMethod)
 	}
 
+	s.merchantCache[merchant.Id] = merchant
 	s.merchantPaymentMethods[merchant.Id][pm.Id] = merchant.PaymentMethods[pm.Id]
 
 	rsp.Status = pkg.ResponseStatusOk

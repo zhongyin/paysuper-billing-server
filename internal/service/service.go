@@ -84,6 +84,7 @@ type Service struct {
 	paymentMethodCache   map[string]map[int32]*billing.PaymentMethod
 	paymentMethodIdCache map[string]*billing.PaymentMethod
 
+	merchantCache          map[string]*billing.Merchant
 	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
 
 	commissionCache           map[string]map[string]*billing.MerchantPaymentMethodCommissions
@@ -302,4 +303,31 @@ func (s *Service) sendCentrifugoMessage(msg map[string]interface{}) error {
 	}
 
 	return nil
+}
+
+func (s *Service) mgoPipeSort(query []bson.M, sort []string) []bson.M {
+	pipeSort := make(bson.M)
+
+	for _, field := range sort {
+		n := 1
+
+		if field == "" {
+			continue
+		}
+
+		sField := strings.Split(field, "")
+
+		if sField[0] == "-" {
+			n = -1
+			field = field[1:]
+		}
+
+		pipeSort[field] = n
+	}
+
+	if len(pipeSort) > 0 {
+		query = append(query, bson.M{"$sort": pipeSort})
+	}
+
+	return query
 }

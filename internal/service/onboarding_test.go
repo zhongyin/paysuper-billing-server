@@ -280,25 +280,17 @@ func (suite *OnboardingTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           rub,
+		LimitsCurrency:           rub.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusInProduction,
+		MerchantId:               merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
@@ -2011,15 +2003,6 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Sort_Ok() {
 	err = suite.service.CreateNotification(context.TODO(), req, rsp)
 	assert.Nil(suite.T(), err)
 	assert.True(suite.T(), len(rsp.Id) > 0)
-
-	req2 := &grpc.ListingNotificationRequest{
-		MerchantId: suite.merchant.Id,
-		Sort:       []string{"created_at"},
-		Limit:      10,
-		Offset:     0,
-	}
-	rsp2 := &grpc.Notifications{}
-	err = suite.service.ListNotifications(context.TODO(), req2, rsp2)
 
 	req1 := &grpc.ListingNotificationRequest{
 		MerchantId: suite.merchant.Id,

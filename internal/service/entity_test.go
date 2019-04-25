@@ -84,15 +84,16 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		MerchantId:         bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "default",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "test project 1",
+		Name:               map[string]string{"en": "test project 1"},
 		IsProductsCheckout: true,
 		SecretKey:          "test project 1 secret key",
-		IsActive:           true,
+		Status:             pkg.ProjectStatusInProduction,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)

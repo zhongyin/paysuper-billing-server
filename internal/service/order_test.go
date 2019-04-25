@@ -427,230 +427,96 @@ func (suite *OrderTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           usd,
+		LimitsCurrency:           usd.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       false,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusInProduction,
+		MerchantId:               merchant.Id,
 	}
 	projectFixedAmount := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           usd,
+		LimitsCurrency:           usd.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
+		Name:                     map[string]string{"en": "test project 1"},
 		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusDraft,
+		MerchantId:               merchant.Id,
 	}
 	projectUahLimitCurrency := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "default",
-		LimitsCurrency:     uah,
+		LimitsCurrency:     uah.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "project uah limit currency",
+		Name:               map[string]string{"en": "project uah limit currency"},
 		IsProductsCheckout: true,
 		SecretKey:          "project uah limit currency secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: &billing.Merchant{
-			Id:   bson.NewObjectId().Hex(),
-			Name: "Unit test",
-			Country: &billing.Country{
-				CodeInt:  643,
-				CodeA2:   "RU",
-				CodeA3:   "RUS",
-				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-				IsActive: true,
-			},
-			Zip:  "190000",
-			City: "St.Petersburg",
-			Contacts: &billing.MerchantContact{
-				Authorized: &billing.MerchantContactAuthorized{
-					Name:     "Unit Test",
-					Email:    "test@unit.test",
-					Phone:    "123456789",
-					Position: "Unit Test",
-				},
-				Technical: &billing.MerchantContactTechnical{
-					Name:  "Unit Test",
-					Email: "test@unit.test",
-					Phone: "123456789",
-				},
-			},
-			Banking: &billing.MerchantBanking{
-				Currency: amd,
-				Name:     "Bank name",
-			},
-			IsVatEnabled:              true,
-			IsCommissionToUserEnabled: true,
-			Status:                    1,
-		},
+		Status:             pkg.ProjectStatusInProduction,
+		MerchantId:         merchant1.Id,
 	}
 	projectIncorrectPaymentMethodId := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "default",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "project incorrect payment method id",
+		Name:               map[string]string{"en": "project incorrect payment method id"},
 		IsProductsCheckout: true,
 		SecretKey:          "project incorrect payment method id secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        bson.NewObjectId().Hex(),
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: &billing.Merchant{
-			Id:   bson.NewObjectId().Hex(),
-			Name: "Unit test",
-			Country: &billing.Country{
-				CodeInt:  643,
-				CodeA2:   "RU",
-				CodeA3:   "RUS",
-				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-				IsActive: true,
-			},
-			Zip:  "190000",
-			City: "St.Petersburg",
-			Contacts: &billing.MerchantContact{
-				Authorized: &billing.MerchantContactAuthorized{
-					Name:     "Unit Test",
-					Email:    "test@unit.test",
-					Phone:    "123456789",
-					Position: "Unit Test",
-				},
-				Technical: &billing.MerchantContactTechnical{
-					Name:  "Unit Test",
-					Email: "test@unit.test",
-					Phone: "123456789",
-				},
-			},
-			Banking: &billing.MerchantBanking{
-				Currency: uah,
-				Name:     "Bank name",
-			},
-			IsVatEnabled:              true,
-			IsCommissionToUserEnabled: true,
-			Status:                    1,
-		},
+		Status:             pkg.ProjectStatusInProduction,
+		MerchantId:         merchant1.Id,
 	}
 	projectEmptyPaymentMethodTerminal := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		MerchantId:         merchant1.Id,
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "default",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "project incorrect payment method id",
+		Name:               map[string]string{"en": "project incorrect payment method id"},
 		IsProductsCheckout: false,
 		SecretKey:          "project incorrect payment method id secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: &billing.Merchant{
-			Id:   bson.NewObjectId().Hex(),
-			Name: "Unit test",
-			Country: &billing.Country{
-				CodeInt:  643,
-				CodeA2:   "RU",
-				CodeA3:   "RUS",
-				Name:     &billing.Name{Ru: "Россия", En: "Russia (Russian Federation)"},
-				IsActive: true,
-			},
-			Zip:  "190000",
-			City: "St.Petersburg",
-			Contacts: &billing.MerchantContact{
-				Authorized: &billing.MerchantContactAuthorized{
-					Name:     "Unit Test",
-					Email:    "test@unit.test",
-					Phone:    "123456789",
-					Position: "Unit Test",
-				},
-				Technical: &billing.MerchantContactTechnical{
-					Name:  "Unit Test",
-					Email: "test@unit.test",
-					Phone: "123456789",
-				},
-			},
-			Banking: &billing.MerchantBanking{
-				Currency: uah,
-				Name:     "Bank name",
-			},
-			IsVatEnabled:              false,
-			IsCommissionToUserEnabled: false,
-			Status:                    1,
-		},
+		Status:             pkg.ProjectStatusInProduction,
 	}
 	projectWithoutPaymentMethods := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		MerchantId:         merchant1.Id,
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "default",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "test project 1",
+		Name:               map[string]string{"en": "test project 1"},
 		IsProductsCheckout: true,
 		SecretKey:          "test project 1 secret key",
-		IsActive:           true,
+		Status:             pkg.ProjectStatusInProduction,
 	}
 	inactiveProject := &billing.Project{
 		Id:                 bson.NewObjectId().Hex(),
-		CallbackCurrency:   rub,
+		MerchantId:         merchant1.Id,
+		CallbackCurrency:   rub.CodeA3,
 		CallbackProtocol:   "xsolla",
-		LimitsCurrency:     rub,
+		LimitsCurrency:     rub.CodeA3,
 		MaxPaymentAmount:   15000,
 		MinPaymentAmount:   0,
-		Name:               "test project 2",
+		Name:               map[string]string{"en": "test project 2"},
 		IsProductsCheckout: true,
 		SecretKey:          "test project 2 secret key",
-		IsActive:           false,
+		Status:             pkg.ProjectStatusDeleted,
 	}
 
 	projects := []interface{}{
@@ -902,7 +768,7 @@ func (suite *OrderTestSuite) SetupTest() {
 			DefaultCurrency: "USD",
 			Enabled:         true,
 			Description:     map[string]string{"en": n + " description"},
-			MerchantId:      projectFixedAmount.Merchant.Id,
+			MerchantId:      projectFixedAmount.MerchantId,
 			ProjectId:       projectFixedAmount.Id,
 		}
 
@@ -1146,7 +1012,7 @@ func (suite *OrderTestSuite) TestOrder_ValidateProductsForOrder_OneProductIsInac
 		DefaultCurrency: "USD",
 		Enabled:         false,
 		Description:     map[string]string{"en": n + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1209,7 +1075,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_DifferentCurrencie
 		DefaultCurrency: "USD",
 		Enabled:         false,
 		Description:     map[string]string{"en": n1 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1235,7 +1101,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_DifferentCurrencie
 		DefaultCurrency: "USD",
 		Enabled:         false,
 		Description:     map[string]string{"en": n2 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1269,7 +1135,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_DifferentCurrencie
 		DefaultCurrency: "EUR",
 		Enabled:         false,
 		Description:     map[string]string{"en": n1 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1295,7 +1161,7 @@ func (suite *OrderTestSuite) TestOrder_GetProductsOrderAmount_DifferentCurrencie
 		DefaultCurrency: "EUR",
 		Enabled:         false,
 		Description:     map[string]string{"en": n2 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1345,7 +1211,7 @@ func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_DifferentCurrencies
 		DefaultCurrency: "USD",
 		Enabled:         false,
 		Description:     map[string]string{"en": n1 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1371,7 +1237,7 @@ func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_DifferentCurrencies
 		DefaultCurrency: "USD",
 		Enabled:         false,
 		Description:     map[string]string{"en": n2 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1405,7 +1271,7 @@ func (suite *OrderTestSuite) TestOrder_GetOrderProductsItems_ProductHasNoDescInS
 		DefaultCurrency: "USD",
 		Enabled:         false,
 		Description:     map[string]string{"en": n1 + " description"},
-		MerchantId:      suite.projectFixedAmount.Merchant.Id,
+		MerchantId:      suite.projectFixedAmount.MerchantId,
 		ProjectId:       suite.projectFixedAmount.Id,
 		Prices: []*grpc.ProductPrice{
 			{
@@ -1489,7 +1355,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessProjectOrderId_Duplicate_Error() {
 			UrlCheckAccount:   processor.checked.project.UrlCheckAccount,
 			UrlProcessPayment: processor.checked.project.UrlProcessPayment,
 			CallbackProtocol:  processor.checked.project.CallbackProtocol,
-			Merchant:          processor.checked.project.Merchant,
+			MerchantId:        processor.checked.project.MerchantId,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     req.OrderId,
@@ -1497,7 +1363,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessProjectOrderId_Duplicate_Error() {
 		ProjectIncomeAmount:                req.Amount,
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
-		ProjectOutcomeCurrency:             processor.checked.project.CallbackCurrency,
 		ProjectParams:                      req.Other,
 		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
@@ -1520,6 +1385,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessProjectOrderId_Duplicate_Error() {
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_Ok() {
 	req := &billing.OrderCreateRequest{
+		ProjectId:     suite.project.Id,
 		PaymentMethod: suite.paymentMethod.Group,
 		Currency:      "RUB",
 	}
@@ -1530,7 +1396,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_Ok() {
 	}
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 
-	err := processor.processCurrency()
+	err := processor.processProject()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
 	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
@@ -1605,107 +1474,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	}
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 
-	suite.service.cfg.Environment = environmentProd
-
-	err := processor.processProject()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), pm)
-
-	err = processor.processPaymentMethod(pm)
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
-
-	suite.service.cfg.Environment = "dev"
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodNotAllowed_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.project.Id,
-		PaymentMethod: "WEBMONEY",
-		Currency:      "RUB",
-	}
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-
-	suite.service.cfg.Environment = environmentProd
-
-	err := processor.processProject()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), pm)
-
-	err = processor.processPaymentMethod(pm)
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
-
-	suite.service.cfg.Environment = "dev"
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodIncorrectId_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.projectIncorrectPaymentMethodId.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-	}
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-
-	suite.service.cfg.Environment = environmentProd
-
-	err := processor.processProject()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), pm)
-
-	err = processor.processPaymentMethod(pm)
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-	assert.Equal(suite.T(), orderErrorPaymentMethodIncompatible, err.Error())
-
-	suite.service.cfg.Environment = "dev"
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMethodEmptyTerminal_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.projectEmptyPaymentMethodTerminal.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-	}
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-
-	suite.service.cfg.Environment = environmentProd
-
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
@@ -1720,8 +1488,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethod_ProductionPaymentMet
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), processor.checked.paymentMethod)
 	assert.Equal(suite.T(), orderErrorPaymentMethodEmptySettings, err.Error())
-
-	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_Ok() {
@@ -1788,38 +1554,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ConvertAmount_Ok() {
 
 	err = processor.processLimitAmounts()
 	assert.Nil(suite.T(), err)
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ConvertAmount_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.projectUahLimitCurrency.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-		Amount:        100,
-	}
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-	assert.Nil(suite.T(), processor.checked.paymentMethod)
-
-	err := processor.processProject()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), pm)
-
-	err = processor.processPaymentMethod(pm)
-	assert.Nil(suite.T(), err)
-
-	err = processor.processLimitAmounts()
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCurrencyRate), err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessLimitAmounts_ProjectMinAmount_Error() {
@@ -2325,7 +2059,7 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
 	err = processor.processProjectOrderId()
 	assert.Nil(suite.T(), err)
 
-	processor.checked.project.Merchant.Banking.Currency = &billing.Currency{
+	processor.checked.merchant.Banking.Currency = &billing.Currency{
 		CodeInt:  980,
 		CodeA3:   "UAH",
 		Name:     &billing.Name{Ru: "Украинская гривна", En: "Ukrainian Hryvnia"},
@@ -2433,7 +2167,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 			UrlCheckAccount:   processor.checked.project.UrlCheckAccount,
 			UrlProcessPayment: processor.checked.project.UrlProcessPayment,
 			CallbackProtocol:  processor.checked.project.CallbackProtocol,
-			Merchant:          processor.checked.project.Merchant,
+			MerchantId:        processor.checked.project.MerchantId,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     req.OrderId,
@@ -2441,7 +2175,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 		ProjectIncomeAmount:                req.Amount,
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
-		ProjectOutcomeCurrency:             processor.checked.project.CallbackCurrency,
 		ProjectParams:                      req.Other,
 		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
@@ -2524,7 +2257,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 			UrlCheckAccount:   processor.checked.project.UrlCheckAccount,
 			UrlProcessPayment: processor.checked.project.UrlProcessPayment,
 			CallbackProtocol:  processor.checked.project.CallbackProtocol,
-			Merchant:          processor.checked.project.Merchant,
+			MerchantId:        processor.checked.project.MerchantId,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     req.OrderId,
@@ -2532,7 +2265,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 		ProjectIncomeAmount:                req.Amount,
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
-		ProjectOutcomeCurrency:             processor.checked.project.CallbackCurrency,
 		ProjectParams:                      req.Other,
 		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
@@ -2555,95 +2287,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 	assert.Nil(suite.T(), order.ProjectFeeAmount)
 	assert.Nil(suite.T(), order.PspFeeAmount)
 	assert.Nil(suite.T(), order.PaymentSystemFeeAmount)
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_CommissionNotFound_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.projectUahLimitCurrency.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-		Amount:        100,
-		PayerIp:       "127.0.0.1",
-	}
-
-	processor := &OrderCreateRequestProcessor{
-		Service: suite.service,
-		request: req,
-		checked: &orderCreateRequestProcessorChecked{},
-	}
-
-	err := processor.processProject()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processPayerData()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processCurrency()
-	assert.Nil(suite.T(), err)
-
-	err = processor.processPaylinkProducts()
-	assert.Nil(suite.T(), err)
-
-	pm, err := suite.service.GetPaymentMethodByGroupAndCurrency(req.PaymentMethod, processor.checked.currency.CodeInt)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), pm)
-
-	err = processor.processPaymentMethod(pm)
-	assert.Nil(suite.T(), err)
-
-	id := bson.NewObjectId().Hex()
-
-	order := &billing.Order{
-		Id: id,
-		Project: &billing.ProjectOrder{
-			Id:                processor.checked.project.Id,
-			Name:              processor.checked.project.Name,
-			UrlSuccess:        processor.checked.project.UrlRedirectSuccess,
-			UrlFail:           processor.checked.project.UrlRedirectFail,
-			SendNotifyEmail:   processor.checked.project.SendNotifyEmail,
-			NotifyEmails:      processor.checked.project.NotifyEmails,
-			SecretKey:         processor.checked.project.SecretKey,
-			UrlCheckAccount:   processor.checked.project.UrlCheckAccount,
-			UrlProcessPayment: processor.checked.project.UrlProcessPayment,
-			CallbackProtocol:  processor.checked.project.CallbackProtocol,
-			Merchant:          processor.checked.project.Merchant,
-		},
-		Description:                        fmt.Sprintf(orderDefaultDescription, id),
-		ProjectOrderId:                     req.OrderId,
-		ProjectAccount:                     req.Account,
-		ProjectIncomeAmount:                req.Amount,
-		ProjectIncomeCurrency:              processor.checked.currency,
-		ProjectOutcomeAmount:               req.Amount,
-		ProjectOutcomeCurrency:             processor.checked.project.CallbackCurrency,
-		ProjectParams:                      req.Other,
-		PayerData:                          processor.checked.payerData,
-		Status:                             constant.OrderStatusNew,
-		CreatedAt:                          ptypes.TimestampNow(),
-		IsJsonRequest:                      false,
-		AmountInMerchantAccountingCurrency: tools.FormatAmount(req.Amount),
-		PaymentMethodOutcomeAmount:         req.Amount,
-		PaymentMethodOutcomeCurrency:       processor.checked.currency,
-		PaymentMethodIncomeAmount:          req.Amount,
-		PaymentMethodIncomeCurrency:        processor.checked.currency,
-		PaymentMethod: &billing.PaymentMethodOrder{
-			Id:            processor.checked.paymentMethod.Id,
-			Name:          processor.checked.paymentMethod.Name,
-			Params:        processor.checked.paymentMethod.Params,
-			PaymentSystem: processor.checked.paymentMethod.PaymentSystem,
-			Group:         processor.checked.paymentMethod.Group,
-		},
-	}
-
-	assert.Nil(suite.T(), order.ProjectFeeAmount)
-	assert.Nil(suite.T(), order.PspFeeAmount)
-	assert.Nil(suite.T(), order.PaymentSystemFeeAmount)
-
-	err = processor.processOrderCommissions(order)
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), order.ProjectFeeAmount)
-	assert.Nil(suite.T(), order.PspFeeAmount)
-	assert.Nil(suite.T(), order.PaymentSystemFeeAmount)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCommission), err.Error())
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_PaymentSystemAccountingCurrencyConvert_Error() {
@@ -2684,7 +2327,7 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_PaymentSystemAcco
 			UrlCheckAccount:   processor.checked.project.UrlCheckAccount,
 			UrlProcessPayment: processor.checked.project.UrlProcessPayment,
 			CallbackProtocol:  processor.checked.project.CallbackProtocol,
-			Merchant:          processor.checked.project.Merchant,
+			MerchantId:        processor.checked.project.MerchantId,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     req.OrderId,
@@ -2692,7 +2335,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_PaymentSystemAcco
 		ProjectIncomeAmount:                req.Amount,
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
-		ProjectOutcomeCurrency:             processor.checked.project.CallbackCurrency,
 		ProjectParams:                      req.Other,
 		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
@@ -2915,7 +2557,7 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_DuplicateProjectOrderI
 			UrlCheckAccount:   suite.project.UrlCheckAccount,
 			UrlProcessPayment: suite.project.UrlProcessPayment,
 			CallbackProtocol:  suite.project.CallbackProtocol,
-			Merchant:          suite.project.Merchant,
+			MerchantId:        suite.project.MerchantId,
 		},
 		Description:         fmt.Sprintf(orderDefaultDescription, orderId),
 		ProjectOrderId:      req.OrderId,
@@ -3021,30 +2663,6 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_AmountInvalid_Error() 
 
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), orderErrorAmountLowerThanMinAllowed, err.Error())
-
-	assert.Len(suite.T(), rsp.Id, 0)
-	assert.Nil(suite.T(), rsp.Project)
-	assert.Nil(suite.T(), rsp.PaymentMethod)
-	assert.Nil(suite.T(), rsp.PaymentSystemFeeAmount)
-}
-
-func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_PrepareOrderInvalid_Error() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.projectEmptyPaymentMethodTerminal.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-		Amount:        100,
-		Account:       "unit test",
-		Description:   "unit test",
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
-	}
-
-	rsp := &billing.Order{}
-	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
-
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), fmt.Sprintf(errorNotFound, pkg.CollectionCurrencyRate), err.Error())
 
 	assert.Len(suite.T(), rsp.Id, 0)
 	assert.Nil(suite.T(), rsp.Project)
@@ -3215,8 +2833,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 		PayerIp:       "127.0.0.1",
 	}
 
-	suite.service.cfg.Environment = environmentProd
-
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
 
@@ -3224,31 +2840,34 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProjectNo
 	assert.True(suite.T(), len(order.Id) > 0)
 
 	order.Project.Id = suite.projectWithoutPaymentMethods.Id
+	order.Project.MerchantId = suite.projectWithoutPaymentMethods.MerchantId
 
-	processor := &PaymentFormProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{
+		service: suite.service,
+		order:   order,
+		request: &grpc.PaymentFormJsonDataRequest{
+			Host:   "127.0.0.1",
+			Scheme: "http",
+		},
+	}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
 	assert.Len(suite.T(), pms, 0)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
-
-	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaymentMethods_Error() {
 	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.project.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-		Amount:        100,
-		Account:       "unit test",
-		Description:   "unit test",
-		OrderId:       bson.NewObjectId().Hex(),
-		PayerEmail:    "test@unit.unit",
-		PayerIp:       "127.0.0.1",
+		ProjectId:   suite.projectEmptyPaymentMethodTerminal.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+		PayerEmail:  "test@unit.unit",
+		PayerIp:     "127.0.0.1",
 	}
-
-	suite.service.cfg.Environment = environmentProd
 
 	order := &billing.Order{}
 	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
@@ -3258,14 +2877,19 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_EmptyPaym
 
 	order.Project.Id = suite.projectEmptyPaymentMethodTerminal.Id
 
-	processor := &PaymentFormProcessor{service: suite.service, order: order}
+	processor := &PaymentFormProcessor{
+		service: suite.service,
+		order:   order,
+		request: &grpc.PaymentFormJsonDataRequest{
+			Host:   "localhost",
+			Scheme: "http",
+		},
+	}
 	pms, err := processor.processRenderFormPaymentMethods()
 
 	assert.Error(suite.T(), err)
 	assert.Len(suite.T(), pms, 0)
 	assert.Equal(suite.T(), orderErrorPaymentMethodNotAllowed, err.Error())
-
-	suite.service.cfg.Environment = "dev"
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentMethodsData_SavedCards_Ok() {
@@ -3510,38 +3134,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_BankCard_Ok() {
 
 	assert.True(suite.T(), ok)
 	assert.True(suite.T(), len(bankBrand) > 0)
-}
-
-func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Ewallet_Ok() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:   suite.project.Id,
-		Currency:    "RUB",
-		Amount:      100,
-		Account:     "unit test",
-		Description: "unit test",
-		OrderId:     bson.NewObjectId().Hex(),
-		PayerEmail:  "test@unit.unit",
-		PayerIp:     "127.0.0.1",
-	}
-
-	rsp := &billing.Order{}
-	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
-	assert.Nil(suite.T(), err)
-
-	data := map[string]string{
-		pkg.PaymentCreateFieldOrderId:         rsp.Uuid,
-		pkg.PaymentCreateFieldPaymentMethodId: suite.pmWebMoney.Id,
-		pkg.PaymentCreateFieldEmail:           "test@unit.unit",
-		pkg.PaymentCreateFieldEWallet:         "ewallet_account",
-	}
-
-	processor := &PaymentCreateProcessor{service: suite.service, data: data}
-	err = processor.processPaymentFormData()
-
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), processor.checked.order)
-	assert.NotNil(suite.T(), processor.checked.project)
-	assert.NotNil(suite.T(), processor.checked.paymentMethod)
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_Bitcoin_Ok() {
@@ -4037,13 +3629,12 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 	var check *billing.Order
 	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&check)
 
+	terminal, err := suite.service.getMerchantPaymentMethodTerminalId(suite.project.MerchantId, suite.paymentMethod.Id)
+	assert.NoError(suite.T(), err)
+
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), check)
-	assert.Equal(
-		suite.T(),
-		suite.project.PaymentMethods[constant.PaymentSystemGroupAliasBankCard].Terminal,
-		check.PaymentMethod.Params.Terminal,
-	)
+	assert.Equal(suite.T(), terminal, check.PaymentMethod.Params.Terminal)
 
 	suite.service.cfg.Environment = "dev"
 }
@@ -4132,7 +3723,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), commission)
 
-	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][order1.Project.Merchant.GetPayoutCurrency().CodeInt]
+	merchant, ok := suite.service.merchantCache[order1.Project.MerchantId]
+	assert.True(suite.T(), ok)
+
+	rate, ok := suite.service.currencyRateCache[order1.PaymentMethodOutcomeCurrency.CodeInt][merchant.GetPayoutCurrency().CodeInt]
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), rate)
 

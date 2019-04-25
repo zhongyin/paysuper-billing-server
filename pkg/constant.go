@@ -65,6 +65,7 @@ const (
 	MerchantStatusOnReview           = int32(2)
 	MerchantStatusAgreementSigning   = int32(3)
 	MerchantStatusAgreementSigned    = int32(4)
+	MerchantStatusDeleted            = int32(5)
 
 	ResponseStatusOk          = int32(200)
 	ResponseStatusBadData     = int32(400)
@@ -87,6 +88,15 @@ const (
 	PaymentSystemHandlerCardPay = "cardpay"
 
 	MerchantAgreementTypeESign = 2
+
+	ProjectStatusDraft         = int32(0)
+	ProjectStatusTestCompleted = int32(1)
+	ProjectStatusTestFailed    = int32(2)
+	ProjectStatusInProduction  = int32(3)
+	ProjectStatusDeleted       = int32(4)
+
+	ProjectCallbackProtocolEmpty   = "empty"
+	ProjectCallbackProtocolDefault = "default"
 )
 
 var (
