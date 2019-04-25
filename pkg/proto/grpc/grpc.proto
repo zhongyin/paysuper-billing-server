@@ -535,7 +535,7 @@ message GetProjectRequest {
 }
 
 message ListProjectsRequest {
-    //@inject_tag: validate:"omitempty,hexadecimal,len=24"
+    //@inject_tag: query:"merchant_id" validate:"omitempty,hexadecimal,len=24"
     string merchant_id = 1;
     // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 2;
