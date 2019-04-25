@@ -1168,7 +1168,7 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 func (v *OrderCreateRequestProcessor) processLimitAmounts() (err error) {
 	amount := v.checked.amount
 
-	if v.checked.project.LimitsCurrency != v.checked.currency.CodeA3 {
+	if v.checked.project.LimitsCurrency != "" && v.checked.project.LimitsCurrency != v.checked.currency.CodeA3 {
 		currency, err := v.GetCurrencyByCodeA3(v.checked.project.LimitsCurrency)
 
 		if err != nil {

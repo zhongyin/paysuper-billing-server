@@ -16,6 +16,7 @@ const (
 	projectErrorNameDefaultLangRequired   = "project name in \"" + DefaultLanguage + "\" locale is required"
 	projectErrorCallbackCurrencyIncorrect = "project callback currency is incorrect"
 	projectErrorLimitCurrencyIncorrect    = "project limit currency is incorrect"
+	projectErrorLimitCurrencyRequired     = "project limit currency can't be empty if you send min or max payment amount"
 )
 
 var (
@@ -71,6 +72,13 @@ func (s *Service) ChangeProject(
 
 			return nil
 		}
+	}
+
+	if (req.MinPaymentAmount > 0 || req.MaxPaymentAmount > 0) && req.LimitsCurrency == "" {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = projectErrorLimitCurrencyRequired
+
+		return nil
 	}
 
 	if project == nil {
