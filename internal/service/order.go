@@ -95,8 +95,6 @@ const (
 
 	taxTypeVat      = "vat"
 	taxTypeSalesTax = "sales_tax"
-
-	objectTypeUser = "user"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -931,7 +929,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 
 		Uuid: uuid.New().String(),
 		User: &billing.OrderUser{
-			Object: objectTypeUser,
+			Object: pkg.ObjectTypeUser,
 			Email:  v.checked.payerData.Email,
 			Phone:  v.checked.payerData.Phone,
 			Address: &billing.OrderBillingAddress{
@@ -1697,23 +1695,23 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 	return
 }
 
-func (s *Service) GetOrderProducts(project_id string, product_ids []string) ([]*grpc.Product, error) {
-	if len(product_ids) == 0 {
+func (s *Service) GetOrderProducts(projectId string, productIds []string) ([]*grpc.Product, error) {
+	if len(productIds) == 0 {
 		return nil, errors.New(orderErrorProductsEmpty)
 	}
 
 	result := grpc.ListProductsResponse{}
 
 	err := s.GetProductsForOrder(context.TODO(), &grpc.GetProductsForOrderRequest{
-		ProjectId: project_id,
-		Ids:       product_ids,
+		ProjectId: projectId,
+		Ids:       productIds,
 	}, &result)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if result.Total != int32(len(product_ids)) {
+	if result.Total != int32(len(productIds)) {
 		return nil, errors.New(orderErrorProductsInvalid)
 	}
 
@@ -1739,8 +1737,7 @@ func (s *Service) GetOrderProductsAmount(products []*grpc.Product, currency stri
 }
 
 func (s *Service) GetOrderProductsItems(products []*grpc.Product, language string, currency string) ([]*billing.OrderItem, error) {
-
-	result := []*billing.OrderItem{}
+	var result []*billing.OrderItem
 
 	if len(products) == 0 {
 		return nil, errors.New(orderErrorProductsEmpty)

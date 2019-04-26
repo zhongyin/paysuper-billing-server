@@ -870,3 +870,143 @@ message MerchantPaymentMethodHistory {
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string user_id = 5;
 }
+
+message CustomerIdentity {
+    string merchant_id = 1;
+    string project_id = 2;
+    string type = 3;
+    string value = 4;
+    bool verified = 5;
+    google.protobuf.Timestamp created_at = 6;
+}
+
+message CustomerIpHistory {
+    bytes ip = 1;
+    google.protobuf.Timestamp created_at = 2;
+}
+
+message CustomerAddressHistory {
+    string country = 1;
+    string city = 2;
+    string postal_code = 3;
+    string state = 4;
+    google.protobuf.Timestamp created_at = 5;
+}
+
+message CustomerStringValueHistory {
+    string value = 1;
+    google.protobuf.Timestamp created_at = 2;
+}
+
+message Customer {
+    string id = 1;
+    string tech_email = 2;
+    string external_id = 3;
+    string email = 4;
+    bool email_verified = 5;
+    string phone = 6;
+    bool phone_verified = 7;
+    string name = 8;
+    bytes ip = 9;
+    string locale = 10;
+    string accept_language = 11;
+    // @inject_tag: json:"-"
+    string user_agent = 12;
+    OrderBillingAddress address = 13;
+    repeated CustomerIdentity identity = 14;
+    // @inject_tag: json:"-"
+    repeated CustomerIpHistory ip_history = 15;
+    // @inject_tag: json:"-"
+    repeated CustomerAddressHistory address_history = 16;
+    // @inject_tag: json:"-"
+    repeated CustomerStringValueHistory locale_history = 17;
+    // @inject_tag: json:"-"
+    repeated CustomerStringValueHistory accept_language_history = 18;
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 19;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp created_at = 20;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp updated_at = 21;
+}
+
+message TokenUserEmailValue {
+    //@inject_tag: validate:"omitempty,email"
+    string value = 1;
+    bool verified = 2;
+}
+
+message TokenUserPhoneValue {
+    //@inject_tag: validate:"omitempty,phone"
+    string value = 1;
+    bool verified = 2;
+}
+
+message TokenUserIpValue {
+    //@inject_tag: validate:"omitempty,ip"
+    string value = 1;
+}
+
+message TokenUserLocaleValue {
+    //@inject_tag: validate:"omitempty,alpha,len=2"
+    string value = 1;
+}
+
+message TokenUserValue {
+    string value = 1;
+}
+
+message TokenUser {
+    string id = 1;
+    TokenUserEmailValue email = 2;
+    TokenUserPhoneValue phone = 4;
+    TokenUserValue name = 6;
+    TokenUserIpValue ip = 7;
+    TokenUserLocaleValue locale = 8;
+    OrderBillingAddress address = 9;
+    map<string, string> metadata = 10;
+}
+
+message TokenSettingsReturnUrl {
+    //@inject_tag: validate:"omitempty,url"
+    string success = 1;
+    //@inject_tag: validate:"omitempty,url"
+    string fail = 2;
+}
+
+message TokenSettingsItem {
+    //@inject_tag: validate:"required"
+    string sku = 1;
+    //@inject_tag: validate:"required,numeric,gt=0"
+    double amount = 5;
+    //@inject_tag: validate:"required,alpha,len=3"
+    string currency = 4;
+}
+
+message TokenSettings {
+    string order_id = 1;
+    //@inject_tag: validate:"required,hexadecimal,len=24"
+    string project_id = 2;
+    TokenSettingsReturnUrl return_url = 3;
+    //@inject_tag: validate:"omitempty,alpha,len=3"
+    string currency = 4;
+    //@inject_tag: validate:"omitempty,numeric,gt=0"
+    double amount = 5;
+    string payment_method = 6;
+    repeated TokenSettingsItem items = 7;
+    //@inject_tag: json:"-"
+    repeated string products_ids = 8;
+    map<string, string> metadata = 9;
+}
+
+message Token {
+    string id = 1;
+    string token = 2;
+    string customer_id = 3;
+    TokenUser user = 4;
+    TokenSettings settings = 5;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp created_at = 6;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp updated_at = 7;
+}

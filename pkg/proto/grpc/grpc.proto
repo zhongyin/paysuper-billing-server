@@ -56,6 +56,8 @@ service BillingService {
     rpc GetProject (GetProjectRequest) returns (ChangeProjectResponse) {}
     rpc ListProjects (ListProjectsRequest) returns (ListProjectsResponse) {}
     rpc DeleteProject(GetProjectRequest) returns (ChangeProjectResponse) {}
+
+    rpc CreateToken(TokenRequest) returns (TokenResponse) {}
 }
 
 message EmptyRequest {
@@ -552,4 +554,17 @@ message ListProjectsRequest {
 message ListProjectsResponse {
     int32 count = 1;
     repeated billing.Project items = 2;
+}
+
+message TokenRequest {
+    //@inject_tag: validate:"required"
+    billing.TokenUser user = 1;
+    //@inject_tag: validate:"required"
+    billing.TokenSettings settings = 2;
+}
+
+message TokenResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Token item = 3;
 }

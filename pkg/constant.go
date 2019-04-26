@@ -18,6 +18,8 @@ const (
 	CollectionProduct                      = "product"
 	CollectionSystemFees                   = "system_fees"
 	CollectionMerchantPaymentMethodHistory = "payment_method_history"
+	CollectionCustomer                     = "customer"
+	CollectionCustomerToken                = "customer_token"
 
 	CardPayPaymentResponseStatusInProgress = "IN_PROGRESS"
 	CardPayPaymentResponseStatusPending    = "PENDING"
@@ -97,6 +99,14 @@ const (
 
 	ProjectCallbackProtocolEmpty   = "empty"
 	ProjectCallbackProtocolDefault = "default"
+
+	ObjectTypeUser = "user"
+
+	UserIdentityTypeEmail    = "email"
+	UserIdentityTypePhone    = "phone"
+	UserIdentityTypeExternal = "external"
+
+	TechEmailDomain = "@paysuper.com"
 )
 
 var (
