@@ -277,7 +277,7 @@ func (s *Service) processCustomer(
 		customer.Identity = s.processCustomerIdentity(customer.Identity, identity)
 	}
 
-	if user.Email != nil && customer.Email != user.Email.Value {
+	if user.Email != nil && (customer.Email != user.Email.Value || customer.EmailVerified != user.Email.Verified) {
 		customer.Email = user.Email.Value
 		customer.EmailVerified = user.Email.Verified
 		identity := &billing.CustomerIdentity{
@@ -292,7 +292,7 @@ func (s *Service) processCustomer(
 		customer.Identity = s.processCustomerIdentity(customer.Identity, identity)
 	}
 
-	if user.Phone != nil && customer.Phone != user.Phone.Value {
+	if user.Phone != nil && (customer.Phone != user.Phone.Value || customer.PhoneVerified != user.Phone.Verified) {
 		customer.Phone = user.Phone.Value
 		customer.PhoneVerified = user.Phone.Verified
 		identity := &billing.CustomerIdentity{
@@ -320,7 +320,6 @@ func (s *Service) processCustomer(
 				CreatedAt: ptypes.TimestampNow(),
 			}
 			customer.Ip = net.ParseIP(user.Ip.Value)
-
 			customer.IpHistory = append(customer.IpHistory, history)
 		}
 	}
@@ -331,21 +330,22 @@ func (s *Service) processCustomer(
 			CreatedAt: ptypes.TimestampNow(),
 		}
 		customer.Locale = user.Locale.Value
-
 		customer.LocaleHistory = append(customer.LocaleHistory, history)
 	}
 
 	if user.Address != nil && customer.Address != user.Address {
-		history := &billing.CustomerAddressHistory{
-			Country:    customer.Address.Country,
-			City:       customer.Address.City,
-			PostalCode: customer.Address.PostalCode,
-			State:      customer.Address.State,
-			CreatedAt:  ptypes.TimestampNow(),
+		if customer.Address != nil {
+			history := &billing.CustomerAddressHistory{
+				Country:    customer.Address.Country,
+				City:       customer.Address.City,
+				PostalCode: customer.Address.PostalCode,
+				State:      customer.Address.State,
+				CreatedAt:  ptypes.TimestampNow(),
+			}
+			customer.AddressHistory = append(customer.AddressHistory, history)
 		}
-		customer.Address = user.Address
 
-		customer.AddressHistory = append(customer.AddressHistory, history)
+		customer.Address = user.Address
 	}
 }
 
@@ -359,15 +359,15 @@ func (s *Service) processCustomerIdentity(
 
 	isNewIdentity := true
 
-	for _, v := range currentIdentities {
+	for k, v := range currentIdentities {
 		needChange := v.Type == newIdentity.Type && v.ProjectId == newIdentity.ProjectId &&
-			v.MerchantId == newIdentity.MerchantId && v.Value == newIdentity.Value
+			v.MerchantId == newIdentity.MerchantId && v.Value == newIdentity.Value && v.Verified != newIdentity.Verified
 
 		if needChange == false {
 			continue
 		}
 
-		v = newIdentity
+		currentIdentities[k] = newIdentity
 		isNewIdentity = false
 	}
 

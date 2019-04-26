@@ -245,17 +245,17 @@ func (s *Service) processTokenProducts(req *grpc.TokenRequest) ([]string, error)
 
 	query := bson.M{
 		"project_id": bson.ObjectIdHex(req.Settings.ProjectId),
-		"$in":        bson.M{"sku": sku},
+		"sku":        bson.M{"$in": sku},
 		"deleted":    false,
 	}
 	err := s.db.Collection(pkg.CollectionProduct).Find(query).All(&products)
 
-	if err != nil {
-		if err != mgo.ErrNotFound {
-			s.logError("Query to find project products failed", []interface{}{"err", err.Error(), "query", query})
-			return nil, errors.New(orderErrorUnknown)
-		}
+	if err != nil && err != mgo.ErrNotFound {
+		s.logError("Query to find project products failed", []interface{}{"err", err.Error(), "query", query})
+		return nil, errors.New(orderErrorUnknown)
+	}
 
+	if len(products) <= 0 {
 		return nil, errors.New(productErrorNotFound)
 	}
 
