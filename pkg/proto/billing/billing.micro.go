@@ -26,6 +26,7 @@ It has these top-level messages:
 	OrderBillingAddress
 	OrderUser
 	Order
+	OrderItem
 	Currency
 	PayerData
 	PaymentMethodOrder
@@ -51,7 +52,17 @@ It has these top-level messages:
 	MerchantPaymentMethodIdentification
 	MerchantPaymentMethod
 	RefundPayerData
+	RefundOrder
 	Refund
+	SystemFee
+	MinAmount
+	FeeSet
+	SystemFees
+	SystemFeesList
+	AddSystemFeesRequest
+	GetSystemFeesRequest
+	CalculatedFeeItem
+	MerchantPaymentMethodHistory
 */
 package billing
 

@@ -30,11 +30,10 @@ func Test_Finance(t *testing.T) {
 
 func (suite *FinanceTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
-
 	if err != nil {
 		suite.FailNow("Config load failed", "%v", err)
 	}
+	cfg.AccountingCurrency = "RUB"
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -168,17 +167,17 @@ func (suite *FinanceTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err, "Insert merchant test data failed")
 
 	project := &billing.Project{
-		Id:               bson.NewObjectId().Hex(),
-		CallbackCurrency: rub,
-		CallbackProtocol: "default",
-		LimitsCurrency:   rub,
-		MaxPaymentAmount: 15000,
-		MinPaymentAmount: 0,
-		Name:             "test project 1",
-		OnlyFixedAmounts: true,
-		SecretKey:        "test project 1 secret key",
-		IsActive:         true,
-		Merchant:         merchant,
+		Id:                 bson.NewObjectId().Hex(),
+		CallbackCurrency:   rub.CodeA3,
+		CallbackProtocol:   "default",
+		LimitsCurrency:     rub.CodeA3,
+		MaxPaymentAmount:   15000,
+		MinPaymentAmount:   0,
+		Name:               map[string]string{"en": "test project 1"},
+		IsProductsCheckout: true,
+		SecretKey:          "test project 1 secret key",
+		Status:             pkg.ProjectStatusInProduction,
+		MerchantId:         merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
@@ -315,7 +314,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertOk() {
 }
 
 func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyFromError() {
-	amount, err := suite.service.Convert(960, 840, 1000)
+	amount, err := suite.service.Convert(980, 840, 1000)
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)
@@ -323,7 +322,7 @@ func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyFromError() {
 }
 
 func (suite *FinanceTestSuite) TestFinance_ConvertCurrencyToError() {
-	amount, err := suite.service.Convert(643, 960, 1000)
+	amount, err := suite.service.Convert(643, 980, 1000)
 
 	assert.Error(suite.T(), err)
 	assert.True(suite.T(), amount == 0)

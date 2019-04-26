@@ -46,6 +46,16 @@ service BillingService {
     rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
     rpc GetProduct(RequestProduct) returns (Product) {}
     rpc DeleteProduct(RequestProduct) returns (EmptyResponse) {}
+    rpc GetProductsForOrder(GetProductsForOrderRequest) returns (ListProductsResponse) {}
+
+    rpc AddSystemFees(billing.AddSystemFeesRequest) returns (EmptyResponse) {}
+    rpc GetSystemFeesForPayment(billing.GetSystemFeesRequest) returns (billing.FeeSet) {}
+    rpc GetActualSystemFeesList(EmptyRequest) returns (billing.SystemFeesList) {}
+
+    rpc ChangeProject (billing.Project) returns (ChangeProjectResponse) {}
+    rpc GetProject (GetProjectRequest) returns (ChangeProjectResponse) {}
+    rpc ListProjects (ListProjectsRequest) returns (ListProjectsResponse) {}
+    rpc DeleteProject(GetProjectRequest) returns (ChangeProjectResponse) {}
 }
 
 message EmptyRequest {
@@ -96,6 +106,8 @@ message PaymentFormJsonDataResponse {
     string token = 11; // access token to websocket private chanel
     // @inject_tag: json:"user_address_data_required"
     bool user_address_data_required = 12;
+    // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
+    repeated billing.OrderItem items = 13;
 }
 
 message PaymentNotifyRequest {
@@ -252,6 +264,8 @@ message MerchantPaymentMethodRequest {
     billing.MerchantPaymentMethodIntegration integration = 5;
     // @inject_tag: validate:"required"
     bool is_active = 6;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
+    string user_id = 7;
 }
 
 message MerchantPaymentMethodResponse {
@@ -272,7 +286,7 @@ message GetNotificationRequest {
 }
 
 message CreateRefundRequest {
-    // @inject_tag: validate:"required,hexadecimal,len=24"
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
     // @inject_tag: validate:"required,numeric,gt=0"
     double amount = 2;
@@ -287,8 +301,11 @@ message CreateRefundResponse {
 }
 
 message ListRefundsRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
     int32 limit = 7;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
     int32 offset = 8;
 }
 
@@ -298,7 +315,9 @@ message ListRefundsResponse {
 }
 
 message GetRefundRequest {
+    // @inject_tag: validate:"required,uuid"
     string order_id = 1;
+    // @inject_tag: validate:"required,hexadecimal,len=24"
     string refund_id = 2;
 }
 
@@ -450,7 +469,7 @@ message Product {
 
 message ProductPrice {
     // @inject_tag: validate:"required,numeric,gt=0" json:"amount"
-    float amount = 1;
+    double amount = 1;
     //@inject_tag: validate:"required,alpha,len=3" json:"currency"
     string currency = 2;
 }
@@ -469,6 +488,14 @@ message ListProductsRequest {
     //@inject_tag: validate:"omitempty,hexadecimal,len=24" json:"project_id" bson:"project_id"
     string project_id = 6;
 }
+
+message GetProductsForOrderRequest {
+    //@inject_tag: validate:"required,hexadecimal,len=24" json:"project_id" bson:"project_id"
+    string project_id = 1;
+    //@inject_tag: validate:"required,dive,hexadecimal,len=24" json:"ids" bson:"ids"
+    repeated string ids = 2;
+}
+
 message ListProductsResponse {
     // @inject_tag: json:"limit"
     int32 limit = 1;
@@ -492,4 +519,37 @@ message I18NTextSearchable {
     string lang = 1;
     //@inject_tag: validate:"required" json:"value"
     string value = 2;
+}
+
+message ChangeProjectResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.Project item = 3;
+}
+
+message GetProjectRequest {
+    //@inject_tag: validate:"omitempty,hexadecimal,len=24"
+    string merchant_id = 1;
+    //@inject_tag: validate:"required,hexadecimal,len=24"
+    string project_id = 2;
+}
+
+message ListProjectsRequest {
+    //@inject_tag: query:"merchant_id" validate:"omitempty,hexadecimal,len=24"
+    string merchant_id = 1;
+    // @inject_tag: query:"limit" validate:"omitempty,numeric,gt=0"
+    int32 limit = 2;
+    // @inject_tag: query:"offset" validate:"omitempty,numeric,gte=0"
+    int32 offset = 3;
+    // @inject_tag: query:"quick_search"
+    string quick_search = 4;
+    // @inject_tag: query:"status[]"
+    repeated int32 statuses = 5;
+    // @inject_tag: query:"sort[]"
+    repeated string sort = 6;
+}
+
+message ListProjectsResponse {
+    int32 count = 1;
+    repeated billing.Project items = 2;
 }

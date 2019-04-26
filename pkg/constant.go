@@ -4,18 +4,20 @@ const (
 	ServiceName    = "p1paybilling"
 	ServiceVersion = "latest"
 
-	CollectionCurrency      = "currency"
-	CollectionCountry       = "country"
-	CollectionProject       = "project"
-	CollectionCurrencyRate  = "currency_rate"
-	CollectionOrder         = "order"
-	CollectionPaymentMethod = "payment_method"
-	CollectionCommission    = "commission"
-	CollectionBinData       = "bank_bin"
-	CollectionMerchant      = "merchant"
-	CollectionNotification  = "notification"
-	CollectionRefund        = "refund"
-	CollectionProduct       = "product"
+	CollectionCurrency                     = "currency"
+	CollectionCountry                      = "country"
+	CollectionProject                      = "project"
+	CollectionCurrencyRate                 = "currency_rate"
+	CollectionOrder                        = "order"
+	CollectionPaymentMethod                = "payment_method"
+	CollectionCommission                   = "commission"
+	CollectionBinData                      = "bank_bin"
+	CollectionMerchant                     = "merchant"
+	CollectionNotification                 = "notification"
+	CollectionRefund                       = "refund"
+	CollectionProduct                      = "product"
+	CollectionSystemFees                   = "system_fees"
+	CollectionMerchantPaymentMethodHistory = "payment_method_history"
 
 	CardPayPaymentResponseStatusInProgress = "IN_PROGRESS"
 	CardPayPaymentResponseStatusPending    = "PENDING"
@@ -63,6 +65,7 @@ const (
 	MerchantStatusOnReview           = int32(2)
 	MerchantStatusAgreementSigning   = int32(3)
 	MerchantStatusAgreementSigned    = int32(4)
+	MerchantStatusDeleted            = int32(5)
 
 	ResponseStatusOk          = int32(200)
 	ResponseStatusBadData     = int32(400)
@@ -85,6 +88,15 @@ const (
 	PaymentSystemHandlerCardPay = "cardpay"
 
 	MerchantAgreementTypeESign = 2
+
+	ProjectStatusDraft         = int32(0)
+	ProjectStatusTestCompleted = int32(1)
+	ProjectStatusTestFailed    = int32(2)
+	ProjectStatusInProduction  = int32(3)
+	ProjectStatusDeleted       = int32(4)
+
+	ProjectCallbackProtocolEmpty   = "empty"
+	ProjectCallbackProtocolDefault = "default"
 )
 
 var (

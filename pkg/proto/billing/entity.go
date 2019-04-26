@@ -44,6 +44,10 @@ func (m *Merchant) CanChangeStatusToSigning() bool {
 		m.Contacts != nil && m.Contacts.Authorized != nil
 }
 
+func (m *Merchant) IsDeleted() bool {
+	return m.Status == pkg.MerchantStatusDeleted
+}
+
 func (m *PaymentMethodOrder) GetAccountingCurrency() *Currency {
 	return m.PaymentSystem.AccountingCurrency
 }
@@ -64,4 +68,36 @@ func (m *Order) FormInputTimeIsEnded() bool {
 	t, err := ptypes.Timestamp(m.ExpireDateToFormInput)
 
 	return err != nil || t.Before(time.Now())
+}
+
+func (m *Project) IsProduction() bool {
+	return m.Status == pkg.ProjectStatusInProduction
+}
+
+func (m *Project) IsDeleted() bool {
+	return m.Status == pkg.ProjectStatusDeleted
+}
+
+func (m *Project) NeedChangeStatusToDraft(req *Project) bool {
+	if m.Status != pkg.ProjectStatusTestCompleted &&
+		m.Status != pkg.ProjectStatusInProduction {
+		return false
+	}
+
+	if m.CallbackProtocol == pkg.ProjectCallbackProtocolEmpty &&
+		req.CallbackProtocol == pkg.ProjectCallbackProtocolDefault {
+		return true
+	}
+
+	if req.UrlCheckAccount != "" &&
+		req.UrlCheckAccount != m.UrlCheckAccount {
+		return true
+	}
+
+	if req.UrlProcessPayment != "" &&
+		req.UrlProcessPayment != m.UrlProcessPayment {
+		return true
+	}
+
+	return false
 }

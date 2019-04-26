@@ -123,7 +123,15 @@ func (h *Commission) setCache(recs []interface{}) {
 	}
 
 	for _, v := range recs {
-		h.svc.commissionCache = v.(map[string]map[string]*billing.MerchantPaymentMethodCommissions)
+		typedV := v.(map[string]map[string]*billing.MerchantPaymentMethodCommissions)
+
+		for k, v1 := range typedV {
+			h.svc.commissionCache[k] = make(map[string]*billing.MerchantPaymentMethodCommissions)
+
+			for k1, v2 := range v1 {
+				h.svc.commissionCache[k][k1] = v2
+			}
+		}
 	}
 }
 
@@ -138,21 +146,16 @@ func (h *Commission) getAll() (recs []interface{}, err error) {
 	}
 
 	for _, v := range merchants {
-		query := bson.M{"merchant._id": bson.ObjectIdHex(v.Id)}
+		query := bson.M{"merchant_id": bson.ObjectIdHex(v.Id)}
 		err = h.svc.db.Collection(pkg.CollectionProject).Find(query).All(&projects)
 
 		if err != nil {
 			continue
 		}
 
-		commission := make(map[string]map[string]*billing.MerchantPaymentMethodCommissions)
-
 		for _, v1 := range projects {
-			_, ok := commission[v1.Id]
-
-			if !ok {
-				commission[v1.Id] = make(map[string]*billing.MerchantPaymentMethodCommissions)
-			}
+			commission := make(map[string]map[string]*billing.MerchantPaymentMethodCommissions)
+			commission[v1.Id] = make(map[string]*billing.MerchantPaymentMethodCommissions)
 
 			for k, v2 := range v.PaymentMethods {
 				commission[v1.Id][k] = v2.Commission

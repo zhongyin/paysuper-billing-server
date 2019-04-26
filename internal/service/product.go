@@ -47,6 +47,16 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 		return errors.New("no price in default currency")
 	}
 
+	if _, err := req.GetLocalizedName(DefaultLanguage); err != nil {
+		s.logError("No name in default language", []interface{}{"data", req})
+		return err
+	}
+
+	if _, err := req.GetLocalizedDescription(DefaultLanguage); err != nil {
+		s.logError("No description in default language", []interface{}{"data", req})
+		return err
+	}
+
 	// Prevent duplicated products (by projectId+sku)
 	dupQuery := bson.M{"project_id": bson.ObjectIdHex(req.ProjectId), "sku": req.Sku, "deleted": false}
 	found, err := s.db.Collection(pkg.CollectionProduct).Find(dupQuery).Count()
@@ -89,6 +99,34 @@ func (s *Service) CreateOrUpdateProduct(ctx context.Context, req *grpc.Product, 
 	res.MerchantId = req.MerchantId
 	res.ProjectId = req.ProjectId
 
+	return nil
+}
+
+func (s *Service) GetProductsForOrder(ctx context.Context, req *grpc.GetProductsForOrderRequest, res *grpc.ListProductsResponse) error {
+	if len(req.Ids) == 0 {
+		s.logError("Ids list is empty", []interface{}{"data", req})
+		return errors.New("ids list is empty")
+	}
+	query := bson.M{"enabled": true, "deleted": false, "project_id": bson.ObjectIdHex(req.ProjectId)}
+	var items = []bson.ObjectId{}
+	for _, id := range req.Ids {
+		items = append(items, bson.ObjectIdHex(id))
+	}
+	query["_id"] = bson.M{"$in": items}
+
+	found := []*grpc.Product{}
+
+	err := s.db.Collection(pkg.CollectionProduct).Find(query).All(&found)
+
+	if err != nil {
+		s.logError("Query to find refund by id failed", []interface{}{"err", err.Error(), "req", req})
+		return err
+	}
+
+	res.Limit = int32(len(found))
+	res.Offset = 0
+	res.Total = res.Limit
+	res.Products = found
 	return nil
 }
 
@@ -173,4 +211,15 @@ func (s *Service) DeleteProduct(ctx context.Context, req *grpc.RequestProduct, r
 	}
 
 	return nil
+}
+
+func (s *Service) getProductsCountByProject(projectId string) int32 {
+	query := bson.M{"project_id": bson.ObjectIdHex(projectId), "deleted": false}
+	count, err := s.db.Collection(pkg.CollectionProduct).Find(query).Count()
+
+	if err != nil {
+		s.logError("Query to get project products count failed", []interface{}{"err", err.Error(), "query", query})
+	}
+
+	return int32(count)
 }

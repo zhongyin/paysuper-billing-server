@@ -35,6 +35,7 @@ import (
 const (
 	orderErrorProjectNotFound                          = "project with specified identifier not found"
 	orderErrorProjectInactive                          = "project with specified identifier is inactive"
+	orderErrorProjectMerchantInactive                  = "merchant for project with specified identifier is inactive"
 	orderErrorPaymentMethodNotAllowed                  = "payment method not specified for project"
 	orderErrorPaymentMethodNotFound                    = "payment method with specified not found"
 	orderErrorPaymentMethodInactive                    = "payment method with specified is inactive"
@@ -42,10 +43,6 @@ const (
 	orderErrorPaymentMethodEmptySettings               = "payment method setting for project is empty"
 	orderErrorPaymentSystemInactive                    = "payment system for specified payment method is inactive"
 	orderErrorPayerRegionUnknown                       = "payer region can't be found"
-	orderErrorFixedPackagesIsEmpty                     = "project's fixed packages list is empty"
-	orderErrorFixedPackageForRegionNotFound            = "project not have fixed packages for payer region"
-	orderErrorFixedPackageNotFound                     = "project not have fixed package with specified amount or currency"
-	orderErrorFixedPackageUnknownCurrency              = "to fixed package of project set unknown currency"
 	orderErrorProjectOrderIdIsDuplicate                = "request with specified project order identifier processed early"
 	orderErrorDynamicNotifyUrlsNotAllowed              = "dynamic verify url or notify url not allowed for project"
 	orderErrorDynamicRedirectUrlsNotAllowed            = "dynamic payer redirect urls not allowed for project"
@@ -68,6 +65,14 @@ const (
 	callbackHandlerIncorrect                           = "unknown callback type"
 	orderErrorCountryByPaymentAccountNotFound          = "information about user country can't be found"
 	orderErrorPaymentAccountIncorrect                  = "account in  payment system is incorrect"
+	orderErrorProductsEmpty                            = "products set is empty"
+	orderErrorProductsInvalid                          = "some products in set are invalid or inactive"
+	orderErrorNoProductsCommonCurrency                 = "no common prices nether in requested currency nor in default currency"
+	orderErrorNoNameInDefaultLanguage                  = "no name in default language %s"
+	orderErrorNoNameInRequiredLanguage                 = "no name in required language %s"
+	orderErrorNoDescriptionInDefaultLanguage           = "no description in default language %s"
+	orderErrorNoDescriptionInRequiredLanguage          = "no description in required language %s"
+	orderErrorProjectMerchantNotFound                  = "merchant for project with specified identifier not found"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
@@ -95,11 +100,17 @@ const (
 )
 
 type orderCreateRequestProcessorChecked struct {
-	project       *billing.Project
-	currency      *billing.Currency
-	payerData     *billing.PayerData
-	fixedPackage  *billing.FixedPackage
-	paymentMethod *billing.PaymentMethod
+	id              string
+	project         *billing.Project
+	merchant        *billing.Merchant
+	currency        *billing.Currency
+	amount          float64
+	payerData       *billing.PayerData
+	paymentMethod   *billing.PaymentMethod
+	products        []string
+	items           []*billing.OrderItem
+	metadata        map[string]string
+	privateMetadata map[string]string
 }
 
 type OrderCreateRequestProcessor struct {
@@ -159,15 +170,22 @@ func (s *Service) OrderCreateProcess(
 		return err
 	}
 
-	if req.Currency != "" {
-		if err := processor.processCurrency(); err != nil {
+	if processor.checked.project.IsProductsCheckout == true {
+		if err := processor.processPaylinkProducts(); err != nil {
+			if pid := req.PrivateMetadata["PaylinkId"]; pid != "" {
+				s.notifyPaylinkError(pid, err, req, nil)
+			}
 			return err
 		}
-	}
+	} else {
+		if req.Currency != "" {
+			if err := processor.processCurrency(); err != nil {
+				return err
+			}
+		}
 
-	if processor.checked.project.OnlyFixedAmounts == true {
-		if err := processor.processFixedPackage(); err != nil {
-			return err
+		if req.Amount != 0 {
+			processor.processAmount()
 		}
 	}
 
@@ -197,6 +215,9 @@ func (s *Service) OrderCreateProcess(
 		return err
 	}
 
+	processor.processMetadata()
+	processor.processPrivateMetadata()
+
 	order, err := processor.prepareOrder()
 
 	if err != nil {
@@ -224,7 +245,6 @@ func (s *Service) OrderCreateProcess(
 	rsp.Status = order.Status
 	rsp.CreatedAt = order.CreatedAt
 	rsp.IsJsonRequest = order.IsJsonRequest
-	rsp.FixedPackage = order.FixedPackage
 	rsp.AmountInMerchantAccountingCurrency = order.AmountInMerchantAccountingCurrency
 	rsp.PaymentMethodOutcomeAmount = order.PaymentMethodOutcomeAmount
 	rsp.PaymentMethodOutcomeCurrency = order.PaymentMethodOutcomeCurrency
@@ -239,6 +259,11 @@ func (s *Service) OrderCreateProcess(
 	rsp.Uuid = order.Uuid
 	rsp.ExpireDateToFormInput = order.ExpireDateToFormInput
 	rsp.TotalPaymentAmount = order.TotalPaymentAmount
+	rsp.Products = order.Products
+	rsp.Items = order.Items
+	rsp.Amount = order.Amount
+	rsp.Currency = order.Currency
+	rsp.Metadata = order.Metadata
 
 	return nil
 }
@@ -248,7 +273,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	req *grpc.PaymentFormJsonDataRequest,
 	rsp *grpc.PaymentFormJsonDataResponse,
 ) error {
-	order, err := s.getOrderById(req.OrderId)
+	order, err := s.getOrderByUuid(req.OrderId)
 
 	if err != nil {
 		return err
@@ -284,6 +309,14 @@ func (s *Service) PaymentFormJsonDataProcess(
 		rsp.UserAddressDataRequired = order.UserAddressDataRequired
 	}
 
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		if pid := order.PrivateMetadata["PaylinkId"]; pid != "" {
+			s.notifyPaylinkError(pid, err, req, order)
+		}
+		return err
+	}
+
 	p1.processOrderVat(order)
 	err = s.updateOrder(order)
 
@@ -297,6 +330,12 @@ func (s *Service) PaymentFormJsonDataProcess(
 		return err
 	}
 
+	projectName, ok := order.Project.Name[order.User.Locale]
+
+	if !ok {
+		projectName = order.Project.Name[DefaultLanguage]
+	}
+
 	expire := time.Now().Add(time.Minute * 30).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": order.Id, "exp": expire})
 
@@ -306,7 +345,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.Vat = order.Tax.Amount
 	rsp.Currency = order.ProjectIncomeCurrency.CodeA3
 	rsp.Project = &grpc.PaymentFormJsonDataProject{
-		Name:       order.Project.Name,
+		Name:       projectName,
 		UrlSuccess: order.Project.UrlSuccess,
 		UrlFail:    order.Project.UrlFail,
 	}
@@ -315,6 +354,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
+	rsp.Items = order.Items
 
 	return nil
 }
@@ -335,6 +375,18 @@ func (s *Service) PaymentCreateProcess(
 	}
 
 	order := processor.checked.order
+
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		if pid := order.PrivateMetadata["PaylinkId"]; pid != "" {
+			s.notifyPaylinkError(pid, err, req, order)
+		}
+		rsp.Error = err.Error()
+		rsp.Status = pkg.StatusErrorValidation
+
+		return nil
+	}
+
 	order.PaymentMethod = &billing.PaymentMethodOrder{
 		Id:            processor.checked.paymentMethod.Id,
 		Name:          processor.checked.paymentMethod.Name,
@@ -378,10 +430,13 @@ func (s *Service) PaymentCreateProcess(
 		return nil
 	}
 
-	if s.isProductionEnvironment() == true {
-		order.PaymentMethod.Params.Terminal = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Terminal
-		order.PaymentMethod.Params.Password = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].Password
-		order.PaymentMethod.Params.CallbackPassword = processor.checked.project.PaymentMethods[order.PaymentMethod.Group].CallbackPassword
+	if processor.checked.project.IsProduction() == true {
+		merchantId := processor.GetMerchantId()
+		pmId := order.PaymentMethod.Id
+
+		order.PaymentMethod.Params.Terminal, _ = s.getMerchantPaymentMethodTerminalId(merchantId, pmId)
+		order.PaymentMethod.Params.Password, _ = s.getMerchantPaymentMethodTerminalPassword(merchantId, pmId)
+		order.PaymentMethod.Params.CallbackPassword, _ = s.getMerchantPaymentMethodTerminalCallbackPassword(merchantId, pmId)
 	}
 
 	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, order)
@@ -397,7 +452,7 @@ func (s *Service) PaymentCreateProcess(
 	errDb := s.db.Collection(pkg.CollectionOrder).UpdateId(bson.ObjectIdHex(order.Id), order)
 
 	if errDb != nil {
-		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
+		s.logError("Update order data failed", []interface{}{"err", errDb.Error(), "order", order})
 
 		rsp.Error = orderErrorUnknown
 		rsp.Status = pkg.StatusErrorSystem
@@ -529,6 +584,17 @@ func (s *Service) PaymentFormLanguageChanged(
 	order.User.Locale = req.Lang
 	order.UserAddressDataRequired = true
 
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		if pid := order.PrivateMetadata["PaylinkId"]; pid != "" {
+			s.notifyPaylinkError(pid, err, req, order)
+		}
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
 	err = s.updateOrder(order)
 
 	if err != nil {
@@ -605,6 +671,7 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 		if err != nil || num.CountryCode == nil {
 			rsp.Status = pkg.ResponseStatusBadData
 			rsp.Message = orderErrorPaymentAccountIncorrect
+			return nil
 		}
 
 		ok := false
@@ -666,6 +733,14 @@ func (s *Service) ProcessBillingAddress(
 		Country:    req.Country,
 		City:       req.City,
 		PostalCode: req.Zip,
+	}
+
+	err = s.ProcessOrderProducts(order)
+	if err != nil {
+		if pid := order.PrivateMetadata["PaylinkId"]; pid != "" {
+			s.notifyPaylinkError(pid, err, req, order)
+		}
+		return err
 	}
 
 	processor := &OrderCreateRequestProcessor{Service: s}
@@ -799,9 +874,9 @@ func (s *Service) getBinData(pan string) (data *BinData) {
 
 func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	id := bson.NewObjectId().Hex()
-	amount := tools.FormatAmount(v.request.Amount)
+	amount := tools.FormatAmount(v.checked.amount)
 	merAccAmount := amount
-	merchantPayoutCurrency := v.checked.project.Merchant.GetPayoutCurrency()
+	merchantPayoutCurrency := v.checked.merchant.GetPayoutCurrency()
 
 	if (v.request.UrlVerify != "" || v.request.UrlNotify != "") && v.checked.project.AllowDynamicNotifyUrls == false {
 		return nil, errors.New(orderErrorDynamicNotifyUrlsNotAllowed)
@@ -812,13 +887,13 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 	}
 
 	if merchantPayoutCurrency != nil && v.checked.currency.CodeInt != merchantPayoutCurrency.CodeInt {
-		amount, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, v.request.Amount)
+		amnt, err := v.Service.Convert(v.checked.currency.CodeInt, merchantPayoutCurrency.CodeInt, amount)
 
 		if err != nil {
 			return nil, err
 		}
 
-		merAccAmount = amount
+		merAccAmount = amnt
 	}
 
 	order := &billing.Order{
@@ -834,7 +909,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			UrlCheckAccount:   v.checked.project.UrlCheckAccount,
 			UrlProcessPayment: v.checked.project.UrlProcessPayment,
 			CallbackProtocol:  v.checked.project.CallbackProtocol,
-			Merchant:          v.checked.project.Merchant,
+			MerchantId:        v.checked.merchant.Id,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     v.request.OrderId,
@@ -842,13 +917,12 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		ProjectIncomeAmount:                amount,
 		ProjectIncomeCurrency:              v.checked.currency,
 		ProjectOutcomeAmount:               amount,
-		ProjectOutcomeCurrency:             v.checked.project.CallbackCurrency,
+		ProjectOutcomeCurrency:             v.checked.currency,
 		ProjectParams:                      v.request.Other,
 		PayerData:                          v.checked.payerData,
 		Status:                             constant.OrderStatusNew,
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      v.request.IsJson,
-		FixedPackage:                       v.checked.fixedPackage,
 		AmountInMerchantAccountingCurrency: merAccAmount,
 		PaymentMethodOutcomeAmount:         amount,
 		PaymentMethodOutcomeCurrency:       v.checked.currency,
@@ -867,6 +941,12 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 				State:      v.checked.payerData.State,
 			},
 		},
+		Amount:          amount,
+		Currency:        v.checked.currency.CodeA3,
+		Products:        v.checked.products,
+		Items:           v.checked.items,
+		Metadata:        v.checked.metadata,
+		PrivateMetadata: v.checked.privateMetadata,
 	}
 
 	v.processOrderVat(order)
@@ -910,11 +990,22 @@ func (v *OrderCreateRequestProcessor) processProject() error {
 		return errors.New(orderErrorProjectNotFound)
 	}
 
-	if project.IsActive == false {
+	if project.IsDeleted() == true {
 		return errors.New(orderErrorProjectInactive)
 	}
 
+	merchant, ok := v.merchantCache[project.MerchantId]
+
+	if !ok {
+		return errors.New(orderErrorProjectMerchantNotFound)
+	}
+
+	if merchant.IsDeleted() == true {
+		return errors.New(orderErrorProjectMerchantInactive)
+	}
+
 	v.checked.project = project
+	v.checked.merchant = merchant
 
 	return nil
 }
@@ -930,6 +1021,18 @@ func (v *OrderCreateRequestProcessor) processCurrency() error {
 	v.checked.currency = currency
 
 	return nil
+}
+
+func (v *OrderCreateRequestProcessor) processAmount() {
+	v.checked.amount = v.request.Amount
+}
+
+func (v *OrderCreateRequestProcessor) processMetadata() {
+	v.checked.metadata = v.request.Metadata
+}
+
+func (v *OrderCreateRequestProcessor) processPrivateMetadata() {
+	v.checked.privateMetadata = v.request.PrivateMetadata
 }
 
 func (v *OrderCreateRequestProcessor) processPayerData() error {
@@ -964,55 +1067,48 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	return nil
 }
 
-func (v *OrderCreateRequestProcessor) processFixedPackage() error {
-	fps := v.checked.project.GetFixedPackage()
-
-	if len(fps) <= 0 {
-		return errors.New(orderErrorFixedPackagesIsEmpty)
+func (v *OrderCreateRequestProcessor) processPaylinkProducts() error {
+	if len(v.request.Products) == 0 {
+		return nil
 	}
 
-	region := v.checked.payerData.Country
-
-	if v.request.Region != "" {
-		region = v.request.Region
+	orderProducts, err := v.Service.GetOrderProducts(v.checked.project.Id, v.request.Products)
+	if err != nil {
+		return err
 	}
 
-	if region == "" {
-		return errors.New(orderErrorPayerRegionUnknown)
+	pid := v.request.PrivateMetadata["PaylinkId"]
+
+	logInfo := "[PAYONE_BILLING] [processPaylinkProducts] %s"
+
+	currency := v.Service.accountingCurrency
+	zap.S().Infow(fmt.Sprintf(logInfo, "accountingCurrency"), "currency", currency.CodeA3, "paylink", pid)
+
+	merchantPayoutCurrency := v.checked.merchant.GetPayoutCurrency()
+
+	if merchantPayoutCurrency != nil {
+		currency = merchantPayoutCurrency
+		zap.S().Infow(fmt.Sprintf(logInfo, "merchant payout currency"), "currency", currency.CodeA3, "paylink", pid)
+	} else {
+		zap.S().Infow(fmt.Sprintf(logInfo, "no merchant payout currency set"), "paylink", pid)
 	}
 
-	regionFps, ok := v.checked.project.FixedPackage[region]
+	zap.S().Infow(fmt.Sprintf(logInfo, "use currency"), "currency", currency.CodeA3, "paylink", pid)
 
-	if !ok || len(regionFps.FixedPackage) <= 0 {
-		return errors.New(orderErrorFixedPackageForRegionNotFound)
+	amount, err := v.Service.GetOrderProductsAmount(orderProducts, currency.CodeA3)
+	if err != nil {
+		return err
 	}
 
-	var fp *billing.FixedPackage
-
-	for _, val := range regionFps.FixedPackage {
-		if val.Price != v.request.Amount || val.IsActive == false ||
-			(v.checked.currency != nil && val.Currency.CodeA3 != v.checked.currency.CodeA3) {
-			continue
-		}
-
-		fp = val
+	items, err := v.Service.GetOrderProductsItems(orderProducts, DefaultLanguage, currency.CodeA3)
+	if err != nil {
+		return err
 	}
 
-	if fp == nil {
-		return errors.New(orderErrorFixedPackageNotFound)
-	}
-
-	if v.checked.currency == nil {
-		currency, err := v.GetCurrencyByCodeA3(fp.Currency.CodeA3)
-
-		if err != nil {
-			return errors.New(orderErrorFixedPackageUnknownCurrency)
-		}
-
-		v.checked.currency = currency
-	}
-
-	v.checked.fixedPackage = fp
+	v.checked.products = v.request.Products
+	v.checked.currency = currency
+	v.checked.amount = amount
+	v.checked.items = items
 
 	return nil
 }
@@ -1048,22 +1144,18 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 		return errors.New(orderErrorPaymentSystemInactive)
 	}
 
-	if v.isProductionEnvironment() == true {
-		if len(v.checked.project.PaymentMethods) <= 0 {
-			return errors.New(orderErrorPaymentMethodNotAllowed)
+	if v.checked.project.IsProduction() == true {
+		mpm, err := v.getMerchantPaymentMethod(v.checked.merchant.Id, pm.Id)
+
+		if err != nil {
+			return err
 		}
 
-		ppm, ok := v.checked.project.PaymentMethods[pm.Group]
-
-		if !ok {
-			return errors.New(orderErrorPaymentMethodNotAllowed)
-		}
-
-		if ppm.Id != pm.Id {
+		if mpm.PaymentMethod.Id != pm.Id {
 			return errors.New(orderErrorPaymentMethodIncompatible)
 		}
 
-		if ppm.Terminal == "" || ppm.Password == "" {
+		if mpm.Integration == nil || mpm.Integration.Integrated == false {
 			return errors.New(orderErrorPaymentMethodEmptySettings)
 		}
 	}
@@ -1074,13 +1166,19 @@ func (v *OrderCreateRequestProcessor) processPaymentMethod(pm *billing.PaymentMe
 }
 
 func (v *OrderCreateRequestProcessor) processLimitAmounts() (err error) {
-	amount := v.request.Amount
+	amount := v.checked.amount
 
-	if v.checked.project.LimitsCurrency.CodeInt != v.checked.currency.CodeInt {
-		amount, err = v.Convert(v.checked.currency.CodeInt, v.checked.project.LimitsCurrency.CodeInt, amount)
+	if v.checked.project.LimitsCurrency != "" && v.checked.project.LimitsCurrency != v.checked.currency.CodeA3 {
+		currency, err := v.GetCurrencyByCodeA3(v.checked.project.LimitsCurrency)
 
 		if err != nil {
-			return
+			return err
+		}
+
+		amount, err = v.Convert(v.checked.currency.CodeInt, currency.CodeInt, amount)
+
+		if err != nil {
+			return err
 		}
 	}
 
@@ -1191,7 +1289,9 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 // Calculate all possible commissions for order, i.e. payment system fee amount, PSP (P1) fee amount,
 // commission shifted from project to user and VAT
 func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) error {
-	mAccCur := o.Project.Merchant.GetPayoutCurrency()
+	merchant, _ := v.merchantCache[o.Project.MerchantId]
+
+	mAccCur := merchant.GetPayoutCurrency()
 	pmOutCur := o.PaymentMethodOutcomeCurrency.CodeInt
 	amount := float64(0)
 
@@ -1239,7 +1339,7 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		return projectPms, nil
 	}
 
-	for k, val := range v.service.paymentMethodCache {
+	for _, val := range v.service.paymentMethodCache {
 		pm, ok := val[v.order.PaymentMethodOutcomeCurrency.CodeInt]
 
 		if !ok || pm.IsActive == false ||
@@ -1247,20 +1347,19 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 			continue
 		}
 
-		if v.order.ProjectIncomeAmount < pm.MinPaymentAmount ||
-			(pm.MaxPaymentAmount > 0 && v.order.ProjectIncomeAmount > pm.MaxPaymentAmount) {
+		if v.order.Amount < pm.MinPaymentAmount ||
+			(pm.MaxPaymentAmount > 0 && v.order.Amount > pm.MaxPaymentAmount) {
 			continue
 		}
 
-		if v.service.isProductionEnvironment() == true {
-			if len(project.PaymentMethods) <= 0 {
-				return projectPms, errors.New(orderErrorPaymentMethodNotAllowed)
+		if project.IsProduction() == true {
+			mpm, err := v.service.getMerchantPaymentMethod(v.order.Project.MerchantId, pm.Id)
+
+			if err != nil {
+				continue
 			}
 
-			ppm, ok := project.PaymentMethods[k]
-
-			if !ok || ppm.Id != pm.Id ||
-				ppm.Terminal == "" || ppm.Password == "" {
+			if mpm.Integration == nil || mpm.Integration.Integrated == false {
 				continue
 			}
 		}
@@ -1382,6 +1481,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		},
 		checked: &orderCreateRequestProcessorChecked{
 			currency: order.ProjectIncomeCurrency,
+			amount:   order.ProjectIncomeAmount,
 		},
 	}
 
@@ -1438,8 +1538,8 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 				v.service.logError("Get data about stored card failed", []interface{}{"err", err.Error(), "id", id})
 			}
 
-			if err != nil || storedCard == nil {
-				v.service.logError("Get data about stored card failed", []interface{}{"err", err.Error(), "id", id})
+			if storedCard == nil {
+				v.service.logError("Get data about stored card failed", []interface{}{"err", "", "id", id})
 				return errors.New(orderGetSavedCardError)
 			}
 
@@ -1551,7 +1651,8 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 		return
 	}
 
-	merchantPayoutCurrency := order.Project.Merchant.GetPayoutCurrency()
+	merchant, _ := v.service.merchantCache[order.Project.MerchantId]
+	merchantPayoutCurrency := merchant.GetPayoutCurrency()
 
 	if merchantPayoutCurrency != nil {
 		order.AmountOutMerchantAccountingCurrency, err = v.service.Convert(
@@ -1594,4 +1695,256 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 	}
 
 	return
+}
+
+func (s *Service) GetOrderProducts(project_id string, product_ids []string) ([]*grpc.Product, error) {
+	if len(product_ids) == 0 {
+		return nil, errors.New(orderErrorProductsEmpty)
+	}
+
+	result := grpc.ListProductsResponse{}
+
+	err := s.GetProductsForOrder(context.TODO(), &grpc.GetProductsForOrderRequest{
+		ProjectId: project_id,
+		Ids:       product_ids,
+	}, &result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Total != int32(len(product_ids)) {
+		return nil, errors.New(orderErrorProductsInvalid)
+	}
+
+	return result.Products, nil
+}
+
+func (s *Service) GetOrderProductsAmount(products []*grpc.Product, currency string) (float64, error) {
+
+	if len(products) == 0 {
+		return 0, errors.New(orderErrorProductsEmpty)
+	}
+
+	summ := float64(0)
+	for _, p := range products {
+		amount, err := p.GetPriceInCurrency(currency)
+		if err != nil {
+			return 0, errors.New(orderErrorNoProductsCommonCurrency)
+		}
+		summ += amount
+	}
+	totalAmount := float64(tools.FormatAmount(summ))
+	return totalAmount, nil
+}
+
+func (s *Service) GetOrderProductsItems(products []*grpc.Product, language string, currency string) ([]*billing.OrderItem, error) {
+
+	result := []*billing.OrderItem{}
+
+	if len(products) == 0 {
+		return nil, errors.New(orderErrorProductsEmpty)
+	}
+
+	isDefaultLanguage := language == DefaultLanguage
+
+	for _, p := range products {
+		var (
+			amount      float64
+			name        string
+			description string
+			err         error
+		)
+
+		amount, err = p.GetPriceInCurrency(currency)
+		if err != nil {
+			return nil, err
+		}
+
+		name, err = p.GetLocalizedName(language)
+		if err != nil {
+			if isDefaultLanguage {
+				return nil, errors.New(fmt.Sprintf(orderErrorNoNameInRequiredLanguage, language))
+			}
+			name, err = p.GetLocalizedName(DefaultLanguage)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf(orderErrorNoNameInDefaultLanguage, DefaultLanguage))
+			}
+		}
+
+		description, err = p.GetLocalizedDescription(language)
+		if err != nil {
+			if isDefaultLanguage {
+				return nil, errors.New(fmt.Sprintf(orderErrorNoDescriptionInRequiredLanguage, language))
+			}
+			description, err = p.GetLocalizedDescription(DefaultLanguage)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf(orderErrorNoDescriptionInDefaultLanguage, DefaultLanguage))
+			}
+		}
+
+		item := &billing.OrderItem{
+			Id:          p.Id,
+			Object:      p.Object,
+			Sku:         p.Sku,
+			Name:        name,
+			Description: description,
+			CreatedAt:   p.CreatedAt,
+			UpdatedAt:   p.UpdatedAt,
+			Images:      p.Images,
+			Url:         p.Url,
+			Metadata:    p.Metadata,
+			Amount:      amount,
+			Currency:    currency,
+		}
+		result = append(result, item)
+	}
+
+	return result, nil
+}
+
+func (s *Service) ProcessOrderProducts(order *billing.Order) error {
+	project, err := s.GetProjectById(order.Project.Id)
+
+	if err != nil {
+		return err
+	}
+	if project.IsDeleted() == true {
+		return errors.New(orderErrorProjectInactive)
+	}
+
+	if project.IsProductsCheckout == false {
+		return nil
+	}
+
+	orderProducts, err := s.GetOrderProducts(project.Id, order.Products)
+	if err != nil {
+		return err
+	}
+
+	var (
+		country       string
+		currency      *billing.Currency
+		itemsCurrency string
+		locale        string
+		logInfo       = "[PAYONE_BILLING] [ProcessOrderProducts] %s"
+	)
+
+	if order.BillingAddress != nil && order.BillingAddress.Country != "" {
+		country = order.BillingAddress.Country
+	} else if order.User.Address != nil && order.User.Address.Country != "" {
+		country = order.User.Address.Country
+	}
+
+	defaultCurrency := s.accountingCurrency
+	zap.S().Infow(fmt.Sprintf(logInfo, "accountingCurrency"), "currency", defaultCurrency.CodeA3, "order.Uuid", order.Uuid)
+
+	merchant, _ := s.merchantCache[order.Project.MerchantId]
+	merchantPayoutCurrency := merchant.GetPayoutCurrency()
+
+	if merchantPayoutCurrency != nil {
+		defaultCurrency = merchantPayoutCurrency
+		zap.S().Infow(fmt.Sprintf(logInfo, "merchant payout currency"), "currency", defaultCurrency.CodeA3, "order.Uuid", order.Uuid)
+	} else {
+		zap.S().Infow(fmt.Sprintf(logInfo, "no merchant payout currency set"))
+	}
+
+	currency = defaultCurrency
+
+	if country != "" {
+		curr, ok := CountryToCurrency[country]
+		if ok {
+			currency, err = s.GetCurrencyByCodeA3(curr)
+			if err == nil {
+				zap.S().Infow(fmt.Sprintf(logInfo, "currency by country"), "currency", currency.CodeA3, "country", country, "order.Uuid", order.Uuid)
+			} else {
+				currency = defaultCurrency
+			}
+		}
+	}
+
+	zap.S().Infow(fmt.Sprintf(logInfo, "try to use detected currency for order amount"), "currency", currency.CodeA3, "order.Uuid", order.Uuid)
+
+	itemsCurrency = currency.CodeA3
+
+	// try to get order Amount in requested currency
+	amount, err := s.GetOrderProductsAmount(orderProducts, currency.CodeA3)
+	if err != nil {
+		if currency.CodeA3 == defaultCurrency.CodeA3 {
+			return err
+		}
+		// try to get order Amount in default currency, if it differs from requested one
+		amount, err = s.GetOrderProductsAmount(orderProducts, defaultCurrency.CodeA3)
+		if err != nil {
+			return err
+		}
+		zap.S().Infow(fmt.Sprintf(logInfo, "try to use default currency for order amount"), "currency", defaultCurrency.CodeA3, "order.Uuid", order.Uuid)
+
+		itemsCurrency = defaultCurrency.CodeA3
+		// converting Amount from default currency to requested
+		amount, err = s.Convert(defaultCurrency.CodeInt, currency.CodeInt, amount)
+		if err != nil {
+			return err
+		}
+	}
+
+	if order.User != nil && order.User.Locale != "" {
+		locale = order.User.Locale
+	} else {
+		locale = DefaultLanguage
+	}
+
+	items, err := s.GetOrderProductsItems(orderProducts, locale, itemsCurrency)
+	if err != nil {
+		return err
+	}
+
+	merAccAmount := amount
+	projectOutcomeCurrency := currency
+	if merchantPayoutCurrency != nil && currency.CodeInt != merchantPayoutCurrency.CodeInt {
+		amount, err := s.Convert(currency.CodeInt, merchantPayoutCurrency.CodeInt, amount)
+
+		if err != nil {
+			return err
+		}
+		merAccAmount = amount
+		projectOutcomeCurrency = merchantPayoutCurrency
+	}
+
+	order.Currency = currency.CodeA3
+	order.ProjectOutcomeCurrency = projectOutcomeCurrency
+	order.ProjectIncomeCurrency = currency
+	order.PaymentMethodOutcomeCurrency = currency
+	order.PaymentMethodIncomeCurrency = currency
+
+	order.Amount = amount
+	order.ProjectIncomeAmount = amount
+	order.ProjectOutcomeAmount = merAccAmount
+	order.PaymentMethodOutcomeAmount = amount
+	order.PaymentMethodIncomeAmount = amount
+
+	order.Items = items
+
+	return nil
+}
+
+func (s *Service) notifyPaylinkError(PaylinkId string, err error, req interface{}, order interface{}) {
+	msg := map[string]interface{}{
+		"event":     "error",
+		"paylinkId": PaylinkId,
+		"message":   "Invalid paylink",
+		"error":     err,
+		"request":   req,
+		"order":     order,
+	}
+	sErr := s.sendCentrifugoMessage(msg)
+	if sErr != nil {
+		s.logError("Cannot send centrifugo message about Paylink Error", []interface{}{
+			"error", sErr.Error(), "PaylinkId", PaylinkId, "originalError", err.Error(), "request", req, "order", order,
+		})
+	}
+}
+
+func (v *PaymentCreateProcessor) GetMerchantId() string {
+	return v.checked.project.MerchantId
 }

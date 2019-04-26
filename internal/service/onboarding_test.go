@@ -36,10 +36,11 @@ func Test_Onboarding(t *testing.T) {
 
 func (suite *OnboardingTestSuite) SetupTest() {
 	cfg, err := config.NewConfig()
-	cfg.AccountingCurrency = "RUB"
-	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
 	assert.NoError(suite.T(), err, "Config load failed")
+
+	cfg.AccountingCurrency = "RUB"
+	cfg.CardPayApiUrl = "https://sandbox.cardpay.com"
 
 	settings := database.Connection{
 		Host:     cfg.MongoHost,
@@ -279,25 +280,17 @@ func (suite *OnboardingTestSuite) SetupTest() {
 
 	project := &billing.Project{
 		Id:                       bson.NewObjectId().Hex(),
-		CallbackCurrency:         rub,
+		CallbackCurrency:         rub.CodeA3,
 		CallbackProtocol:         "default",
-		LimitsCurrency:           rub,
+		LimitsCurrency:           rub.CodeA3,
 		MaxPaymentAmount:         15000,
 		MinPaymentAmount:         1,
-		Name:                     "test project 1",
-		OnlyFixedAmounts:         true,
+		Name:                     map[string]string{"en": "test project 1"},
+		IsProductsCheckout:       true,
 		AllowDynamicRedirectUrls: true,
 		SecretKey:                "test project 1 secret key",
-		PaymentMethods: map[string]*billing.ProjectPaymentMethod{
-			"BANKCARD": {
-				Id:        pmBankCard.Id,
-				Terminal:  "terminal",
-				Password:  "password",
-				CreatedAt: ptypes.TimestampNow(),
-			},
-		},
-		IsActive: true,
-		Merchant: merchant,
+		Status:                   pkg.ProjectStatusInProduction,
+		MerchantId:               merchant.Id,
 	}
 
 	err = db.Collection(pkg.CollectionProject).Insert(project)
@@ -1598,6 +1591,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_NewM
 			Integrated:       true,
 		},
 		IsActive: true,
+		UserId:   bson.NewObjectId().Hex(),
 	}
 	rspMerchantPaymentMethodAdd := &grpc.MerchantPaymentMethodResponse{}
 	err = suite.service.ChangeMerchantPaymentMethod(context.TODO(), reqMerchantPaymentMethodAdd, rspMerchantPaymentMethodAdd)
@@ -1898,7 +1892,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_CreateNotification_MessageEmpty
 
 func (suite *OnboardingTestSuite) TestOnboarding_CreateNotification_AddNotification_Error() {
 	req := &grpc.NotificationRequest{
-		MerchantId: "bad_bson_id",
+		MerchantId: "ffffffffffffffffffffffff",
 		UserId:     bson.NewObjectId().Hex(),
 		Title:      "Unit test title",
 		Message:    "Unit test message",
@@ -1907,7 +1901,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_CreateNotification_AddNotificat
 
 	err := suite.service.CreateNotification(context.TODO(), req, rsp)
 	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), notificationErrorMerchantIdIncorrect, err.Error())
+	assert.Equal(suite.T(), merchantErrorNotFound, err.Error())
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetNotification_Ok() {
@@ -2020,14 +2014,13 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_Sort_Ok() {
 	err = suite.service.ListNotifications(context.TODO(), req1, rsp1)
 	assert.Nil(suite.T(), err)
 	assert.Len(suite.T(), rsp1.Items, 3)
-	assert.Equal(suite.T(), rsp.Id, rsp1.Items[0].Id)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 	userId := bson.NewObjectId().Hex()
 
 	req1 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     userId,
 		Title:      "Unit test title 1",
 		Message:    "Unit test message 1",
@@ -2039,7 +2032,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 	assert.True(suite.T(), len(rsp1.Id) > 0)
 
 	req2 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     userId,
 		Title:      "Unit test title 2",
 		Message:    "Unit test message 2",
@@ -2051,7 +2044,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 	assert.True(suite.T(), len(rsp1.Id) > 0)
 
 	req3 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     userId,
 		Title:      "Unit test title 3",
 		Message:    "Unit test message 3",
@@ -2078,7 +2071,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListNotifications_User_Ok() {
 
 func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_Ok() {
 	req1 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     bson.NewObjectId().Hex(),
 		Title:      "Unit test title 1",
 		Message:    "Unit test message 1",
@@ -2110,7 +2103,7 @@ func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_Ok() {
 
 func (suite *OnboardingTestSuite) TestOnboarding_MarkNotificationAsRead_NotFound_Error() {
 	req1 := &grpc.NotificationRequest{
-		MerchantId: bson.NewObjectId().Hex(),
+		MerchantId: suite.merchant.Id,
 		UserId:     bson.NewObjectId().Hex(),
 		Title:      "Unit test title 1",
 		Message:    "Unit test message 1",
