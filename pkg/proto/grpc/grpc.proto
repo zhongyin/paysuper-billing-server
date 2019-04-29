@@ -550,6 +550,8 @@ message ListProjectsRequest {
 }
 
 message ListProjectsResponse {
+    //@inject_tag: json:"count"
     int32 count = 1;
+    //@inject_tag: json:"items"
     repeated billing.Project items = 2;
 }
