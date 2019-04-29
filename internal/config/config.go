@@ -20,6 +20,11 @@ type PaymentSystemConfig struct {
 	CardPayApiUrl string `envconfig:"CARD_PAY_API_URL" required:"true"`
 }
 
+type CustomerTokenConfig struct {
+	Length   int   `envconfig:"CUSTOMER_TOKEN_LENGTH" default:"32"`
+	LifeTime int64 `envconfig:"CUSTOMER_TOKEN_LIFETIME" default:"2592000"`
+}
+
 type Config struct {
 	MongoHost          string `envconfig:"MONGO_HOST" required:"true"`
 	MongoDatabase      string `envconfig:"MONGO_DB" required:"true"`
@@ -28,6 +33,9 @@ type Config struct {
 	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" default:"EUR"`
 	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8086"`
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
+	RedisHost          string `envconfig:"REDIS_HOST" default:"localhost:6379"`
+	RedisPassword      string `envconfig:"REDIS_PASSWORD" default:""`
+	RedisDatabase      int    `envconfig:"REDIS_DATABASE" default:"0"`
 
 	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
 	CentrifugoURL    string `envconfig:"CENTRIFUGO_URL" required:"false" default:"http://127.0.0.1:8000"`
@@ -37,6 +45,7 @@ type Config struct {
 
 	*CacheConfig
 	*PaymentSystemConfig
+	*CustomerTokenConfig
 }
 
 func NewConfig() (*Config, error) {
@@ -44,4 +53,12 @@ func NewConfig() (*Config, error) {
 	err := envconfig.Process("", cfg)
 
 	return cfg, err
+}
+
+func (cfg *Config) GetCustomerTokenLength() int {
+	return cfg.CustomerTokenConfig.Length
+}
+
+func (cfg *Config) GetCustomerTokenLifetime() int64 {
+	return cfg.CustomerTokenConfig.LifeTime
 }

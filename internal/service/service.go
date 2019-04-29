@@ -9,6 +9,7 @@ import (
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/centrifugal/gocent"
 	"github.com/globalsign/mgo/bson"
+	"github.com/go-redis/redis"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -74,6 +75,7 @@ type Service struct {
 	tax              tax_service.TaxService
 	broker           *rabbitmq.Broker
 	centrifugoClient *gocent.Client
+	redis            *redis.Client
 
 	accountingCurrency *billing.Currency
 
@@ -108,6 +110,7 @@ func NewBillingService(
 	rep repository.RepositoryService,
 	tax tax_service.TaxService,
 	broker *rabbitmq.Broker,
+	redis *redis.Client,
 ) *Service {
 	return &Service{
 		db:     db,
@@ -117,6 +120,7 @@ func NewBillingService(
 		rep:    rep,
 		tax:    tax,
 		broker: broker,
+		redis:  redis,
 	}
 }
 

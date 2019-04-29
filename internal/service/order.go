@@ -109,6 +109,7 @@ type orderCreateRequestProcessorChecked struct {
 	items           []*billing.OrderItem
 	metadata        map[string]string
 	privateMetadata map[string]string
+	customer        *billing.Customer
 }
 
 type OrderCreateRequestProcessor struct {
@@ -152,10 +153,26 @@ func (s *Service) OrderCreateProcess(
 	req *billing.OrderCreateRequest,
 	rsp *billing.Order,
 ) error {
-	processor := &OrderCreateRequestProcessor{Service: s, request: req, checked: &orderCreateRequestProcessorChecked{}}
+	processor := &OrderCreateRequestProcessor{
+		Service: s,
+		request: req,
+		checked: &orderCreateRequestProcessorChecked{}}
 
 	if err := processor.processProject(); err != nil {
 		return err
+	}
+
+	if req.Token != "" || req.User != nil {
+		err := processor.processToken()
+
+		if err != nil {
+			return err
+		}
+	} else {
+		if req.User != nil {
+			tokenReq := s.transformOrderUser2TokenRequest(req.User)
+			s.findCustomer(tokenReq, processor.checked.project)
+		}
 	}
 
 	if req.Signature != "" || processor.checked.project.SignatureRequired == true {
@@ -1319,6 +1336,47 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 		amount, _ = v.Service.Convert(pmOutCur, mAccCur.CodeInt, commission)
 		o.PaymentSystemFeeAmount.AmountMerchantCurrency = amount
 	}
+
+	return nil
+}
+
+func (v *OrderCreateRequestProcessor) processCustomer() error {
+	var customer *billing.Customer
+	var err error
+
+	if v.request.Token != "" {
+		token, err := v.getTokenBy(v.request.Token)
+
+		if err != nil {
+			return err
+		}
+
+		customer, err = v.getCustomerById(token.CustomerId)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if v.request.User != nil {
+		tokenReq := v.transformOrderUser2TokenRequest(v.request.User)
+
+		if v.request.Token == "" {
+			customer, err = v.findCustomer(tokenReq, v.checked.project)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		if customer != nil {
+			customer, err = v.updateCustomer(tokenReq, v.checked.project, customer)
+		} else {
+			customer, err = v.createCustomer(tokenReq, v.checked.project)
+		}
+	}
+
+	v.checked.customer = customer
 
 	return nil
 }

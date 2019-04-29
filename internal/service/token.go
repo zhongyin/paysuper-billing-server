@@ -6,25 +6,42 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
+	"math/rand"
 	"net"
+	"strings"
+	"time"
 )
 
 const (
 	customerNotFound                 = "customer by specified data not found"
+	tokenErrorNotFound               = "token not found"
 	tokenErrorUserIdentityRequired   = "request must contain one or more parameters with user information"
 	tokenErrorSettingsItemsRequired  = "field settings.items required and can't be empty"
 	tokenErrorSettingsAmountRequired = "field settings.amount required and must be greater than 0"
+
+	tokenStorageMask   = "paysuper:token:%s"
+	tokenLetterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	tokenLetterIdxBits = uint(6)
+	tokenLetterIdxMask = uint64(1<<tokenLetterIdxBits - 1)
+	tokenLetterIdxMax  = 63 / tokenLetterIdxBits
 )
 
 var (
 	customerErrNotFound = errors.New(customerNotFound)
+
+	tokenRandSource = rand.NewSource(time.Now().UnixNano())
 )
+
+type tokenRepository struct {
+	token *billing.Token
+}
 
 func (s *Service) CreateToken(
 	ctx context.Context,
@@ -77,7 +94,7 @@ func (s *Service) CreateToken(
 		}
 	}
 
-	customer, err := s.getCustomer(req, project)
+	customer, err := s.findCustomer(req, project)
 
 	if err != nil && err != customerErrNotFound {
 		rsp.Status = pkg.ResponseStatusSystemError
@@ -118,14 +135,16 @@ func (s *Service) createToken(
 	req *grpc.TokenRequest,
 	customer *billing.Customer,
 ) (*billing.Token, error) {
+	tokenRep := &tokenRepository{}
+
 	token := &billing.Token{
-		Id:         bson.NewObjectId().Hex(),
+		Token:      tokenRep.getTokenString(s.cfg.CustomerTokenConfig.Length),
 		CustomerId: customer.Id,
 		User:       req.User,
 		Settings:   req.Settings,
-		CreatedAt:  ptypes.TimestampNow(),
-		UpdatedAt:  ptypes.TimestampNow(),
 	}
+
+	s.redis.HSet()
 
 	b, _ := json.Marshal(token)
 
@@ -143,7 +162,39 @@ func (s *Service) createToken(
 	return token, nil
 }
 
-func (s *Service) getCustomer(
+func (s *Service) getTokenBy(token string) (*billing.Token, error) {
+	var t *billing.Token
+
+	query := bson.M{"token": token}
+	err := s.db.Collection(pkg.CollectionCustomerToken).Find(query).One(&t)
+
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			return nil, errors.New(orderErrorUnknown)
+		}
+
+		return nil, errors.New(tokenErrorNotFound)
+	}
+
+	return t, nil
+}
+
+func (s *Service) getCustomerById(id string) (*billing.Customer, error) {
+	var customer *billing.Customer
+	err := s.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(id)).One(&customer)
+
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			return nil, errors.New(orderErrorUnknown)
+		}
+
+		return nil, errors.New(customerNotFound)
+	}
+
+	return customer, nil
+}
+
+func (s *Service) findCustomer(
 	req *grpc.TokenRequest,
 	project *billing.Project,
 ) (*billing.Customer, error) {
@@ -376,4 +427,81 @@ func (s *Service) processCustomerIdentity(
 	}
 
 	return currentIdentities
+}
+
+func (s *Service) transformOrderUser2TokenRequest(user *billing.OrderUser) *grpc.TokenRequest {
+	tokenReq := &grpc.TokenRequest{User: &billing.TokenUser{}}
+
+	if user.ExternalId != "" {
+		tokenReq.User.Id = user.ExternalId
+	}
+
+	if user.Name != "" {
+		tokenReq.User.Name = &billing.TokenUserValue{Value: user.Name}
+	}
+
+	if user.Email != "" {
+		tokenReq.User.Email = &billing.TokenUserEmailValue{
+			Value:    user.Email,
+			Verified: user.EmailVerified,
+		}
+	}
+
+	if user.Phone != "" {
+		tokenReq.User.Phone = &billing.TokenUserPhoneValue{
+			Value:    user.Phone,
+			Verified: user.PhoneVerified,
+		}
+	}
+
+	if user.Ip != "" {
+		tokenReq.User.Ip = &billing.TokenUserIpValue{Value: user.Ip}
+	}
+
+	if user.Locale != "" {
+		tokenReq.User.Locale = &billing.TokenUserLocaleValue{Value: user.Locale}
+	}
+
+	if user.Address != nil {
+		tokenReq.User.Address = user.Address
+	}
+
+	if len(user.Metadata) > 0 {
+		tokenReq.User.Metadata = user.Metadata
+	}
+
+	return tokenReq
+}
+
+func (r *tokenRepository) getToken() {
+
+}
+
+func (r *tokenRepository) setToken() {
+
+}
+
+func (r *tokenRepository) getKey(token string) string {
+	return fmt.Sprintf(tokenStorageMask, token)
+}
+
+func (r *tokenRepository) getTokenString(n int) string {
+	sb := strings.Builder{}
+	sb.Grow(n)
+
+	for i, cache, remain := n-1, tokenRandSource.Int63(), tokenLetterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = tokenRandSource.Int63(), tokenLetterIdxMax
+		}
+
+		if idx := int(uint64(cache) & tokenLetterIdxMask); idx < len(tokenLetterBytes) {
+			sb.WriteByte(tokenLetterBytes[idx])
+			i--
+		}
+
+		cache >>= tokenLetterIdxBits
+		remain--
+	}
+
+	return sb.String()
 }

@@ -59,6 +59,8 @@ message OrderCreateRequest {
     map<string, string> metadata = 23;
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 24;
+    string token = 25;
+    OrderUser user = 26;
 }
 
 message Project {
@@ -279,6 +281,7 @@ message OrderTax {
 }
 
 message OrderBillingAddress {
+    // @inject_tag: validate:"omitempty,alpha,len=2"
     string country = 1;
     string city = 2;
     string postal_code = 3;
@@ -290,24 +293,25 @@ message OrderUser {
     string id = 1;
     // @inject_tag: bson:"object"
     string object = 2;
+    string external_id = 3;
     // @inject_tag: bson:"name"
-    string name = 3;
-    // @inject_tag: bson:"email"
-    string email = 4;
+    string name = 4;
+    // @inject_tag: validate:"omitempty,email"
+    string email = 5;
     // @inject_tag: bson:"email_verified"
-    bool email_verified = 5;
-    // @inject_tag: bson:"phone"
-    string phone = 6;
+    bool email_verified = 6;
+    // @inject_tag: validate:"omitempty,phone"
+    string phone = 7;
     // @inject_tag: bson:"phone_verified"
-    bool phone_verified = 7;
-    // @inject_tag: bson:"ip"
-    string ip = 8;
-    // @inject_tag: bson:"locale"
-    string locale = 9;
+    bool phone_verified = 8;
+    // @inject_tag: validate:"omitempty,ip"
+    string ip = 9;
+    // @inject_tag: validate:"omitempty,alpha,len=2"
+    string locale = 10;
     // @inject_tag: bson:"address"
-    OrderBillingAddress address = 10;
+    OrderBillingAddress address = 11;
     // @inject_tag: bson:"metadata"
-    map<string, string> metadata = 11;
+    map<string, string> metadata = 12;
 }
 
 message Order {
@@ -1000,13 +1004,8 @@ message TokenSettings {
 }
 
 message Token {
-    string id = 1;
-    string token = 2;
-    string customer_id = 3;
-    TokenUser user = 4;
-    TokenSettings settings = 5;
-    // @inject_tag: json:"-"
-    google.protobuf.Timestamp created_at = 6;
-    // @inject_tag: json:"-"
-    google.protobuf.Timestamp updated_at = 7;
+    string token = 1;
+    string customer_id = 2;
+    TokenUser user = 3;
+    TokenSettings settings = 4;
 }

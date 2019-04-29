@@ -8,6 +8,7 @@ import (
 	"github.com/ProtocolONE/geoip-service/pkg/proto"
 	metrics "github.com/ProtocolONE/go-micro-plugins/wrapper/monitoring/prometheus"
 	"github.com/ProtocolONE/rabbitmq/pkg"
+	"github.com/go-redis/redis"
 	"github.com/micro/go-micro"
 	k8s "github.com/micro/kubernetes/go/micro"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
@@ -29,6 +30,7 @@ import (
 type Application struct {
 	cfg        *config.Config
 	database   *database.Source
+	redis      *redis.Client
 	service    micro.Service
 	httpServer *http.Server
 	router     *http.ServeMux
@@ -54,6 +56,18 @@ func (app *Application) Init() {
 
 	app.cfg = cfg
 	app.initDatabase()
+
+	app.redis = database.NewRedis(
+		&redis.Options{
+			Addr:     cfg.RedisHost,
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDatabase,
+		},
+	)
+
+	if err != nil {
+		app.logger.Fatal("Connection to Redis failed", zap.Error(err), zap.String("broker_address", app.cfg.BrokerAddress))
+	}
 
 	broker, err := rabbitmq.NewBroker(app.cfg.BrokerAddress)
 
@@ -203,12 +217,21 @@ func (app *Application) Stop() {
 	app.logger.Info("Database connection closed")
 
 	func() {
+		err := app.redis.Close()
+
+		if err != nil {
+			zap.L().Fatal("Redis connection close failed", zap.Error(err))
+		} else {
+			zap.L().Info("Redis connection closed")
+		}
+	}()
+
+	func() {
 		if err := app.logger.Sync(); err != nil {
 			app.logger.Fatal("Logger sync failed", zap.Error(err))
 		} else {
 			app.logger.Info("Logger synced")
 		}
-
 	}()
 }
 

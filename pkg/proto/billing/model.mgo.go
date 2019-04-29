@@ -361,16 +361,6 @@ type MgoCustomer struct {
 	UpdatedAt             time.Time                        `bson:"updated_at"`
 }
 
-type MgoToken struct {
-	Id         bson.ObjectId  `bson:"id"`
-	Token      string         `bson:"token"`
-	CustomerId bson.ObjectId  `bson:"customer_id"`
-	User       *TokenUser     `bson:"user"`
-	Settings   *TokenSettings `bson:"settings"`
-	CreatedAt  time.Time      `bson:"created_at"`
-	UpdatedAt  time.Time      `bson:"updated_at"`
-}
-
 func (m *Vat) GetBSON() (interface{}, error) {
 	st := &MgoVat{
 		Country:     m.Country,
@@ -1908,71 +1898,6 @@ func (m *Customer) SetBSON(raw bson.Raw) error {
 		identity.CreatedAt, _ = ptypes.TimestampProto(v.CreatedAt)
 		m.AcceptLanguageHistory = append(m.AcceptLanguageHistory, identity)
 	}
-
-	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
-
-	if err != nil {
-		return err
-	}
-
-	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *Token) GetBSON() (interface{}, error) {
-	st := &MgoToken{
-		Id:         bson.ObjectIdHex(m.Id),
-		Token:      m.Token,
-		CustomerId: bson.ObjectIdHex(m.CustomerId),
-		Settings:   m.Settings,
-		User:       m.User,
-	}
-
-	if m.CreatedAt != nil {
-		t, err := ptypes.Timestamp(m.CreatedAt)
-
-		if err != nil {
-			return nil, err
-		}
-
-		st.CreatedAt = t
-	} else {
-		st.CreatedAt = time.Now()
-	}
-
-	if m.UpdatedAt != nil {
-		t, err := ptypes.Timestamp(m.UpdatedAt)
-
-		if err != nil {
-			return nil, err
-		}
-
-		st.UpdatedAt = t
-	} else {
-		st.UpdatedAt = time.Now()
-	}
-
-	return st, nil
-}
-
-func (m *Token) SetBSON(raw bson.Raw) error {
-	decoded := new(MgoToken)
-	err := raw.Unmarshal(decoded)
-
-	if err != nil {
-		return err
-	}
-
-	m.Id = decoded.Id.Hex()
-	m.Token = decoded.Token
-	m.CustomerId = decoded.CustomerId.Hex()
-	m.Settings = decoded.Settings
-	m.User = decoded.User
 
 	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
 
