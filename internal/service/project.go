@@ -214,7 +214,7 @@ func (s *Service) ListProjects(
 	}
 
 	rsp.Count = int32(count)
-	rsp.Items = []*billing.Project{}
+	rsp.Items = make([]*billing.Project, 0)
 
 	if len(projects) > 0 {
 		rsp.Items = projects
