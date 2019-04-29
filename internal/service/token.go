@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,8 +37,15 @@ var (
 	tokenRandSource = rand.NewSource(time.Now().UnixNano())
 )
 
+type Token struct {
+	CustomerId string                 `json:"customer_id"`
+	User       *billing.TokenUser     `json:"user"`
+	Settings   *billing.TokenSettings `json:"settings"`
+}
+
 type tokenRepository struct {
-	token *billing.Token
+	token   *Token
+	service *Service
 }
 
 func (s *Service) CreateToken(
@@ -126,57 +131,42 @@ func (s *Service) CreateToken(
 	}
 
 	rsp.Status = pkg.ResponseStatusOk
-	rsp.Item = token
+	rsp.Token = token
 
 	return nil
 }
 
-func (s *Service) createToken(
-	req *grpc.TokenRequest,
-	customer *billing.Customer,
-) (*billing.Token, error) {
-	tokenRep := &tokenRepository{}
-
-	token := &billing.Token{
-		Token:      tokenRep.getTokenString(s.cfg.CustomerTokenConfig.Length),
-		CustomerId: customer.Id,
-		User:       req.User,
-		Settings:   req.Settings,
+func (s *Service) createToken(req *grpc.TokenRequest, customer *billing.Customer) (string, error) {
+	tokenRep := &tokenRepository{
+		service: s,
+		token: &Token{
+			CustomerId: customer.Id,
+			User:       req.User,
+			Settings:   req.Settings,
+		},
 	}
-
-	s.redis.HSet()
-
-	b, _ := json.Marshal(token)
-
-	hash := sha256.New()
-	hash.Write(b)
-	token.Token = hex.EncodeToString(hash.Sum(nil))
-
-	err := s.db.Collection(pkg.CollectionCustomerToken).Insert(token)
+	token := tokenRep.getTokenString(s.cfg.GetCustomerTokenLength())
+	err := tokenRep.setToken(token)
 
 	if err != nil {
-		s.logError("Query to create token failed", []interface{}{"error", err.Error(), "data", token})
-		return nil, errors.New(orderErrorUnknown)
+		return "", err
 	}
 
 	return token, nil
 }
 
-func (s *Service) getTokenBy(token string) (*billing.Token, error) {
-	var t *billing.Token
-
-	query := bson.M{"token": token}
-	err := s.db.Collection(pkg.CollectionCustomerToken).Find(query).One(&t)
+func (s *Service) getTokenBy(token string) (*Token, error) {
+	tokenRep := &tokenRepository{
+		service: s,
+		token:   &Token{},
+	}
+	err := tokenRep.getToken(token)
 
 	if err != nil {
-		if err != mgo.ErrNotFound {
-			return nil, errors.New(orderErrorUnknown)
-		}
-
-		return nil, errors.New(tokenErrorNotFound)
+		return nil, err
 	}
 
-	return t, nil
+	return tokenRep.token, nil
 }
 
 func (s *Service) getCustomerById(id string) (*billing.Customer, error) {
@@ -473,12 +463,33 @@ func (s *Service) transformOrderUser2TokenRequest(user *billing.OrderUser) *grpc
 	return tokenReq
 }
 
-func (r *tokenRepository) getToken() {
+func (r *tokenRepository) getToken(token string) error {
+	data, err := r.service.redis.Get(r.getKey(token)).Bytes()
 
+	if err != nil {
+		r.service.logError("Get customer token from Redis failed", []interface{}{"error", err.Error()})
+		return errors.New(tokenErrorNotFound)
+	}
+
+	err = json.Unmarshal(data, &r.token)
+
+	if err != nil {
+		r.service.logError("Unmarshal customer token failed", []interface{}{"error", err.Error()})
+		return errors.New(tokenErrorNotFound)
+	}
+
+	return nil
 }
 
-func (r *tokenRepository) setToken() {
+func (r *tokenRepository) setToken(token string) error {
+	b, err := json.Marshal(r.token)
 
+	if err != nil {
+		r.service.logError("Marshal customer token failed", []interface{}{"error", err.Error()})
+		return errors.New(orderErrorUnknown)
+	}
+
+	return r.service.redis.Set(r.getKey(token), b, r.service.cfg.GetCustomerTokenExpire()).Err()
 }
 
 func (r *tokenRepository) getKey(token string) string {

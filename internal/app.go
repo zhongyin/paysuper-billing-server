@@ -107,6 +107,7 @@ func (app *Application) Init() {
 		repService,
 		taxService,
 		broker,
+		app.redis,
 	)
 
 	if err := svc.Init(); err != nil {

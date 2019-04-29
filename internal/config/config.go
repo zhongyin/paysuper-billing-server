@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/kelseyhightower/envconfig"
+	"time"
 )
 
 type CacheConfig struct {
@@ -33,7 +34,7 @@ type Config struct {
 	AccountingCurrency string `envconfig:"PSP_ACCOUNTING_CURRENCY" default:"EUR"`
 	MetricsPort        string `envconfig:"METRICS_PORT" required:"false" default:"8086"`
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
-	RedisHost          string `envconfig:"REDIS_HOST" default:"localhost:6379"`
+	RedisHost          string `envconfig:"REDIS_HOST" default:"127.0.0.1:6379"`
 	RedisPassword      string `envconfig:"REDIS_PASSWORD" default:""`
 	RedisDatabase      int    `envconfig:"REDIS_DATABASE" default:"0"`
 
@@ -59,6 +60,6 @@ func (cfg *Config) GetCustomerTokenLength() int {
 	return cfg.CustomerTokenConfig.Length
 }
 
-func (cfg *Config) GetCustomerTokenLifetime() int64 {
-	return cfg.CustomerTokenConfig.LifeTime
+func (cfg *Config) GetCustomerTokenExpire() time.Duration {
+	return time.Second * time.Duration(cfg.CustomerTokenConfig.LifeTime)
 }

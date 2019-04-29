@@ -566,5 +566,5 @@ message TokenRequest {
 message TokenResponse {
     int32 status = 1;
     string message = 2;
-    billing.Token item = 3;
+    string token = 3;
 }

@@ -163,15 +163,10 @@ func (s *Service) OrderCreateProcess(
 	}
 
 	if req.Token != "" || req.User != nil {
-		err := processor.processToken()
+		err := processor.processCustomer()
 
 		if err != nil {
 			return err
-		}
-	} else {
-		if req.User != nil {
-			tokenReq := s.transformOrderUser2TokenRequest(req.User)
-			s.findCustomer(tokenReq, processor.checked.project)
 		}
 	}
 

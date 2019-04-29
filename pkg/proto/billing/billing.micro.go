@@ -77,7 +77,6 @@ It has these top-level messages:
 	TokenSettingsReturnUrl
 	TokenSettingsItem
 	TokenSettings
-	Token
 */
 package billing
 

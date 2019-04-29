@@ -342,7 +342,7 @@ func (suite *ProjectTestSuite) SetupTest() {
 
 	suite.projectId = project.Id
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {

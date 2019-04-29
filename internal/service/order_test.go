@@ -748,6 +748,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		mock.NewRepositoryServiceOk(),
 		mock.NewTaxServiceOkMock(),
 		broker,
+		nil,
 	)
 	err = suite.service.Init()
 

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/globalsign/mgo/bson"
+	"github.com/go-redis/redis"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -127,7 +128,24 @@ func (suite *TokenTestSuite) SetupTest() {
 	err = db.Collection(pkg.CollectionProduct).Insert([]interface{}{product1, product2}...)
 	assert.NoError(suite.T(), err, "Insert product test data failed")
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
+	redisClient := database.NewRedis(
+		&redis.Options{
+			Addr:     cfg.RedisHost,
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDatabase,
+		},
+	)
+
+	suite.service = NewBillingService(
+		db,
+		cfg,
+		make(chan bool, 1),
+		nil,
+		nil,
+		nil,
+		nil,
+		redisClient,
+	)
 	err = suite.service.Init()
 	assert.NoError(suite.T(), err, "Billing service initialization failed")
 
@@ -168,21 +186,17 @@ func (suite *TokenTestSuite) TestToken_CreateToken_NewCustomer_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.Empty(suite.T(), rsp.Message)
-	assert.NotNil(suite.T(), rsp.Item)
-	assert.NotEmpty(suite.T(), rsp.Item.Id)
-	assert.NotEmpty(suite.T(), rsp.Item.Token)
-	assert.NotEmpty(suite.T(), rsp.Item.CustomerId)
-	assert.Equal(suite.T(), req.User.Id, rsp.Item.User.Id)
-	assert.Equal(suite.T(), req.User.Locale.Value, rsp.Item.User.Locale.Value)
-	assert.Equal(suite.T(), req.Settings.ProjectId, rsp.Item.Settings.ProjectId)
-	assert.Equal(suite.T(), req.Settings.Amount, rsp.Item.Settings.Amount)
-	assert.Equal(suite.T(), req.Settings.Currency, rsp.Item.Settings.Currency)
-	assert.NotNil(suite.T(), rsp.Item.User.Email)
-	assert.Nil(suite.T(), rsp.Item.User.Phone)
-	assert.Empty(suite.T(), rsp.Item.Settings.ProductsIds)
+	assert.NotEmpty(suite.T(), rsp.Token)
+
+	rep := &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep.getToken(rsp.Token)
+	assert.NoError(suite.T(), err)
 
 	var customer *billing.Customer
-	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rsp.Item.CustomerId)).One(&customer)
+	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rep.token.CustomerId)).One(&customer)
 	assert.NotNil(suite.T(), customer)
 
 	assert.Equal(suite.T(), req.User.Id, customer.ExternalId)
@@ -241,8 +255,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ExistCustomer_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.Empty(suite.T(), rsp.Message)
-	assert.NotNil(suite.T(), rsp.Item)
-	assert.NotEmpty(suite.T(), rsp.Item.Id)
+	assert.NotEmpty(suite.T(), rsp.Token)
 
 	req.User.Phone = &billing.TokenUserPhoneValue{
 		Value: "1234567890",
@@ -255,12 +268,26 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ExistCustomer_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp1.Status)
 	assert.Empty(suite.T(), rsp1.Message)
-	assert.NotNil(suite.T(), rsp1.Item)
-	assert.NotEmpty(suite.T(), rsp1.Item.Id)
-	assert.Equal(suite.T(), rsp.Item.CustomerId, rsp1.Item.CustomerId)
+	assert.NotEmpty(suite.T(), rsp1.Token)
+
+	rep := &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep.getToken(rsp.Token)
+	assert.NoError(suite.T(), err)
+
+	rep1 := &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep1.getToken(rsp1.Token)
+	assert.NoError(suite.T(), err)
+
+	assert.Equal(suite.T(), rep.token.CustomerId, rep1.token.CustomerId)
 
 	var customers []*billing.Customer
-	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rsp.Item.CustomerId)).All(&customers)
+	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rep.token.CustomerId)).All(&customers)
 	assert.Len(suite.T(), customers, 1)
 
 	assert.Len(suite.T(), customers[0].Identity, 4)
@@ -319,11 +346,17 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ExistCustomer_UpdateExistIden
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.Empty(suite.T(), rsp.Message)
-	assert.NotNil(suite.T(), rsp.Item)
-	assert.NotEmpty(suite.T(), rsp.Item.Id)
+	assert.NotEmpty(suite.T(), rsp.Token)
+
+	rep := &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep.getToken(rsp.Token)
+	assert.NoError(suite.T(), err)
 
 	var customer *billing.Customer
-	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rsp.Item.CustomerId)).One(&customer)
+	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rep.token.CustomerId)).One(&customer)
 	assert.NotNil(suite.T(), customer)
 	assert.False(suite.T(), customer.Identity[1].Verified)
 
@@ -347,12 +380,26 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ExistCustomer_UpdateExistIden
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp1.Status)
 	assert.Empty(suite.T(), rsp1.Message)
-	assert.NotNil(suite.T(), rsp1.Item)
-	assert.NotEmpty(suite.T(), rsp1.Item.Id)
-	assert.Equal(suite.T(), rsp.Item.CustomerId, rsp1.Item.CustomerId)
+	assert.NotEmpty(suite.T(), rsp1.Token)
+
+	rep = &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep.getToken(rsp.Token)
+	assert.NoError(suite.T(), err)
+
+	rep1 := &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep1.getToken(rsp.Token)
+	assert.NoError(suite.T(), err)
+
+	assert.Equal(suite.T(), rep.token.CustomerId, rep1.token.CustomerId)
 
 	var customers []*billing.Customer
-	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rsp.Item.CustomerId)).All(&customers)
+	err = suite.service.db.Collection(pkg.CollectionCustomer).FindId(bson.ObjectIdHex(rep.token.CustomerId)).All(&customers)
 	assert.Len(suite.T(), customers, 1)
 
 	assert.Len(suite.T(), customers[0].Identity, 3)
@@ -406,7 +453,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_CustomerIdentityInformationNo
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), tokenErrorUserIdentityRequired, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectNotFound_Error() {
@@ -428,7 +475,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectNotFound_Error() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), projectErrorNotFound, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_AmountIncorrect_Error() {
@@ -450,7 +497,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_AmountIncorrect_Error() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), tokenErrorSettingsAmountRequired, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_WithoutItems_Error() {
@@ -470,7 +517,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_With
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), tokenErrorSettingsItemsRequired, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_ProductsNotFound_Error() {
@@ -507,7 +554,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_Prod
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), productErrorNotFound, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_ProductsCountNotMatch_Error() {
@@ -544,7 +591,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_Prod
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), productErrorCountNotMatch, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_ProductAmountNotMatch_Error() {
@@ -576,7 +623,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_Prod
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), productErrorAmountNotMatch, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_ProductCurrencyNotMatch_Error() {
@@ -603,7 +650,7 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_Prod
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Equal(suite.T(), productErrorCurrencyNotMatch, rsp.Message)
-	assert.Nil(suite.T(), rsp.Item)
+	assert.Empty(suite.T(), rsp.Token)
 }
 
 func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_Ok() {
@@ -635,6 +682,14 @@ func (suite *TokenTestSuite) TestToken_CreateToken_ProjectIsProductCheckout_Ok()
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.Empty(suite.T(), rsp.Message)
-	assert.NotNil(suite.T(), rsp.Item)
-	assert.Len(suite.T(), rsp.Item.Settings.ProductsIds, 2)
+	assert.NotEmpty(suite.T(), rsp.Token)
+
+	rep := &tokenRepository{
+		service: suite.service,
+		token:   &Token{},
+	}
+	err = rep.getToken(rsp.Token)
+	assert.NoError(suite.T(), err)
+
+	assert.Len(suite.T(), rep.token.Settings.ProductsIds, 2)
 }
