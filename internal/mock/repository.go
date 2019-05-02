@@ -52,7 +52,7 @@ func (r *RepositoryServiceOk) FindSavedCards(
 		SavedCards: []*entity.SavedCard{
 			{
 				Id:        bson.NewObjectId().Hex(),
-				Account:   "test@unit.unit",
+				Token:     bson.NewObjectId().Hex(),
 				ProjectId: projectId,
 				MaskedPan: "555555******4444",
 				Expire:    &entity.CardExpire{Month: "12", Year: "2019"},
@@ -60,7 +60,7 @@ func (r *RepositoryServiceOk) FindSavedCards(
 			},
 			{
 				Id:        bson.NewObjectId().Hex(),
-				Account:   "test@unit.unit",
+				Token:     bson.NewObjectId().Hex(),
 				ProjectId: projectId,
 				MaskedPan: "400000******0002",
 				Expire:    &entity.CardExpire{Month: "12", Year: "2019"},

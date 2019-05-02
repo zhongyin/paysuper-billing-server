@@ -67,6 +67,9 @@ message EmptyResponse {
 
 message PaymentCreateRequest {
     map<string, string> data = 1;
+    string ip = 3;
+    string accept_language = 4;
+    string user_agent = 5;
 }
 
 message PaymentCreateResponse {
@@ -81,6 +84,8 @@ message PaymentFormJsonDataRequest {
     string host = 3;
     string locale = 4;
     string ip = 5;
+    string user_agent = 6;
+    string cookie = 7;
 }
 
 message PaymentFormJsonDataProject {
@@ -110,6 +115,8 @@ message PaymentFormJsonDataResponse {
     bool user_address_data_required = 12;
     // @inject_tag: json:"items" validate="omitempty,gte=1,dive"
     repeated billing.OrderItem items = 13;
+    // @inject_tag: json:"-"
+    string cookie = 14;
 }
 
 message PaymentNotifyRequest {
@@ -340,6 +347,9 @@ message PaymentFormUserChangeLangRequest {
     string order_id = 1;
     // @inject_tag: validate:"required,len=2"
     string lang = 2;
+    string ip = 3;
+    string accept_language = 4;
+    string user_agent = 5;
 }
 
 message PaymentFormUserChangePaymentAccountRequest {
@@ -349,6 +359,9 @@ message PaymentFormUserChangePaymentAccountRequest {
     string method_id = 2;
     // @inject_tag: validate:"required"
     string account = 3;
+    string ip = 4;
+    string accept_language = 5;
+    string user_agent = 6;
 }
 
 message UserIpData {

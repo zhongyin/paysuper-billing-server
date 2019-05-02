@@ -59,6 +59,7 @@ message OrderCreateRequest {
     map<string, string> metadata = 23;
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 24;
+
     string token = 25;
     OrderUser user = 26;
 }
@@ -289,29 +290,32 @@ message OrderBillingAddress {
 }
 
 message OrderUser {
-    // @inject_tag: bson:"uuid"
+    // @inject_tag: json:"id"
     string id = 1;
-    // @inject_tag: bson:"object"
+    // @inject_tag: json:"object"
     string object = 2;
+    // @inject_tag: json:"external_id"
     string external_id = 3;
-    // @inject_tag: bson:"name"
+    // @inject_tag: json:"name"
     string name = 4;
-    // @inject_tag: validate:"omitempty,email"
+    // @inject_tag: json:"email" validate:"omitempty,email"
     string email = 5;
-    // @inject_tag: bson:"email_verified"
+    // @inject_tag: json:"email_verified"
     bool email_verified = 6;
-    // @inject_tag: validate:"omitempty,phone"
+    // @inject_tag: json:"phone" validate:"omitempty,phone"
     string phone = 7;
-    // @inject_tag: bson:"phone_verified"
+    // @inject_tag: json:"phone_verified"
     bool phone_verified = 8;
-    // @inject_tag: validate:"omitempty,ip"
+    // @inject_tag: json:"ip" validate:"omitempty,ip"
     string ip = 9;
-    // @inject_tag: validate:"omitempty,alpha,len=2"
+    // @inject_tag: json:"locale" validate:"omitempty,alpha,len=2"
     string locale = 10;
-    // @inject_tag: bson:"address"
+    // @inject_tag: json:"address"
     OrderBillingAddress address = 11;
-    // @inject_tag: bson:"metadata"
+    // @inject_tag: json:"metadata"
     map<string, string> metadata = 12;
+    // @inject_tag: json:"-"
+    string tech_email = 13;
 }
 
 message Order {
@@ -969,6 +973,10 @@ message TokenUser {
     TokenUserLocaleValue locale = 8;
     OrderBillingAddress address = 9;
     map<string, string> metadata = 10;
+    //@inject_tag: json:"-"
+    string user_agent = 11;
+    //@inject_tag: json:"-"
+    string accept_language = 12;
 }
 
 message TokenSettingsReturnUrl {
@@ -1002,8 +1010,10 @@ message TokenSettings {
     string payment_method = 6;
     //@inject_tag: json:"items"
     repeated TokenSettingsItem items = 7;
+    //@inject_tag: json:"description"
+    string description = 8;
     //@inject_tag: json:"products_ids"
-    repeated string products_ids = 8;
+    repeated string products_ids = 9;
     //@inject_tag: json:"metadata"
-    map<string, string> metadata = 9;
+    map<string, string> metadata = 10;
 }

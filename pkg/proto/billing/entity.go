@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"github.com/globalsign/mgo/bson"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/constant"
@@ -100,4 +101,8 @@ func (m *Project) NeedChangeStatusToDraft(req *Project) bool {
 	}
 
 	return false
+}
+
+func (m *OrderUser) IsIdentified() bool {
+	return m.Id != "" && bson.IsObjectIdHex(m.Id) == true
 }

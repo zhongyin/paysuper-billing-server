@@ -106,6 +106,8 @@ const (
 	UserIdentityTypePhone    = "phone"
 	UserIdentityTypeExternal = "external"
 
+	UserCookiePattern = "^[aA0-zZ9]{%d}$"
+
 	TechEmailDomain = "@paysuper.com"
 )
 

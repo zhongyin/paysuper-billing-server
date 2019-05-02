@@ -3,6 +3,7 @@ package grpc
 import (
 	"errors"
 	"fmt"
+	"regexp"
 )
 
 var (
@@ -65,4 +66,14 @@ func (p *Product) GetLocalizedLongDescription(lang string) (string, error) {
 		return "", errors.New(fmt.Sprintf(productNoLongDescriptionInLanguage, lang))
 	}
 	return v, nil
+}
+
+func (m *PaymentFormJsonDataRequest) HasUserCookie(regex string) bool {
+	if m.Cookie == "" {
+		return false
+	}
+
+	match, _ := regexp.MatchString(regex, m.Cookie)
+
+	return match
 }

@@ -145,7 +145,7 @@ func (s *Service) createToken(req *grpc.TokenRequest, customer *billing.Customer
 			Settings:   req.Settings,
 		},
 	}
-	token := tokenRep.getTokenString(s.cfg.GetCustomerTokenLength())
+	token := tokenRep.service.getTokenString(s.cfg.GetCustomerTokenLength())
 	err := tokenRep.setToken(token)
 
 	if err != nil {
@@ -235,6 +235,10 @@ func (s *Service) findCustomer(
 
 	query := make(bson.M)
 	customer := new(billing.Customer)
+
+	if len(subQuery) <= 0 {
+		return nil, customerErrNotFound
+	}
 
 	if len(subQuery) > 1 {
 		query["$or"] = subQuery
@@ -388,6 +392,19 @@ func (s *Service) processCustomer(
 
 		customer.Address = user.Address
 	}
+
+	if user.UserAgent != "" && customer.UserAgent != user.UserAgent {
+		customer.UserAgent = user.UserAgent
+	}
+
+	if user.AcceptLanguage != "" && customer.AcceptLanguage != user.AcceptLanguage {
+		history := &billing.CustomerStringValueHistory{
+			Value:     customer.AcceptLanguage,
+			CreatedAt: ptypes.TimestampNow(),
+		}
+		customer.AcceptLanguage = user.AcceptLanguage
+		customer.AcceptLanguageHistory = append(customer.AcceptLanguageHistory, history)
+	}
 }
 
 func (s *Service) processCustomerIdentity(
@@ -496,7 +513,7 @@ func (r *tokenRepository) getKey(token string) string {
 	return fmt.Sprintf(tokenStorageMask, token)
 }
 
-func (r *tokenRepository) getTokenString(n int) string {
+func (s *Service) getTokenString(n int) string {
 	sb := strings.Builder{}
 	sb.Grow(n)
 
@@ -515,4 +532,58 @@ func (r *tokenRepository) getTokenString(n int) string {
 	}
 
 	return sb.String()
+}
+
+func (s *Service) updateCustomerFromRequest(
+	order *billing.Order,
+	req *grpc.TokenRequest,
+	ip, acceptLanguage, userAgent string,
+) error {
+	customer, err := s.getCustomerById(order.User.Id)
+	project := &billing.Project{Id: order.Project.Id, MerchantId: order.Project.MerchantId}
+
+	if err != nil {
+		return err
+	}
+
+	req.User.Ip = &billing.TokenUserIpValue{Value: ip}
+	req.User.AcceptLanguage = acceptLanguage
+	req.User.UserAgent = userAgent
+
+	_, err = s.updateCustomer(req, project, customer)
+
+	return err
+}
+
+func (s *Service) updateCustomerFromRequestLocale(
+	order *billing.Order,
+	ip, acceptLanguage, userAgent, locale string,
+) {
+	tokenReq := &grpc.TokenRequest{
+		User: &billing.TokenUser{
+			Locale: &billing.TokenUserLocaleValue{Value: locale},
+		},
+	}
+
+	err := s.updateCustomerFromRequest(order, tokenReq, ip, acceptLanguage, userAgent)
+
+	if err != nil {
+		s.logError("Update customer data by request failed", []interface{}{"error", err})
+	}
+}
+
+func (s *Service) updateCustomerFromRequestAddress(
+	order *billing.Order,
+	ip, acceptLanguage, userAgent string,
+	address *billing.OrderBillingAddress,
+) {
+	tokenReq := &grpc.TokenRequest{
+		User: &billing.TokenUser{Address: address},
+	}
+
+	err := s.updateCustomerFromRequest(order, tokenReq, ip, acceptLanguage, userAgent)
+
+	if err != nil {
+		s.logError("Update customer data by request failed", []interface{}{"error", err})
+	}
 }

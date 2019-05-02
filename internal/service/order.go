@@ -109,7 +109,7 @@ type orderCreateRequestProcessorChecked struct {
 	items           []*billing.OrderItem
 	metadata        map[string]string
 	privateMetadata map[string]string
-	customer        *billing.Customer
+	user            *billing.OrderUser
 }
 
 type OrderCreateRequestProcessor struct {
@@ -125,9 +125,12 @@ type PaymentFormProcessor struct {
 }
 
 type PaymentCreateProcessor struct {
-	service *Service
-	data    map[string]string
-	checked struct {
+	service        *Service
+	data           map[string]string
+	ip             string
+	acceptLanguage string
+	userAgent      string
+	checked        struct {
 		order         *billing.Order
 		project       *billing.Project
 		paymentMethod *billing.PaymentMethod
@@ -162,22 +165,18 @@ func (s *Service) OrderCreateProcess(
 		return err
 	}
 
-	if req.Token != "" || req.User != nil {
-		err := processor.processCustomer()
-
-		if err != nil {
-			return err
-		}
-	}
-
 	if req.Signature != "" || processor.checked.project.SignatureRequired == true {
 		if err := processor.processSignature(); err != nil {
 			return err
 		}
 	}
 
-	if err := processor.processPayerData(); err != nil {
-		return err
+	if req.Token != "" || req.User != nil {
+		err := processor.processCustomerToken()
+
+		if err != nil {
+			return err
+		}
 	}
 
 	if processor.checked.project.IsProductsCheckout == true {
@@ -274,6 +273,7 @@ func (s *Service) OrderCreateProcess(
 	rsp.Amount = order.Amount
 	rsp.Currency = order.Currency
 	rsp.Metadata = order.Metadata
+	rsp.User = order.User
 
 	return nil
 }
@@ -290,11 +290,11 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 
 	p := &PaymentFormProcessor{service: s, order: order, request: req}
-	p1 := &OrderCreateRequestProcessor{Service: s,
-		request: &billing.OrderCreateRequest{
-			PayerIp: req.Ip,
+	p1 := &OrderCreateRequestProcessor{
+		Service: s,
+		checked: &orderCreateRequestProcessorChecked{
+			user: &billing.OrderUser{Ip: req.Ip},
 		},
-		checked: &orderCreateRequestProcessorChecked{},
 	}
 
 	err = p1.processPayerData()
@@ -304,14 +304,45 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 
 	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
+	isIdentified := order.User.IsIdentified()
 
-	order.User.Ip = p1.checked.payerData.Ip
-	order.User.Locale = loc
-	order.User.Address = &billing.OrderBillingAddress{
-		Country:    p1.checked.payerData.Country,
-		City:       p1.checked.payerData.City.En,
-		PostalCode: p1.checked.payerData.Zip,
-		State:      p1.checked.payerData.State,
+	if isIdentified == true {
+		customer, err := s.getCustomerById(order.User.Id)
+
+		if err != nil {
+			return err
+		}
+
+		tokenReq := &grpc.TokenRequest{
+			User: &billing.TokenUser{
+				Ip:             &billing.TokenUserIpValue{Value: req.Ip},
+				Locale:         &billing.TokenUserLocaleValue{Value: loc},
+				AcceptLanguage: req.Locale,
+				UserAgent:      req.UserAgent,
+			},
+		}
+		project := &billing.Project{
+			Id:         order.Project.Id,
+			MerchantId: order.Project.MerchantId,
+		}
+
+		_, err = s.updateCustomer(tokenReq, project, customer)
+	} else {
+		order.User.Ip = p1.checked.payerData.Ip
+		order.User.Locale = loc
+		order.User.Address = &billing.OrderBillingAddress{
+			Country:    p1.checked.payerData.Country,
+			City:       p1.checked.payerData.City.En,
+			PostalCode: p1.checked.payerData.Zip,
+			State:      p1.checked.payerData.State,
+		}
+
+		if req.HasUserCookie(s.getUserCookieRegex()) == true {
+			isIdentified = true
+			order.User.Id = req.Cookie
+		} else {
+			order.User.Id = s.getTokenString(s.cfg.CookieLength)
+		}
 	}
 
 	if ctr != order.User.Address.Country {
@@ -366,6 +397,10 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
 
+	if isIdentified == false {
+		rsp.Cookie = order.User.Id
+	}
+
 	return nil
 }
 
@@ -374,7 +409,13 @@ func (s *Service) PaymentCreateProcess(
 	req *grpc.PaymentCreateRequest,
 	rsp *grpc.PaymentCreateResponse,
 ) error {
-	processor := &PaymentCreateProcessor{service: s, data: req.Data}
+	processor := &PaymentCreateProcessor{
+		service:        s,
+		data:           req.Data,
+		ip:             req.Ip,
+		acceptLanguage: req.AcceptLanguage,
+		userAgent:      req.UserAgent,
+	}
 	err := processor.processPaymentFormData()
 
 	if err != nil {
@@ -591,6 +632,10 @@ func (s *Service) PaymentFormLanguageChanged(
 		return nil
 	}
 
+	if order.User.IsIdentified() == true {
+		s.updateCustomerFromRequestLocale(order, req.Ip, req.AcceptLanguage, req.UserAgent, req.Lang)
+	}
+
 	order.User.Locale = req.Lang
 	order.UserAddressDataRequired = true
 
@@ -699,7 +744,7 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 		return nil
 	}
 
-	if order.PayerData.Country == country {
+	if order.User.Address.Country == country {
 		return nil
 	}
 
@@ -778,9 +823,10 @@ func (s *Service) ProcessBillingAddress(
 
 func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
-		Account:   order.ProjectAccount,
-		ProjectId: order.Project.Id,
-		MaskedPan: order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
+		Token:      order.User.Id,
+		ProjectId:  order.Project.Id,
+		MerchantId: order.Project.MerchantId,
+		MaskedPan:  order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
 		Expire: &entity.CardExpire{
 			Month: order.PaymentRequisites[pkg.PaymentCreateFieldMonth],
 			Year:  order.PaymentRequisites[pkg.PaymentCreateFieldYear],
@@ -939,18 +985,8 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PaymentMethodIncomeAmount:          amount,
 		PaymentMethodIncomeCurrency:        v.checked.currency,
 
-		Uuid: uuid.New().String(),
-		User: &billing.OrderUser{
-			Object: pkg.ObjectTypeUser,
-			Email:  v.checked.payerData.Email,
-			Phone:  v.checked.payerData.Phone,
-			Address: &billing.OrderBillingAddress{
-				Country:    v.checked.payerData.Country,
-				City:       v.checked.payerData.City.En,
-				PostalCode: v.checked.payerData.Zip,
-				State:      v.checked.payerData.State,
-			},
-		},
+		Uuid:            uuid.New().String(),
+		User:            v.checked.user,
 		Amount:          amount,
 		Currency:        v.checked.currency.CodeA3,
 		Products:        v.checked.products,
@@ -959,7 +995,13 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PrivateMetadata: v.checked.privateMetadata,
 	}
 
-	v.processOrderVat(order)
+	if order.User != nil {
+		v.processOrderVat(order)
+	} else {
+		order.User = &billing.OrderUser{
+			Object: pkg.ObjectTypeUser,
+		}
+	}
 
 	if v.request.Description != "" {
 		order.Description = v.request.Description
@@ -1046,7 +1088,7 @@ func (v *OrderCreateRequestProcessor) processPrivateMetadata() {
 }
 
 func (v *OrderCreateRequestProcessor) processPayerData() error {
-	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.request.PayerIp})
+	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.checked.user.Ip})
 
 	if err != nil {
 		zap.S().Errorw("[PAYONE_BILLING] Order create get payer data error", "err", err, "ip", v.request.PayerIp)
@@ -1054,14 +1096,11 @@ func (v *OrderCreateRequestProcessor) processPayerData() error {
 	}
 
 	data := &billing.PayerData{
-		Ip:          v.request.PayerIp,
+		Ip:          v.checked.user.Ip,
 		Country:     rsp.Country.IsoCode,
 		CountryName: &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
 		City:        &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
 		Timezone:    rsp.Location.TimeZone,
-		Email:       v.request.PayerEmail,
-		Phone:       v.request.PayerPhone,
-		Language:    v.request.Language,
 	}
 
 	if len(rsp.Subdivisions) > 0 {
@@ -1335,7 +1374,7 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	return nil
 }
 
-func (v *OrderCreateRequestProcessor) processCustomer() error {
+func (v *OrderCreateRequestProcessor) processCustomerToken() error {
 	var customer *billing.Customer
 	var err error
 
@@ -1351,17 +1390,55 @@ func (v *OrderCreateRequestProcessor) processCustomer() error {
 		if err != nil {
 			return err
 		}
+
+		if token.Settings.Description != "" {
+			v.request.Description = token.Settings.Description
+		}
+
+		if v.checked.project.IsProductsCheckout == true {
+			v.request.Products = token.Settings.ProductsIds
+		} else {
+			v.request.Amount = token.Settings.Amount
+
+			if token.Settings.Currency != "" {
+				v.request.Currency = token.Settings.Currency
+			}
+		}
+
+		v.checked.user = &billing.OrderUser{
+			ExternalId: token.User.Id,
+			Address:    token.User.Address,
+			Metadata:   token.User.Metadata,
+		}
+
+		if token.User.Name != nil {
+			v.checked.user.Name = token.User.Name.Value
+		}
+
+		if token.User.Email != nil {
+			v.checked.user.Email = token.User.Email.Value
+			v.checked.user.EmailVerified = token.User.Email.Verified
+		}
+
+		if token.User.Phone != nil {
+			v.checked.user.Phone = token.User.Phone.Value
+			v.checked.user.PhoneVerified = token.User.Phone.Verified
+		}
+
+		if token.User.Ip != nil {
+			v.checked.user.Ip = token.User.Ip.Value
+		}
+
+		if token.User.Locale != nil {
+			v.checked.user.Locale = token.User.Locale.Value
+		}
 	}
 
 	if v.request.User != nil {
 		tokenReq := v.transformOrderUser2TokenRequest(v.request.User)
 
 		if v.request.Token == "" {
-			customer, err = v.findCustomer(tokenReq, v.checked.project)
-
-			if err != nil {
-				return err
-			}
+			customer, _ = v.findCustomer(tokenReq, v.checked.project)
 		}
 
 		if customer != nil {
@@ -1369,9 +1446,43 @@ func (v *OrderCreateRequestProcessor) processCustomer() error {
 		} else {
 			customer, err = v.createCustomer(tokenReq, v.checked.project)
 		}
+
+		if err != nil {
+			return err
+		}
+
+		v.checked.user = v.request.User
 	}
 
-	v.checked.customer = customer
+	if v.checked.user.Ip != "" {
+		err = v.processPayerData()
+
+		if err == nil {
+			if v.checked.user.Address == nil {
+				v.checked.user.Address = &billing.OrderBillingAddress{}
+			}
+
+			if v.checked.user.Address.Country == "" {
+				v.checked.user.Address.Country = v.checked.payerData.Country
+			}
+
+			if v.checked.user.Address.City == "" {
+				v.checked.user.Address.City = v.checked.payerData.City.En
+			}
+
+			if v.checked.user.Address.PostalCode == "" {
+				v.checked.user.Address.PostalCode = v.checked.payerData.Zip
+			}
+
+			if v.checked.user.Address.State == "" {
+				v.checked.user.Address.State = v.checked.payerData.State
+			}
+		}
+	}
+
+	v.checked.user.Id = customer.Id
+	v.checked.user.Object = pkg.ObjectTypeUser
+	v.checked.user.TechEmail = customer.TechEmail
 
 	return nil
 }
@@ -1453,7 +1564,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
-		req := &repo.SavedCardRequest{Account: v.order.ProjectAccount, ProjectId: v.order.Project.Id}
+		req := &repo.SavedCardRequest{Token: v.order.User.Id}
 		rsp, err := v.service.rep.FindSavedCards(context.TODO(), req)
 
 		if err != nil {
@@ -1554,7 +1665,10 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return err
 	}
 
-	order.PayerData.Email = v.data[pkg.PaymentCreateFieldEmail]
+	if val, ok := v.data[pkg.PaymentCreateFieldEmail]; ok {
+		order.User.Email = val
+	}
+
 	order.PaymentRequisites = make(map[string]string)
 
 	if order.UserAddressDataRequired == true {
@@ -1575,6 +1689,10 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		}
 
 		processor.processOrderVat(order)
+
+		if order.User.IsIdentified() == true {
+			v.service.updateCustomerFromRequestAddress(order, v.ip, v.acceptLanguage, v.userAgent, order.BillingAddress)
+		}
 	}
 
 	delete(v.data, pkg.PaymentCreateFieldOrderId)
@@ -1772,20 +1890,24 @@ func (s *Service) GetOrderProducts(projectId string, productIds []string) ([]*gr
 }
 
 func (s *Service) GetOrderProductsAmount(products []*grpc.Product, currency string) (float64, error) {
-
 	if len(products) == 0 {
 		return 0, errors.New(orderErrorProductsEmpty)
 	}
 
-	summ := float64(0)
+	sum := float64(0)
+
 	for _, p := range products {
 		amount, err := p.GetPriceInCurrency(currency)
+
 		if err != nil {
 			return 0, errors.New(orderErrorNoProductsCommonCurrency)
 		}
-		summ += amount
+
+		sum += amount
 	}
-	totalAmount := float64(tools.FormatAmount(summ))
+
+	totalAmount := float64(tools.FormatAmount(sum))
+
 	return totalAmount, nil
 }
 
@@ -1997,4 +2119,8 @@ func (s *Service) notifyPaylinkError(PaylinkId string, err error, req interface{
 
 func (v *PaymentCreateProcessor) GetMerchantId() string {
 	return v.checked.project.MerchantId
+}
+
+func (s *Service) getUserCookieRegex() string {
+	return fmt.Sprintf(pkg.UserCookiePattern, s.cfg.CookieLength)
 }

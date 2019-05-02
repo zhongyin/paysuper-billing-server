@@ -15,7 +15,7 @@ require (
 	github.com/micro/go-micro v1.0.0
 	github.com/micro/go-plugins v1.0.0
 	github.com/micro/kubernetes v0.7.0
-	github.com/paysuper/paysuper-recurring-repository v1.0.100
+	github.com/paysuper/paysuper-recurring-repository v1.0.101-0.20190502122509-bf96007846b8
 	github.com/paysuper/paysuper-tax-service v0.0.0-20190308105725-016a09c27fbd
 	github.com/prometheus/client_golang v0.9.2
 	github.com/stoewer/go-strcase v1.0.2

@@ -22,8 +22,9 @@ type PaymentSystemConfig struct {
 }
 
 type CustomerTokenConfig struct {
-	Length   int   `envconfig:"CUSTOMER_TOKEN_LENGTH" default:"32"`
-	LifeTime int64 `envconfig:"CUSTOMER_TOKEN_LIFETIME" default:"2592000"`
+	Length       int   `envconfig:"CUSTOMER_TOKEN_LENGTH" default:"32"`
+	LifeTime     int64 `envconfig:"CUSTOMER_TOKEN_LIFETIME" default:"2592000"`
+	CookieLength int   `envconfig:"CUSTOMER_COOKIE_LENGTH" default:"128"`
 }
 
 type Config struct {
