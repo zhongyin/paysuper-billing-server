@@ -199,7 +199,6 @@ type MgoOrder struct {
 	ProjectOutcomeCurrency                  *Currency              `bson:"project_outcome_currency"`
 	ProjectLastRequestedAt                  time.Time              `bson:"project_last_requested_at"`
 	ProjectParams                           map[string]string      `bson:"project_params"`
-	PayerData                               *PayerData             `bson:"payer_data"`
 	PaymentMethod                           *MgoOrderPaymentMethod `bson:"payment_method"`
 	PaymentMethodTerminalId                 string                 `bson:"pm_terminal_id"`
 	PaymentMethodOrderId                    string                 `bson:"pm_order_id"`
@@ -839,7 +838,6 @@ func (m *Order) GetBSON() (interface{}, error) {
 		ProjectOutcomeAmount:                    m.ProjectOutcomeAmount,
 		ProjectOutcomeCurrency:                  m.ProjectOutcomeCurrency,
 		ProjectParams:                           m.ProjectParams,
-		PayerData:                               m.PayerData,
 		PaymentMethodOrderId:                    m.PaymentMethodOrderId,
 		PaymentMethodOutcomeAmount:              m.PaymentMethodOutcomeAmount,
 		PaymentMethodOutcomeCurrency:            m.PaymentMethodOutcomeCurrency,
@@ -983,7 +981,6 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.ProjectOutcomeAmount = decoded.ProjectOutcomeAmount
 	m.ProjectOutcomeCurrency = decoded.ProjectOutcomeCurrency
 	m.ProjectParams = decoded.ProjectParams
-	m.PayerData = decoded.PayerData
 
 	if decoded.PaymentMethod != nil {
 		m.PaymentMethod = &PaymentMethodOrder{

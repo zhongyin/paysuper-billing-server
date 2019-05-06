@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
+	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
@@ -741,6 +742,14 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Creating RabbitMQ publisher failed", "%v", err)
 	}
 
+	redisClient := database.NewRedis(
+		&redis.Options{
+			Addr:     cfg.RedisHost,
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDatabase,
+		},
+	)
+
 	suite.service = NewBillingService(
 		db,
 		cfg,
@@ -749,7 +758,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		mock.NewRepositoryServiceOk(),
 		mock.NewTaxServiceOkMock(),
 		broker,
-		nil,
+		redisClient,
 	)
 	err = suite.service.Init()
 
@@ -757,8 +766,7 @@ func (suite *OrderTestSuite) SetupTest() {
 		suite.FailNow("Billing service initialization failed", "%v", err)
 	}
 
-	productIds := []string{}
-
+	var productIds []string
 	names := []string{"Madalin Stunt Cars M2", "Plants vs Zombies"}
 
 	for i, n := range names {
@@ -918,16 +926,17 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptyEmailAndPhone_Ok() 
 		request: req,
 		checked: &orderCreateRequestProcessorChecked{},
 	}
-	assert.Nil(suite.T(), processor.checked.payerData)
+	assert.Nil(suite.T(), processor.checked.user)
 
-	err := processor.processCustomerToken()
+	err := processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 
 	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), processor.checked.payerData)
-	assert.NotEmpty(suite.T(), processor.checked.payerData.State)
+	assert.NotNil(suite.T(), processor.checked.user)
+	assert.NotNil(suite.T(), processor.checked.user.Address)
+	assert.NotEmpty(suite.T(), processor.checked.user.Address.State)
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptySubdivision_Ok() {
@@ -941,16 +950,17 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_EmptySubdivision_Ok() {
 		request: req,
 		checked: &orderCreateRequestProcessorChecked{},
 	}
-	assert.Nil(suite.T(), processor.checked.payerData)
+	assert.Nil(suite.T(), processor.checked.user)
 
-	err := processor.processCustomerToken()
+	err := processor.processUserData()
 	assert.NoError(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 
 	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), processor.checked.payerData)
-	assert.Empty(suite.T(), processor.checked.payerData.State)
+	assert.NotNil(suite.T(), processor.checked.user)
+	assert.NotNil(suite.T(), processor.checked.user.Address)
+	assert.Empty(suite.T(), processor.checked.user.Address.State)
 
 	suite.service.geo = mock.NewGeoIpServiceTestOk()
 }
@@ -969,20 +979,20 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_NotEmptyEmailAndPhone_Ok
 		request: req,
 		checked: &orderCreateRequestProcessorChecked{},
 	}
-	assert.Nil(suite.T(), processor.checked.payerData)
+	assert.Nil(suite.T(), processor.checked.user)
 
 	err := processor.processProject()
 	assert.NoError(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), processor.checked.user)
 	assert.Equal(suite.T(), req.User.Email, processor.checked.user.Email)
 	assert.Equal(suite.T(), req.User.Phone, processor.checked.user.Phone)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), processor.checked.payerData)
+	assert.NotNil(suite.T(), processor.checked.user.Address)
 }
 
 func (suite *OrderTestSuite) TestOrder_ProcessPayerData_Error() {
@@ -996,15 +1006,15 @@ func (suite *OrderTestSuite) TestOrder_ProcessPayerData_Error() {
 		request: req,
 		checked: &orderCreateRequestProcessorChecked{},
 	}
-	assert.Nil(suite.T(), processor.checked.payerData)
+	assert.Nil(suite.T(), processor.checked.user)
 
-	err := processor.processCustomerToken()
+	err := processor.processUserData()
 	assert.NoError(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 
 	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), processor.checked.payerData)
+	assert.Nil(suite.T(), processor.checked.user.Address)
 	assert.Equal(suite.T(), orderErrorPayerRegionUnknown, err.Error())
 }
 
@@ -1350,13 +1360,13 @@ func (suite *OrderTestSuite) TestOrder_ProcessProjectOrderId_Duplicate_Error() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processPaylinkProducts()
@@ -1386,7 +1396,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessProjectOrderId_Duplicate_Error() {
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
 		ProjectParams:                      req.Other,
-		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      false,
@@ -1846,10 +1855,13 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Ok() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
+	assert.Nil(suite.T(), err)
+
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -1896,10 +1908,10 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_PaymentMethod_Ok() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -1963,10 +1975,10 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlVerify_Error() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2013,10 +2025,10 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_UrlRedirect_Error() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2062,10 +2074,10 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Convert_Error() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2115,10 +2127,10 @@ func (suite *OrderTestSuite) TestOrder_PrepareOrder_Commission_Error() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2162,10 +2174,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2205,7 +2217,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_Ok() {
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
 		ProjectParams:                      req.Other,
-		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      false,
@@ -2258,10 +2269,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2301,7 +2312,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_VatNotFound_Error
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
 		ProjectParams:                      req.Other,
-		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      false,
@@ -2344,10 +2354,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_PaymentSystemAcco
 	err := processor.processProject()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processCustomerToken()
+	err = processor.processUserData()
 	assert.Nil(suite.T(), err)
 
-	err = processor.processPayerData()
+	err = processor.processPayerIp()
 	assert.Nil(suite.T(), err)
 
 	err = processor.processCurrency()
@@ -2377,7 +2387,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessOrderCommissions_PaymentSystemAcco
 		ProjectIncomeCurrency:              processor.checked.currency,
 		ProjectOutcomeAmount:               req.Amount,
 		ProjectParams:                      req.Other,
-		PayerData:                          processor.checked.payerData,
 		Status:                             constant.OrderStatusNew,
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      false,
@@ -2601,14 +2610,6 @@ func (suite *OrderTestSuite) TestOrder_OrderCreateProcess_DuplicateProjectOrderI
 			IsActive: true,
 		},
 		ProjectParams: req.Other,
-		PayerData: &billing.PayerData{
-			Ip:          req.PayerIp,
-			Country:     "RU",
-			CountryName: &billing.Name{En: "Russia", Ru: "Россия"},
-			City:        &billing.Name{En: "St.Petersburg", Ru: "Санкт-Петербург"},
-			State:       "",
-			Timezone:    "Europe/Moscow",
-		},
 		Status:        constant.OrderStatusNew,
 		CreatedAt:     ptypes.TimestampNow(),
 		IsJsonRequest: false,
@@ -4052,8 +4053,8 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 			Token:              bson.NewObjectId().Hex(),
 		},
 		Customer: &billing.CardPayCustomer{
-			Email:  order.PayerData.Email,
-			Ip:     order.PayerData.Ip,
+			Email:  order.User.Email,
+			Ip:     order.User.Ip,
 			Id:     order.ProjectAccount,
 			Locale: "Europe/Moscow",
 		},
@@ -4163,8 +4164,8 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Recurring_Ok() {
 			Token:              bson.NewObjectId().Hex(),
 		},
 		Customer: &billing.CardPayCustomer{
-			Email:  order.PayerData.Email,
-			Ip:     order.PayerData.Ip,
+			Email:  order.User.Email,
+			Ip:     order.User.Ip,
 			Id:     order.ProjectAccount,
 			Locale: "Europe/Moscow",
 		},
@@ -4240,9 +4241,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormLanguageChanged_Ok() {
 	assert.Empty(suite.T(), rsp1.Message)
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.True(suite.T(), rsp1.Item.UserAddressDataRequired)
-	assert.Equal(suite.T(), rsp.PayerData.Country, rsp1.Item.UserIpData.Country)
-	assert.Equal(suite.T(), rsp.PayerData.Zip, rsp1.Item.UserIpData.Zip)
-	assert.Equal(suite.T(), rsp.PayerData.City.En, rsp1.Item.UserIpData.City)
+	assert.Equal(suite.T(), rsp.User.Address.Country, rsp1.Item.UserIpData.Country)
+	assert.Equal(suite.T(), rsp.User.Address.PostalCode, rsp1.Item.UserIpData.Zip)
+	assert.Equal(suite.T(), rsp.User.Address.City, rsp1.Item.UserIpData.City)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentFormLanguageChanged_OrderNotFound_Error() {
@@ -4351,8 +4352,8 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_BankCard
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.True(suite.T(), rsp1.Item.UserAddressDataRequired)
 	assert.Equal(suite.T(), "US", rsp1.Item.UserIpData.Country)
-	assert.Equal(suite.T(), rsp.PayerData.Zip, rsp1.Item.UserIpData.Zip)
-	assert.Equal(suite.T(), rsp.PayerData.City.En, rsp1.Item.UserIpData.City)
+	assert.Equal(suite.T(), rsp.User.Address.PostalCode, rsp1.Item.UserIpData.Zip)
+	assert.Equal(suite.T(), rsp.User.Address.City, rsp1.Item.UserIpData.City)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Qiwi_Ok() {
@@ -4387,8 +4388,8 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_Qiwi_Ok(
 	assert.NotNil(suite.T(), rsp1.Item)
 	assert.True(suite.T(), rsp1.Item.UserAddressDataRequired)
 	assert.Equal(suite.T(), "BY", rsp1.Item.UserIpData.Country)
-	assert.Equal(suite.T(), rsp.PayerData.Zip, rsp1.Item.UserIpData.Zip)
-	assert.Equal(suite.T(), rsp.PayerData.City.En, rsp1.Item.UserIpData.City)
+	assert.Equal(suite.T(), rsp.User.Address.PostalCode, rsp1.Item.UserIpData.Zip)
+	assert.Equal(suite.T(), rsp.User.Address.City, rsp1.Item.UserIpData.City)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentFormPaymentAccountChanged_OrderNotFound_Error() {
@@ -4969,4 +4970,60 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	assert.Equal(suite.T(), order.Tax.Amount, order1.Tax.Amount)
 	assert.Equal(suite.T(), order.TotalPaymentAmount, order1.TotalPaymentAmount)
 	assert.Nil(suite.T(), order1.BillingAddress)
+}
+
+func (suite *OrderTestSuite) TestOrder_CreateOrderByToken_Ok() {
+	req := &grpc.TokenRequest{
+		User: &billing.TokenUser{
+			Id: bson.NewObjectId().Hex(),
+			Email: &billing.TokenUserEmailValue{
+				Value: "test@unit.test",
+			},
+			Phone: &billing.TokenUserPhoneValue{
+				Value: "1234567890",
+			},
+			Name: &billing.TokenUserValue{
+				Value: "Unit Test",
+			},
+			Ip: &billing.TokenUserIpValue{
+				Value: "127.0.0.1",
+			},
+			Locale: &billing.TokenUserLocaleValue{
+				Value: "ru",
+			},
+			Address: &billing.OrderBillingAddress{
+				Country:    "RU",
+				City:       "St.Petersburg",
+				PostalCode: "190000",
+				State:      "SPE",
+			},
+		},
+		Settings: &billing.TokenSettings{
+			OrderId:     bson.NewObjectId().Hex(),
+			ProjectId:   suite.project.Id,
+			Currency:    "RUB",
+			Amount:      100,
+			Description: "test payment",
+		},
+	}
+	rsp := &grpc.TokenResponse{}
+	err := suite.service.CreateToken(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotEmpty(suite.T(), rsp.Token)
+
+	req1 := &billing.OrderCreateRequest{
+		Token: rsp.Token,
+	}
+
+	rsp1 := &billing.Order{}
+	err = suite.service.OrderCreateProcess(context.TODO(), req1, rsp1)
+	assert.NoError(suite.T(), err)
+	assert.NotEmpty(suite.T(), rsp1.Id)
+	assert.Equal(suite.T(), req.Settings.ProjectId, rsp1.Project.Id)
+	assert.Equal(suite.T(), req.Settings.OrderId, rsp1.ProjectOrderId)
+	assert.Equal(suite.T(), req.Settings.Currency, rsp1.ProjectIncomeCurrency.CodeA3)
+	assert.Equal(suite.T(), req.Settings.Amount, rsp1.ProjectIncomeAmount)
+	assert.Equal(suite.T(), req.Settings.Description, rsp1.Description)
 }

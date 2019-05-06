@@ -1104,8 +1104,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_Ok() {
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1304,8 +1304,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownHandler_Er
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1415,8 +1415,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_RefundNotFound_Er
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1533,8 +1533,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderNotFound_Err
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1644,8 +1644,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_UnknownPaymentSys
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1755,8 +1755,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_ProcessRefundErro
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1866,8 +1866,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_TemporaryStatus_O
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 
@@ -1982,8 +1982,8 @@ func (suite *RefundTestSuite) TestRefund_ProcessRefundCallback_OrderFullyRefunde
 		},
 		CallbackTime: time.Now().Format(cardPayDateFormat),
 		Customer: &billing.CardPayCustomer{
-			Email: order.PayerData.Email,
-			Id:    order.PayerData.Email,
+			Email: order.User.Email,
+			Id:    order.User.Email,
 		},
 	}
 

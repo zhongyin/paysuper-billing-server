@@ -301,9 +301,9 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 		CreatedAt: ptypes.TimestampNow(),
 		UpdatedAt: ptypes.TimestampNow(),
 		PayerData: &billing.RefundPayerData{
-			Country: order.PayerData.Country,
-			Zip:     order.PayerData.Zip,
-			State:   order.PayerData.State,
+			Country: order.User.Address.Country,
+			Zip:     order.User.Address.PostalCode,
+			State:   order.User.Address.State,
 		},
 	}
 

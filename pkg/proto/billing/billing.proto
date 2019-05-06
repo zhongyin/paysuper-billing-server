@@ -340,8 +340,6 @@ message Order {
     google.protobuf.Timestamp project_last_requested_at = 10; // date of last notification request to project
     // @inject_tag: bson:"project_params" structure:"project_params"
     map<string, string> project_params = 11; // any project params which received from project in request of create of order
-    // @inject_tag: bson:"payer_data" structure:"payer_data"
-    PayerData payer_data = 12; // information about payer, for example: ip, email,phone and etc
     // @inject_tag: bson:"payment_method" structure:"payment_method"
     PaymentMethodOrder payment_method = 13; // payment method unique identifier
     // @inject_tag: bson:"pm_order_id" structure:"pm_order_id"
