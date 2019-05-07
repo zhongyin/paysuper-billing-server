@@ -108,7 +108,8 @@ const (
 
 	UserCookiePattern = "^[aA0-zZ9]{%d}$"
 
-	TechEmailDomain = "@paysuper.com"
+	TechEmailDomain        = "@paysuper.com"
+	OrderInlineFormUrlMask = "%s://%s/order/%s"
 )
 
 var (

@@ -14,6 +14,7 @@ jobs:
     services:
     - mongodb
     - rabbitmq
+    - redis-server
     env:
       - GO111MODULE=on
       - MONGO_HOST=127.0.0.1:27017
