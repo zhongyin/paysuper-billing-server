@@ -61,7 +61,6 @@ func (app *Application) Init() {
 		&redis.Options{
 			Addr:     cfg.RedisHost,
 			Password: cfg.RedisPassword,
-			DB:       cfg.RedisDatabase,
 		},
 	)
 

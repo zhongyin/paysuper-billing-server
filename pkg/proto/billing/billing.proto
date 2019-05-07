@@ -994,8 +994,6 @@ message TokenSettingsItem {
 }
 
 message TokenSettings {
-    //@inject_tag: json:"order_id"
-    string order_id = 1;
     //@inject_tag: json:"project_id" validate:"required,hexadecimal,len=24"
     string project_id = 2;
     //@inject_tag: json:"return_url"

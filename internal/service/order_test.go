@@ -746,7 +746,6 @@ func (suite *OrderTestSuite) SetupTest() {
 		&redis.Options{
 			Addr:     cfg.RedisHost,
 			Password: cfg.RedisPassword,
-			DB:       cfg.RedisDatabase,
 		},
 	)
 
@@ -4999,7 +4998,6 @@ func (suite *OrderTestSuite) TestOrder_CreateOrderByToken_Ok() {
 			},
 		},
 		Settings: &billing.TokenSettings{
-			OrderId:     bson.NewObjectId().Hex(),
 			ProjectId:   suite.project.Id,
 			Currency:    "RUB",
 			Amount:      100,
@@ -5022,7 +5020,6 @@ func (suite *OrderTestSuite) TestOrder_CreateOrderByToken_Ok() {
 	assert.NoError(suite.T(), err)
 	assert.NotEmpty(suite.T(), rsp1.Id)
 	assert.Equal(suite.T(), req.Settings.ProjectId, rsp1.Project.Id)
-	assert.Equal(suite.T(), req.Settings.OrderId, rsp1.ProjectOrderId)
 	assert.Equal(suite.T(), req.Settings.Currency, rsp1.ProjectIncomeCurrency.CodeA3)
 	assert.Equal(suite.T(), req.Settings.Amount, rsp1.ProjectIncomeAmount)
 	assert.Equal(suite.T(), req.Settings.Description, rsp1.Description)
@@ -5108,7 +5105,6 @@ func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_ExistCookie_Ok
 			},
 		},
 		Settings: &billing.TokenSettings{
-			OrderId:     bson.NewObjectId().Hex(),
 			ProjectId:   suite.project.Id,
 			Currency:    "RUB",
 			Amount:      100,

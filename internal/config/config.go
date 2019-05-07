@@ -45,7 +45,6 @@ type Config struct {
 	Environment        string `envconfig:"ENVIRONMENT" default:"dev"`
 	RedisHost          string `envconfig:"REDIS_HOST" default:"127.0.0.1:6379"`
 	RedisPassword      string `envconfig:"REDIS_PASSWORD" default:""`
-	RedisDatabase      int    `envconfig:"REDIS_DATABASE" default:"0"`
 
 	CentrifugoSecret string `envconfig:"CENTRIFUGO_SECRET" required:"true"`
 	CentrifugoURL    string `envconfig:"CENTRIFUGO_URL" required:"false" default:"http://127.0.0.1:8000"`

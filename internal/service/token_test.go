@@ -132,7 +132,6 @@ func (suite *TokenTestSuite) SetupTest() {
 		&redis.Options{
 			Addr:     cfg.RedisHost,
 			Password: cfg.RedisPassword,
-			DB:       cfg.RedisDatabase,
 		},
 	)
 

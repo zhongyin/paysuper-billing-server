@@ -1414,7 +1414,6 @@ func (v *OrderCreateRequestProcessor) processCustomerToken() error {
 	}
 
 	v.request.ProjectId = token.Settings.ProjectId
-	v.request.OrderId = token.Settings.OrderId
 	v.request.Description = token.Settings.Description
 	v.request.Amount = token.Settings.Amount
 	v.request.Currency = token.Settings.Currency
