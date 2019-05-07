@@ -308,7 +308,7 @@ func (p *createRefundProcessor) processCreateRefund() (*billing.Refund, error) {
 	}
 
 	if order.Tax != nil {
-		refund.SalesTax = order.Tax.Amount
+		refund.SalesTax = float32(order.Tax.Amount)
 	}
 
 	if p.request.Reason != "" {

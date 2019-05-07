@@ -4691,7 +4691,7 @@ func (suite *OrderTestSuite) TestOrder_OrderReCalculateAmounts_Ok() {
 	assert.NotNil(suite.T(), order1.BillingAddress)
 
 	assert.Equal(suite.T(), order1.Tax.Amount, rsp1.Item.Vat)
-	assert.Equal(suite.T(), float32(order1.TotalPaymentAmount), rsp1.Item.TotalAmount)
+	assert.Equal(suite.T(), order1.TotalPaymentAmount, rsp1.Item.TotalAmount)
 }
 
 func (suite *OrderTestSuite) TestOrder_OrderReCalculateAmounts_OrderNotFound_Error() {

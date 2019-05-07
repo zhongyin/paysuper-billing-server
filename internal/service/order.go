@@ -838,8 +838,8 @@ func (s *Service) ProcessBillingAddress(
 	rsp.Item = &grpc.ProcessBillingAddressResponseItem{
 		HasVat:      order.Tax.Amount > 0,
 		Vat:         order.Tax.Amount,
-		Amount:      float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount)),
-		TotalAmount: float32(tools.FormatAmount(order.TotalPaymentAmount)),
+		Amount:      tools.FormatAmount(order.PaymentMethodOutcomeAmount),
+		TotalAmount: tools.FormatAmount(order.TotalPaymentAmount),
 	}
 
 	return nil
@@ -1354,8 +1354,8 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 		req.UserData.State = rsp.Rate.State
 	}
 
-	order.Tax.Rate = rsp.Rate.Rate
-	order.Tax.Amount = float32(tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate)))
+	order.Tax.Rate = tools.FormatAmount(float64(rsp.Rate.Rate))
+	order.Tax.Amount = tools.FormatAmount(order.PaymentMethodOutcomeAmount * float64(rsp.Rate.Rate))
 	order.TotalPaymentAmount = tools.FormatAmount(order.TotalPaymentAmount + float64(order.Tax.Amount))
 
 	return

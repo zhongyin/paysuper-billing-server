@@ -276,8 +276,8 @@ message OrderPlatformFee {
 
 message OrderTax {
     string type = 1;
-    float rate = 2;
-    float amount = 3;
+    double rate = 2;
+    double amount = 3;
     string currency = 4;
 }
 
