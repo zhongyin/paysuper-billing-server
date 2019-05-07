@@ -58,6 +58,7 @@ service BillingService {
     rpc DeleteProject(GetProjectRequest) returns (ChangeProjectResponse) {}
 
     rpc CreateToken(TokenRequest) returns (TokenResponse) {}
+    rpc CheckProjectRequestSignature(CheckProjectRequestSignatureRequest) returns (CheckProjectRequestSignatureResponse) {}
 }
 
 message EmptyRequest {
@@ -580,4 +581,15 @@ message TokenResponse {
     int32 status = 1;
     string message = 2;
     string token = 3;
+}
+
+message CheckProjectRequestSignatureRequest {
+    string body = 1;
+    string project_id = 2;
+    string signature = 3;
+}
+
+message CheckProjectRequestSignatureResponse {
+    int32 status = 1;
+    string message = 2;
 }

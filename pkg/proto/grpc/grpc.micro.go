@@ -67,6 +67,8 @@ It has these top-level messages:
 	ListProjectsResponse
 	TokenRequest
 	TokenResponse
+	CheckProjectRequestSignatureRequest
+	CheckProjectRequestSignatureResponse
 */
 package grpc
 
@@ -143,6 +145,7 @@ type BillingService interface {
 	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...client.CallOption) (*ListProjectsResponse, error)
 	DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
 	CreateToken(ctx context.Context, in *TokenRequest, opts ...client.CallOption) (*TokenResponse, error)
+	CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
 }
 
 type billingService struct {
@@ -573,6 +576,16 @@ func (c *billingService) CreateToken(ctx context.Context, in *TokenRequest, opts
 	return out, nil
 }
 
+func (c *billingService) CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.CheckProjectRequestSignature", in)
+	out := new(CheckProjectRequestSignatureResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -617,6 +630,7 @@ type BillingServiceHandler interface {
 	ListProjects(context.Context, *ListProjectsRequest, *ListProjectsResponse) error
 	DeleteProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
 	CreateToken(context.Context, *TokenRequest, *TokenResponse) error
+	CheckProjectRequestSignature(context.Context, *CheckProjectRequestSignatureRequest, *CheckProjectRequestSignatureResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -662,6 +676,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListProjects(ctx context.Context, in *ListProjectsRequest, out *ListProjectsResponse) error
 		DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
 		CreateToken(ctx context.Context, in *TokenRequest, out *TokenResponse) error
+		CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -836,4 +851,8 @@ func (h *billingServiceHandler) DeleteProject(ctx context.Context, in *GetProjec
 
 func (h *billingServiceHandler) CreateToken(ctx context.Context, in *TokenRequest, out *TokenResponse) error {
 	return h.BillingServiceHandler.CreateToken(ctx, in, out)
+}
+
+func (h *billingServiceHandler) CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error {
+	return h.BillingServiceHandler.CheckProjectRequestSignature(ctx, in, out)
 }
