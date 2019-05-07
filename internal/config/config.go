@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/rsa"
+	"encoding/base64"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/kelseyhightower/envconfig"
 	"time"
 )
@@ -25,6 +28,11 @@ type CustomerTokenConfig struct {
 	Length       int   `envconfig:"CUSTOMER_TOKEN_LENGTH" default:"32"`
 	LifeTime     int64 `envconfig:"CUSTOMER_TOKEN_LIFETIME" default:"2592000"`
 	CookieLength int   `envconfig:"CUSTOMER_COOKIE_LENGTH" default:"128"`
+
+	CookiePublicKeyBase64  string `envconfig:"CUSTOMER_COOKIE_PUBLIC_KEY" required:"true"`
+	CookiePrivateKeyBase64 string `envconfig:"CUSTOMER_COOKIE_PRIVATE_KEY" required:"true"`
+	CookiePublicKey        *rsa.PublicKey
+	CookiePrivateKey       *rsa.PrivateKey
 }
 
 type Config struct {
@@ -53,6 +61,30 @@ type Config struct {
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 	err := envconfig.Process("", cfg)
+
+	pem, err := base64.StdEncoding.DecodeString(cfg.CookiePublicKeyBase64)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.CookiePublicKey, err = jwt.ParseRSAPublicKeyFromPEM(pem)
+
+	if err != nil {
+		return nil, err
+	}
+
+	pem, err = base64.StdEncoding.DecodeString(cfg.CookiePrivateKeyBase64)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.CookiePrivateKey, err = jwt.ParseRSAPrivateKeyFromPEM(pem)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return cfg, err
 }

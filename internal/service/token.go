@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +49,16 @@ type Token struct {
 type tokenRepository struct {
 	token   *Token
 	service *Service
+}
+
+type BrowserCookieCustomer struct {
+	CustomerId     string    `json:"customer_id"`
+	Ip             string    `json:"ip"`
+	UserAgent      string    `json:"user_agent"`
+	AcceptLanguage string    `json:"accept_language"`
+	SessionCount   int32     `json:"session_count"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 func (s *Service) CreateToken(
@@ -586,4 +599,43 @@ func (s *Service) updateCustomerFromRequestAddress(
 	if err != nil {
 		s.logError("Update customer data by request failed", []interface{}{"error", err})
 	}
+}
+
+func (s *Service) generateBrowserCookie(customer *BrowserCookieCustomer) (string, error) {
+	b, err := json.Marshal(customer)
+
+	if err != nil {
+		s.logError("Customer cookie generation failed", []interface{}{"error", err})
+		return "", err
+	}
+
+	hash := sha512.New()
+	cookie, err := rsa.EncryptOAEP(hash, cryptoRand.Reader, s.cfg.CookiePublicKey, b, nil)
+
+	if err != nil {
+		s.logError("Customer cookie generation failed", []interface{}{"error", err})
+		return "", err
+	}
+
+	return string(cookie), nil
+}
+
+func (s *Service) decryptBrowserCookie(cookie string) (*BrowserCookieCustomer, error) {
+	hash := sha512.New()
+	res, err := rsa.DecryptOAEP(hash, cryptoRand.Reader, s.cfg.CookiePrivateKey, []byte(cookie), nil)
+
+	if err != nil {
+		s.logError("Customer cookie decrypt failed", []interface{}{"error", err})
+		return nil, err
+	}
+
+	customer := &BrowserCookieCustomer{}
+	err = json.Unmarshal(res, &customer)
+
+	if err != nil {
+		s.logError("Customer cookie decrypt failed", []interface{}{"error", err})
+		return nil, err
+	}
+
+	return customer, nil
 }

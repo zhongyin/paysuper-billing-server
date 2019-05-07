@@ -5027,3 +5027,122 @@ func (suite *OrderTestSuite) TestOrder_CreateOrderByToken_Ok() {
 	assert.Equal(suite.T(), req.Settings.Amount, rsp1.ProjectIncomeAmount)
 	assert.Equal(suite.T(), req.Settings.Description, rsp1.Description)
 }
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_UuidNotFound_Error() {
+	req := &grpc.PaymentFormJsonDataRequest{
+		OrderId: bson.NewObjectId().Hex(),
+	}
+	rsp := &grpc.PaymentFormJsonDataResponse{}
+	err := suite.service.PaymentFormJsonDataProcess(context.TODO(), req, rsp)
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), orderErrorNotFound, err.Error())
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_NewCookie_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	req1 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+	}
+	rsp1 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req1, rsp1)
+	assert.NoError(suite.T(), err)
+	assert.NotEmpty(suite.T(), rsp1.Cookie)
+
+	browserCustomer, err := suite.service.decryptBrowserCookie(rsp1.Cookie)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), browserCustomer)
+	assert.Empty(suite.T(), browserCustomer.CustomerId)
+}
+
+func (suite *OrderTestSuite) TestOrder_PaymentFormJsonDataProcess_ExistCookie_Ok() {
+	req := &billing.OrderCreateRequest{
+		ProjectId:   suite.project.Id,
+		Currency:    "RUB",
+		Amount:      100,
+		Account:     "unit test",
+		Description: "unit test",
+		OrderId:     bson.NewObjectId().Hex(),
+	}
+
+	rsp := &billing.Order{}
+	err := suite.service.OrderCreateProcess(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+
+	req1 := &grpc.TokenRequest{
+		User: &billing.TokenUser{
+			Id: bson.NewObjectId().Hex(),
+			Email: &billing.TokenUserEmailValue{
+				Value: "test@unit.test",
+			},
+			Phone: &billing.TokenUserPhoneValue{
+				Value: "1234567890",
+			},
+			Name: &billing.TokenUserValue{
+				Value: "Unit Test",
+			},
+			Ip: &billing.TokenUserIpValue{
+				Value: "127.0.0.1",
+			},
+			Locale: &billing.TokenUserLocaleValue{
+				Value: "ru",
+			},
+			Address: &billing.OrderBillingAddress{
+				Country:    "RU",
+				City:       "St.Petersburg",
+				PostalCode: "190000",
+				State:      "SPE",
+			},
+		},
+		Settings: &billing.TokenSettings{
+			OrderId:     bson.NewObjectId().Hex(),
+			ProjectId:   suite.project.Id,
+			Currency:    "RUB",
+			Amount:      100,
+			Description: "test payment",
+		},
+	}
+	customer, err := suite.service.createCustomer(req1, suite.project)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), customer)
+
+	browserCustomer := &BrowserCookieCustomer{
+		CustomerId: customer.Id,
+		Ip:         "127.0.0.1",
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+	cookie, err := suite.service.generateBrowserCookie(browserCustomer)
+	assert.NoError(suite.T(), err)
+	assert.NotEmpty(suite.T(), cookie)
+
+	req2 := &grpc.PaymentFormJsonDataRequest{
+		OrderId: rsp.Uuid,
+		Scheme:  "http",
+		Host:    "127.0.0.1",
+		Cookie:  cookie,
+	}
+	rsp2 := &grpc.PaymentFormJsonDataResponse{}
+	err = suite.service.PaymentFormJsonDataProcess(context.TODO(), req2, rsp2)
+	assert.NoError(suite.T(), err)
+	assert.NotEmpty(suite.T(), rsp2.Cookie)
+
+	browserCustomer, err = suite.service.decryptBrowserCookie(rsp2.Cookie)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), browserCustomer)
+	assert.NotEmpty(suite.T(), browserCustomer.CustomerId)
+	assert.Equal(suite.T(), int32(1), browserCustomer.SessionCount)
+}

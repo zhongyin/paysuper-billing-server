@@ -92,6 +92,7 @@ const (
 	orderInlineFormImagesUrlMask = "//%s%s"
 
 	defaultExpireDateToFormInput = 30
+	cookieCounterUpdateTime      = 1800
 
 	taxTypeVat      = "vat"
 	taxTypeSalesTax = "sales_tax"
@@ -187,7 +188,7 @@ func (s *Service) OrderCreateProcess(
 		}
 	}
 
-	if processor.checked.user.Ip != "" {
+	if processor.checked.user != nil && processor.checked.user.Ip != "" {
 		err := processor.processPayerIp()
 
 		if err != nil {
@@ -320,29 +321,43 @@ func (s *Service) PaymentFormJsonDataProcess(
 
 	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
 	isIdentified := order.User.IsIdentified()
+	browserCustomer := &BrowserCookieCustomer{
+		Ip:             req.Ip,
+		UserAgent:      req.UserAgent,
+		AcceptLanguage: req.Locale,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
 
 	if isIdentified == true {
-		customer, err := s.getCustomerById(order.User.Id)
+		customer, err := s.processCustomerData(order.User.Id, order, req, browserCustomer, loc)
 
-		if err != nil {
-			return err
+		if err == nil {
+			browserCustomer.CustomerId = customer.Id
 		}
-
-		tokenReq := &grpc.TokenRequest{
-			User: &billing.TokenUser{
-				Ip:             &billing.TokenUserIpValue{Value: req.Ip},
-				Locale:         &billing.TokenUserLocaleValue{Value: loc},
-				AcceptLanguage: req.Locale,
-				UserAgent:      req.UserAgent,
-			},
-		}
-		project := &billing.Project{
-			Id:         order.Project.Id,
-			MerchantId: order.Project.MerchantId,
-		}
-
-		_, err = s.updateCustomer(tokenReq, project, customer)
 	} else {
+		if req.Cookie != "" {
+			browserCustomer, err = s.decryptBrowserCookie(req.Cookie)
+
+			if err == nil {
+				isIdentified = true
+
+				if (time.Now().Unix() - browserCustomer.UpdatedAt.Unix()) <= cookieCounterUpdateTime {
+					browserCustomer.SessionCount++
+				}
+
+				if browserCustomer.CustomerId != "" {
+					_, err := s.processCustomerData(browserCustomer.CustomerId, order, req, browserCustomer, loc)
+
+					if err != nil {
+						s.logError("Customer by identifier in browser cookie not processed", []interface{}{"error", err.Error()})
+					}
+				}
+			}
+		} else {
+			order.User.Id = s.getTokenString(s.cfg.CookieLength)
+		}
+
 		order.User.Ip = p1.checked.user.Ip
 		order.User.Locale = loc
 		order.User.Address = &billing.OrderBillingAddress{
@@ -350,13 +365,6 @@ func (s *Service) PaymentFormJsonDataProcess(
 			City:       p1.checked.user.Address.City,
 			PostalCode: p1.checked.user.Address.PostalCode,
 			State:      p1.checked.user.Address.State,
-		}
-
-		if req.HasUserCookie(s.getUserCookieRegex()) == true {
-			isIdentified = true
-			order.User.Id = req.Cookie
-		} else {
-			order.User.Id = s.getTokenString(s.cfg.CookieLength)
 		}
 	}
 
@@ -412,8 +420,10 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
 
-	if isIdentified == false {
-		rsp.Cookie = order.User.Id
+	cookie, err := s.generateBrowserCookie(browserCustomer)
+
+	if err == nil {
+		rsp.Cookie = cookie
 	}
 
 	return nil
@@ -2113,6 +2123,34 @@ func (v *PaymentCreateProcessor) GetMerchantId() string {
 	return v.checked.project.MerchantId
 }
 
-func (s *Service) getUserCookieRegex() string {
-	return fmt.Sprintf(pkg.UserCookiePattern, s.cfg.CookieLength)
+func (s *Service) processCustomerData(
+	customerId string,
+	order *billing.Order,
+	req *grpc.PaymentFormJsonDataRequest,
+	browserCustomer *BrowserCookieCustomer,
+	locale string,
+) (*billing.Customer, error) {
+	customer, err := s.getCustomerById(customerId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tokenReq := &grpc.TokenRequest{
+		User: &billing.TokenUser{
+			Ip:             &billing.TokenUserIpValue{Value: req.Ip},
+			Locale:         &billing.TokenUserLocaleValue{Value: locale},
+			AcceptLanguage: req.Locale,
+			UserAgent:      req.UserAgent,
+		},
+	}
+	project := &billing.Project{
+		Id:         order.Project.Id,
+		MerchantId: order.Project.MerchantId,
+	}
+
+	browserCustomer.CustomerId = customer.Id
+	_, err = s.updateCustomer(tokenReq, project, customer)
+
+	return customer, err
 }
