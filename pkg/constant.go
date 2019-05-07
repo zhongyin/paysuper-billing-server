@@ -19,7 +19,6 @@ const (
 	CollectionSystemFees                   = "system_fees"
 	CollectionMerchantPaymentMethodHistory = "payment_method_history"
 	CollectionCustomer                     = "customer"
-	CollectionCustomerToken                = "customer_token"
 
 	CardPayPaymentResponseStatusInProgress = "IN_PROGRESS"
 	CardPayPaymentResponseStatusPending    = "PENDING"
@@ -105,8 +104,6 @@ const (
 	UserIdentityTypeEmail    = "email"
 	UserIdentityTypePhone    = "phone"
 	UserIdentityTypeExternal = "external"
-
-	UserCookiePattern = "^[aA0-zZ9]{%d}$"
 
 	TechEmailDomain        = "@paysuper.com"
 	OrderInlineFormUrlMask = "%s://%s/order/%s"
