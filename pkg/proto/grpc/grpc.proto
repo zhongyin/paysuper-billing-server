@@ -118,6 +118,7 @@ message PaymentFormJsonDataResponse {
     repeated billing.OrderItem items = 13;
     // @inject_tag: json:"-"
     string cookie = 14;
+    string email = 15;
 }
 
 message PaymentNotifyRequest {

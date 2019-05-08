@@ -418,6 +418,7 @@ func (s *Service) PaymentFormJsonDataProcess(
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
+	rsp.Email = order.User.Email
 
 	cookie, err := s.generateBrowserCookie(browserCustomer)
 
@@ -1665,8 +1666,11 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return err
 	}
 
+	updCustomerReq := &grpc.TokenRequest{User: &billing.TokenUser{}}
+
 	if val, ok := v.data[pkg.PaymentCreateFieldEmail]; ok {
 		order.User.Email = val
+		updCustomerReq.User.Email = &billing.TokenUserEmailValue{Value: val}
 	}
 
 	order.PaymentRequisites = make(map[string]string)
@@ -1689,9 +1693,14 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		}
 
 		processor.processOrderVat(order)
+		updCustomerReq.User.Address = order.BillingAddress
+	}
 
-		if order.User.IsIdentified() == true {
-			v.service.updateCustomerFromRequestAddress(order, v.ip, v.acceptLanguage, v.userAgent, order.BillingAddress)
+	if order.User.IsIdentified() == true {
+		err = v.service.updateCustomerFromRequest(order, updCustomerReq, v.ip, v.acceptLanguage, v.userAgent)
+
+		if err != nil {
+			v.service.logError("Update customer data by request failed", []interface{}{"error", err.Error(), "data", updCustomerReq})
 		}
 	}
 

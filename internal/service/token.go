@@ -585,22 +585,6 @@ func (s *Service) updateCustomerFromRequestLocale(
 	}
 }
 
-func (s *Service) updateCustomerFromRequestAddress(
-	order *billing.Order,
-	ip, acceptLanguage, userAgent string,
-	address *billing.OrderBillingAddress,
-) {
-	tokenReq := &grpc.TokenRequest{
-		User: &billing.TokenUser{Address: address},
-	}
-
-	err := s.updateCustomerFromRequest(order, tokenReq, ip, acceptLanguage, userAgent)
-
-	if err != nil {
-		s.logError("Update customer data by request failed", []interface{}{"error", err})
-	}
-}
-
 func (s *Service) generateBrowserCookie(customer *BrowserCookieCustomer) (string, error) {
 	b, err := json.Marshal(customer)
 
