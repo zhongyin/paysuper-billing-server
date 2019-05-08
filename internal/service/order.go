@@ -88,15 +88,13 @@ const (
 	paymentCreateBankCardFieldIssuerCountry = "bank_issuer_country"
 
 	orderDefaultDescription      = "Payment by order # %s"
-	orderInlineFormUrlMask       = "%s://%s/order/%s"
 	orderInlineFormImagesUrlMask = "//%s%s"
 
 	defaultExpireDateToFormInput = 30
+	cookieCounterUpdateTime      = 1800
 
 	taxTypeVat      = "vat"
 	taxTypeSalesTax = "sales_tax"
-
-	objectTypeUser = "user"
 )
 
 type orderCreateRequestProcessorChecked struct {
@@ -105,12 +103,12 @@ type orderCreateRequestProcessorChecked struct {
 	merchant        *billing.Merchant
 	currency        *billing.Currency
 	amount          float64
-	payerData       *billing.PayerData
 	paymentMethod   *billing.PaymentMethod
 	products        []string
 	items           []*billing.OrderItem
 	metadata        map[string]string
 	privateMetadata map[string]string
+	user            *billing.OrderUser
 }
 
 type OrderCreateRequestProcessor struct {
@@ -126,9 +124,12 @@ type PaymentFormProcessor struct {
 }
 
 type PaymentCreateProcessor struct {
-	service *Service
-	data    map[string]string
-	checked struct {
+	service        *Service
+	data           map[string]string
+	ip             string
+	acceptLanguage string
+	userAgent      string
+	checked        struct {
 		order         *billing.Order
 		project       *billing.Project
 		paymentMethod *billing.PaymentMethod
@@ -154,7 +155,19 @@ func (s *Service) OrderCreateProcess(
 	req *billing.OrderCreateRequest,
 	rsp *billing.Order,
 ) error {
-	processor := &OrderCreateRequestProcessor{Service: s, request: req, checked: &orderCreateRequestProcessorChecked{}}
+	processor := &OrderCreateRequestProcessor{
+		Service: s,
+		request: req,
+		checked: &orderCreateRequestProcessorChecked{},
+	}
+
+	if req.Token != "" {
+		err := processor.processCustomerToken()
+
+		if err != nil {
+			return err
+		}
+	}
 
 	if err := processor.processProject(); err != nil {
 		return err
@@ -166,8 +179,20 @@ func (s *Service) OrderCreateProcess(
 		}
 	}
 
-	if err := processor.processPayerData(); err != nil {
-		return err
+	if req.User != nil {
+		err := processor.processUserData()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if processor.checked.user != nil && processor.checked.user.Ip != "" {
+		err := processor.processPayerIp()
+
+		if err != nil {
+			return err
+		}
 	}
 
 	if processor.checked.project.IsProductsCheckout == true {
@@ -241,7 +266,6 @@ func (s *Service) OrderCreateProcess(
 	rsp.ProjectOutcomeAmount = order.ProjectOutcomeAmount
 	rsp.ProjectOutcomeCurrency = order.ProjectOutcomeCurrency
 	rsp.ProjectParams = order.ProjectParams
-	rsp.PayerData = order.PayerData
 	rsp.Status = order.Status
 	rsp.CreatedAt = order.CreatedAt
 	rsp.IsJsonRequest = order.IsJsonRequest
@@ -264,6 +288,7 @@ func (s *Service) OrderCreateProcess(
 	rsp.Amount = order.Amount
 	rsp.Currency = order.Currency
 	rsp.Metadata = order.Metadata
+	rsp.User = order.User
 
 	return nil
 }
@@ -280,28 +305,66 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 
 	p := &PaymentFormProcessor{service: s, order: order, request: req}
-	p1 := &OrderCreateRequestProcessor{Service: s,
-		request: &billing.OrderCreateRequest{
-			PayerIp: req.Ip,
+	p1 := &OrderCreateRequestProcessor{
+		Service: s,
+		checked: &orderCreateRequestProcessorChecked{
+			user: &billing.OrderUser{Ip: req.Ip},
 		},
-		checked: &orderCreateRequestProcessorChecked{},
 	}
 
-	err = p1.processPayerData()
+	err = p1.processPayerIp()
 
 	if err != nil {
 		return err
 	}
 
 	loc, ctr := s.getCountryFromAcceptLanguage(req.Locale)
+	isIdentified := order.User.IsIdentified()
+	browserCustomer := &BrowserCookieCustomer{
+		Ip:             req.Ip,
+		UserAgent:      req.UserAgent,
+		AcceptLanguage: req.Locale,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
 
-	order.User.Ip = p1.checked.payerData.Ip
-	order.User.Locale = loc
-	order.User.Address = &billing.OrderBillingAddress{
-		Country:    p1.checked.payerData.Country,
-		City:       p1.checked.payerData.City.En,
-		PostalCode: p1.checked.payerData.Zip,
-		State:      p1.checked.payerData.State,
+	if isIdentified == true {
+		customer, err := s.processCustomerData(order.User.Id, order, req, browserCustomer, loc)
+
+		if err == nil {
+			browserCustomer.CustomerId = customer.Id
+		}
+	} else {
+		if req.Cookie != "" {
+			browserCustomer, err = s.decryptBrowserCookie(req.Cookie)
+
+			if err == nil {
+				isIdentified = true
+
+				if (time.Now().Unix() - browserCustomer.UpdatedAt.Unix()) <= cookieCounterUpdateTime {
+					browserCustomer.SessionCount++
+				}
+
+				if browserCustomer.CustomerId != "" {
+					_, err := s.processCustomerData(browserCustomer.CustomerId, order, req, browserCustomer, loc)
+
+					if err != nil {
+						s.logError("Customer by identifier in browser cookie not processed", []interface{}{"error", err.Error()})
+					}
+				}
+			}
+		} else {
+			order.User.Id = s.getTokenString(s.cfg.CookieLength)
+		}
+
+		order.User.Ip = p1.checked.user.Ip
+		order.User.Locale = loc
+		order.User.Address = &billing.OrderBillingAddress{
+			Country:    p1.checked.user.Address.Country,
+			City:       p1.checked.user.Address.City,
+			PostalCode: p1.checked.user.Address.PostalCode,
+			State:      p1.checked.user.Address.State,
+		}
 	}
 
 	if ctr != order.User.Address.Country {
@@ -351,10 +414,17 @@ func (s *Service) PaymentFormJsonDataProcess(
 	}
 	rsp.PaymentMethods = pms
 	rsp.Token, _ = token.SignedString([]byte(s.cfg.CentrifugoSecret))
-	rsp.InlineFormRedirectUrl = fmt.Sprintf(orderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
+	rsp.InlineFormRedirectUrl = fmt.Sprintf(pkg.OrderInlineFormUrlMask, req.Scheme, req.Host, rsp.Id)
 	rsp.Amount = order.PaymentMethodOutcomeAmount
 	rsp.TotalAmount = order.TotalPaymentAmount
 	rsp.Items = order.Items
+	rsp.Email = order.User.Email
+
+	cookie, err := s.generateBrowserCookie(browserCustomer)
+
+	if err == nil {
+		rsp.Cookie = cookie
+	}
 
 	return nil
 }
@@ -364,7 +434,13 @@ func (s *Service) PaymentCreateProcess(
 	req *grpc.PaymentCreateRequest,
 	rsp *grpc.PaymentCreateResponse,
 ) error {
-	processor := &PaymentCreateProcessor{service: s, data: req.Data}
+	processor := &PaymentCreateProcessor{
+		service:        s,
+		data:           req.Data,
+		ip:             req.Ip,
+		acceptLanguage: req.AcceptLanguage,
+		userAgent:      req.UserAgent,
+	}
 	err := processor.processPaymentFormData()
 
 	if err != nil {
@@ -581,6 +657,10 @@ func (s *Service) PaymentFormLanguageChanged(
 		return nil
 	}
 
+	if order.User.IsIdentified() == true {
+		s.updateCustomerFromRequestLocale(order, req.Ip, req.AcceptLanguage, req.UserAgent, req.Lang)
+	}
+
 	order.User.Locale = req.Lang
 	order.UserAddressDataRequired = true
 
@@ -689,7 +769,7 @@ func (s *Service) PaymentFormPaymentAccountChanged(
 		return nil
 	}
 
-	if order.PayerData.Country == country {
+	if order.User.Address.Country == country {
 		return nil
 	}
 
@@ -768,9 +848,10 @@ func (s *Service) ProcessBillingAddress(
 
 func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 	req := &repo.SavedCardRequest{
-		Account:   order.ProjectAccount,
-		ProjectId: order.Project.Id,
-		MaskedPan: order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
+		Token:      order.User.Id,
+		ProjectId:  order.Project.Id,
+		MerchantId: order.Project.MerchantId,
+		MaskedPan:  order.PaymentMethodTxnParams[pkg.PaymentCreateFieldPan],
 		Expire: &entity.CardExpire{
 			Month: order.PaymentRequisites[pkg.PaymentCreateFieldMonth],
 			Year:  order.PaymentRequisites[pkg.PaymentCreateFieldYear],
@@ -796,7 +877,6 @@ func (s *Service) updateOrder(order *billing.Order) error {
 
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"error", err.Error(), "order", order})
-
 		return errors.New(orderErrorUnknown)
 	}
 
@@ -919,7 +999,6 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		ProjectOutcomeAmount:               amount,
 		ProjectOutcomeCurrency:             v.checked.currency,
 		ProjectParams:                      v.request.Other,
-		PayerData:                          v.checked.payerData,
 		Status:                             constant.OrderStatusNew,
 		CreatedAt:                          ptypes.TimestampNow(),
 		IsJsonRequest:                      v.request.IsJson,
@@ -929,18 +1008,8 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PaymentMethodIncomeAmount:          amount,
 		PaymentMethodIncomeCurrency:        v.checked.currency,
 
-		Uuid: uuid.New().String(),
-		User: &billing.OrderUser{
-			Object: objectTypeUser,
-			Email:  v.checked.payerData.Email,
-			Phone:  v.checked.payerData.Phone,
-			Address: &billing.OrderBillingAddress{
-				Country:    v.checked.payerData.Country,
-				City:       v.checked.payerData.City.En,
-				PostalCode: v.checked.payerData.Zip,
-				State:      v.checked.payerData.State,
-			},
-		},
+		Uuid:            uuid.New().String(),
+		User:            v.checked.user,
 		Amount:          amount,
 		Currency:        v.checked.currency.CodeA3,
 		Products:        v.checked.products,
@@ -949,7 +1018,15 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 		PrivateMetadata: v.checked.privateMetadata,
 	}
 
-	v.processOrderVat(order)
+	if order.User != nil && order.User.Address != nil {
+		v.processOrderVat(order)
+	}
+
+	if order.User == nil {
+		order.User = &billing.OrderUser{
+			Object: pkg.ObjectTypeUser,
+		}
+	}
 
 	if v.request.Description != "" {
 		order.Description = v.request.Description
@@ -1035,34 +1112,33 @@ func (v *OrderCreateRequestProcessor) processPrivateMetadata() {
 	v.checked.privateMetadata = v.request.PrivateMetadata
 }
 
-func (v *OrderCreateRequestProcessor) processPayerData() error {
-	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.request.PayerIp})
+func (v *OrderCreateRequestProcessor) processPayerIp() error {
+	rsp, err := v.geo.GetIpData(context.TODO(), &proto.GeoIpDataRequest{IP: v.checked.user.Ip})
 
 	if err != nil {
 		zap.S().Errorw("[PAYONE_BILLING] Order create get payer data error", "err", err, "ip", v.request.PayerIp)
 		return errors.New(orderErrorPayerRegionUnknown)
 	}
 
-	data := &billing.PayerData{
-		Ip:          v.request.PayerIp,
-		Country:     rsp.Country.IsoCode,
-		CountryName: &billing.Name{En: rsp.Country.Names["en"], Ru: rsp.Country.Names["ru"]},
-		City:        &billing.Name{En: rsp.City.Names["en"], Ru: rsp.City.Names["ru"]},
-		Timezone:    rsp.Location.TimeZone,
-		Email:       v.request.PayerEmail,
-		Phone:       v.request.PayerPhone,
-		Language:    v.request.Language,
+	if v.checked.user.Address == nil {
+		v.checked.user.Address = &billing.OrderBillingAddress{}
 	}
 
-	if len(rsp.Subdivisions) > 0 {
-		data.State = rsp.Subdivisions[0].IsoCode
+	if v.checked.user.Address.Country == "" {
+		v.checked.user.Address.Country = rsp.Country.IsoCode
 	}
 
-	if rsp.Postal != nil {
-		data.Zip = rsp.Postal.Code
+	if v.checked.user.Address.City == "" {
+		v.checked.user.Address.City = rsp.City.Names["en"]
 	}
 
-	v.checked.payerData = data
+	if v.checked.user.Address.PostalCode == "" && rsp.Postal != nil {
+		v.checked.user.Address.PostalCode = rsp.Postal.Code
+	}
+
+	if v.checked.user.Address.State == "" && len(rsp.Subdivisions) > 0 {
+		v.checked.user.Address.State = rsp.Subdivisions[0].IsoCode
+	}
 
 	return nil
 }
@@ -1257,7 +1333,7 @@ func (v *OrderCreateRequestProcessor) processOrderVat(order *billing.Order) {
 		req.UserData.City = order.BillingAddress.City
 	}
 
-	if order.PayerData.Country == CountryCodeUSA {
+	if order.User.Address.Country == CountryCodeUSA {
 		order.Tax.Type = taxTypeSalesTax
 
 		req.IpData.Zip = order.User.Address.PostalCode
@@ -1323,6 +1399,93 @@ func (v *OrderCreateRequestProcessor) processOrderCommissions(o *billing.Order) 
 	}
 
 	return nil
+}
+
+func (v *OrderCreateRequestProcessor) processCustomerToken() error {
+	token, err := v.getTokenBy(v.request.Token)
+
+	if err != nil {
+		return err
+	}
+
+	customer, err := v.getCustomerById(token.CustomerId)
+
+	if err != nil {
+		return err
+	}
+
+	v.request.ProjectId = token.Settings.ProjectId
+	v.request.Description = token.Settings.Description
+	v.request.Amount = token.Settings.Amount
+	v.request.Currency = token.Settings.Currency
+	v.request.Products = token.Settings.ProductsIds
+	v.request.Metadata = token.Settings.Metadata
+	v.request.PaymentMethod = token.Settings.PaymentMethod
+
+	if token.Settings.ReturnUrl != nil {
+		v.request.UrlSuccess = token.Settings.ReturnUrl.Success
+		v.request.UrlFail = token.Settings.ReturnUrl.Fail
+	}
+
+	v.checked.user = &billing.OrderUser{
+		ExternalId: token.User.Id,
+		Address:    token.User.Address,
+		Metadata:   token.User.Metadata,
+	}
+
+	if token.User.Name != nil {
+		v.checked.user.Name = token.User.Name.Value
+	}
+
+	if token.User.Email != nil {
+		v.checked.user.Email = token.User.Email.Value
+		v.checked.user.EmailVerified = token.User.Email.Verified
+	}
+
+	if token.User.Phone != nil {
+		v.checked.user.Phone = token.User.Phone.Value
+		v.checked.user.PhoneVerified = token.User.Phone.Verified
+	}
+
+	if token.User.Ip != nil {
+		v.checked.user.Ip = token.User.Ip.Value
+	}
+
+	if token.User.Locale != nil {
+		v.checked.user.Locale = token.User.Locale.Value
+	}
+
+	v.checked.user.Id = customer.Id
+	v.checked.user.Object = pkg.ObjectTypeUser
+	v.checked.user.TechEmail = customer.TechEmail
+
+	return nil
+}
+
+func (v *OrderCreateRequestProcessor) processUserData() (err error) {
+	customer := new(billing.Customer)
+	tokenReq := v.transformOrderUser2TokenRequest(v.request.User)
+
+	if v.request.Token == "" {
+		customer, _ = v.findCustomer(tokenReq, v.checked.project)
+	}
+
+	if customer != nil {
+		customer, err = v.updateCustomer(tokenReq, v.checked.project, customer)
+	} else {
+		customer, err = v.createCustomer(tokenReq, v.checked.project)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	v.checked.user = v.request.User
+	v.checked.user.Id = customer.Id
+	v.checked.user.Object = pkg.ObjectTypeUser
+	v.checked.user.TechEmail = customer.TechEmail
+
+	return
 }
 
 // Get payment methods of project for rendering in payment form
@@ -1402,7 +1565,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 	pm.HasSavedCards = false
 
 	if pm.IsBankCard() == true {
-		req := &repo.SavedCardRequest{Account: v.order.ProjectAccount, ProjectId: v.order.Project.Id}
+		req := &repo.SavedCardRequest{Token: v.order.User.Id}
 		rsp, err := v.service.rep.FindSavedCards(context.TODO(), req)
 
 		if err != nil {
@@ -1503,7 +1666,13 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		return err
 	}
 
-	order.PayerData.Email = v.data[pkg.PaymentCreateFieldEmail]
+	updCustomerReq := &grpc.TokenRequest{User: &billing.TokenUser{}}
+
+	if val, ok := v.data[pkg.PaymentCreateFieldEmail]; ok {
+		order.User.Email = val
+		updCustomerReq.User.Email = &billing.TokenUserEmailValue{Value: val}
+	}
+
 	order.PaymentRequisites = make(map[string]string)
 
 	if order.UserAddressDataRequired == true {
@@ -1524,6 +1693,15 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 		}
 
 		processor.processOrderVat(order)
+		updCustomerReq.User.Address = order.BillingAddress
+	}
+
+	if order.User.IsIdentified() == true {
+		err = v.service.updateCustomerFromRequest(order, updCustomerReq, v.ip, v.acceptLanguage, v.userAgent)
+
+		if err != nil {
+			v.service.logError("Update customer data by request failed", []interface{}{"error", err.Error(), "data", updCustomerReq})
+		}
 	}
 
 	delete(v.data, pkg.PaymentCreateFieldOrderId)
@@ -1602,7 +1780,7 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 	v.checked.order = order
 
 	if order.ProjectAccount == "" {
-		order.ProjectAccount = order.PayerData.Email
+		order.ProjectAccount = order.User.Email
 	}
 
 	return nil
@@ -1697,23 +1875,23 @@ func (v *PaymentCreateProcessor) processPaymentAmounts() (err error) {
 	return
 }
 
-func (s *Service) GetOrderProducts(project_id string, product_ids []string) ([]*grpc.Product, error) {
-	if len(product_ids) == 0 {
+func (s *Service) GetOrderProducts(projectId string, productIds []string) ([]*grpc.Product, error) {
+	if len(productIds) == 0 {
 		return nil, errors.New(orderErrorProductsEmpty)
 	}
 
 	result := grpc.ListProductsResponse{}
 
 	err := s.GetProductsForOrder(context.TODO(), &grpc.GetProductsForOrderRequest{
-		ProjectId: project_id,
-		Ids:       product_ids,
+		ProjectId: projectId,
+		Ids:       productIds,
 	}, &result)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if result.Total != int32(len(product_ids)) {
+	if result.Total != int32(len(productIds)) {
 		return nil, errors.New(orderErrorProductsInvalid)
 	}
 
@@ -1721,26 +1899,29 @@ func (s *Service) GetOrderProducts(project_id string, product_ids []string) ([]*
 }
 
 func (s *Service) GetOrderProductsAmount(products []*grpc.Product, currency string) (float64, error) {
-
 	if len(products) == 0 {
 		return 0, errors.New(orderErrorProductsEmpty)
 	}
 
-	summ := float64(0)
+	sum := float64(0)
+
 	for _, p := range products {
 		amount, err := p.GetPriceInCurrency(currency)
+
 		if err != nil {
 			return 0, errors.New(orderErrorNoProductsCommonCurrency)
 		}
-		summ += amount
+
+		sum += amount
 	}
-	totalAmount := float64(tools.FormatAmount(summ))
+
+	totalAmount := float64(tools.FormatAmount(sum))
+
 	return totalAmount, nil
 }
 
 func (s *Service) GetOrderProductsItems(products []*grpc.Product, language string, currency string) ([]*billing.OrderItem, error) {
-
-	result := []*billing.OrderItem{}
+	var result []*billing.OrderItem
 
 	if len(products) == 0 {
 		return nil, errors.New(orderErrorProductsEmpty)
@@ -1947,4 +2128,36 @@ func (s *Service) notifyPaylinkError(PaylinkId string, err error, req interface{
 
 func (v *PaymentCreateProcessor) GetMerchantId() string {
 	return v.checked.project.MerchantId
+}
+
+func (s *Service) processCustomerData(
+	customerId string,
+	order *billing.Order,
+	req *grpc.PaymentFormJsonDataRequest,
+	browserCustomer *BrowserCookieCustomer,
+	locale string,
+) (*billing.Customer, error) {
+	customer, err := s.getCustomerById(customerId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tokenReq := &grpc.TokenRequest{
+		User: &billing.TokenUser{
+			Ip:             &billing.TokenUserIpValue{Value: req.Ip},
+			Locale:         &billing.TokenUserLocaleValue{Value: locale},
+			AcceptLanguage: req.Locale,
+			UserAgent:      req.UserAgent,
+		},
+	}
+	project := &billing.Project{
+		Id:         order.Project.Id,
+		MerchantId: order.Project.MerchantId,
+	}
+
+	browserCustomer.CustomerId = customer.Id
+	_, err = s.updateCustomer(tokenReq, project, customer)
+
+	return customer, err
 }

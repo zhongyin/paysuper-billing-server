@@ -199,7 +199,6 @@ type MgoOrder struct {
 	ProjectOutcomeCurrency                  *Currency              `bson:"project_outcome_currency"`
 	ProjectLastRequestedAt                  time.Time              `bson:"project_last_requested_at"`
 	ProjectParams                           map[string]string      `bson:"project_params"`
-	PayerData                               *PayerData             `bson:"payer_data"`
 	PaymentMethod                           *MgoOrderPaymentMethod `bson:"payment_method"`
 	PaymentMethodTerminalId                 string                 `bson:"pm_terminal_id"`
 	PaymentMethodOrderId                    string                 `bson:"pm_order_id"`
@@ -308,6 +307,57 @@ type MgoMerchantPaymentMethodHistory struct {
 	PaymentMethod *MgoMerchantPaymentMethod `bson:"payment_method"`
 	CreatedAt     time.Time                 `bson:"created_at" json:"created_at"`
 	UserId        bson.ObjectId             `bson:"user_id"`
+}
+
+type MgoCustomerIdentity struct {
+	MerchantId bson.ObjectId `bson:"merchant_id"`
+	ProjectId  bson.ObjectId `bson:"project_id"`
+	Type       string        `bson:"type"`
+	Value      string        `bson:"value"`
+	Verified   bool          `bson:"verified"`
+	CreatedAt  time.Time     `bson:"created_at"`
+}
+
+type MgoCustomerIpHistory struct {
+	Ip        []byte    `bson:"ip"`
+	CreatedAt time.Time `bson:"created_at"`
+}
+
+type MgoCustomerAddressHistory struct {
+	Country    string    `bson:"country"`
+	City       string    `bson:"city"`
+	PostalCode string    `bson:"postal_code"`
+	State      string    `bson:"state"`
+	CreatedAt  time.Time `bson:"created_at"`
+}
+
+type MgoCustomerStringValueHistory struct {
+	Value     string    `bson:"value"`
+	CreatedAt time.Time `bson:"created_at"`
+}
+
+type MgoCustomer struct {
+	Id                    bson.ObjectId                    `bson:"_id"`
+	TechEmail             string                           `bson:"tech_email"`
+	ExternalId            string                           `bson:"external_id"`
+	Email                 string                           `bson:"email"`
+	EmailVerified         bool                             `bson:"email_verified"`
+	Phone                 string                           `bson:"phone"`
+	PhoneVerified         bool                             `bson:"phone_verified"`
+	Name                  string                           `bson:"name"`
+	Ip                    []byte                           `bson:"ip"`
+	Locale                string                           `bson:"locale"`
+	AcceptLanguage        string                           `bson:"accept_language"`
+	UserAgent             string                           `bson:"user_agent"`
+	Address               *OrderBillingAddress             `bson:"address"`
+	Identity              []*MgoCustomerIdentity           `bson:"identity"`
+	IpHistory             []*MgoCustomerIpHistory          `bson:"ip_history"`
+	AddressHistory        []*MgoCustomerAddressHistory     `bson:"address_history"`
+	LocaleHistory         []*MgoCustomerStringValueHistory `bson:"locale_history"`
+	AcceptLanguageHistory []*MgoCustomerStringValueHistory `bson:"accept_language_history"`
+	Metadata              map[string]string                `bson:"metadata"`
+	CreatedAt             time.Time                        `bson:"created_at"`
+	UpdatedAt             time.Time                        `bson:"updated_at"`
 }
 
 func (m *Vat) GetBSON() (interface{}, error) {
@@ -788,7 +838,6 @@ func (m *Order) GetBSON() (interface{}, error) {
 		ProjectOutcomeAmount:                    m.ProjectOutcomeAmount,
 		ProjectOutcomeCurrency:                  m.ProjectOutcomeCurrency,
 		ProjectParams:                           m.ProjectParams,
-		PayerData:                               m.PayerData,
 		PaymentMethodOrderId:                    m.PaymentMethodOrderId,
 		PaymentMethodOutcomeAmount:              m.PaymentMethodOutcomeAmount,
 		PaymentMethodOutcomeCurrency:            m.PaymentMethodOutcomeCurrency,
@@ -932,7 +981,6 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 	m.ProjectOutcomeAmount = decoded.ProjectOutcomeAmount
 	m.ProjectOutcomeCurrency = decoded.ProjectOutcomeCurrency
 	m.ProjectParams = decoded.ProjectParams
-	m.PayerData = decoded.PayerData
 
 	if decoded.PaymentMethod != nil {
 		m.PaymentMethod = &PaymentMethodOrder{
@@ -1684,4 +1732,181 @@ func (p *MerchantPaymentMethodHistory) GetBSON() (interface{}, error) {
 	}
 
 	return st, nil
+}
+
+func (m *Customer) GetBSON() (interface{}, error) {
+	st := &MgoCustomer{
+		Id:                    bson.ObjectIdHex(m.Id),
+		TechEmail:             m.TechEmail,
+		ExternalId:            m.ExternalId,
+		Email:                 m.Email,
+		EmailVerified:         m.EmailVerified,
+		Phone:                 m.Phone,
+		PhoneVerified:         m.PhoneVerified,
+		Name:                  m.Name,
+		Ip:                    m.Ip,
+		Locale:                m.Locale,
+		AcceptLanguage:        m.AcceptLanguage,
+		UserAgent:             m.UserAgent,
+		Address:               m.Address,
+		Metadata:              m.Metadata,
+		Identity:              []*MgoCustomerIdentity{},
+		IpHistory:             []*MgoCustomerIpHistory{},
+		AddressHistory:        []*MgoCustomerAddressHistory{},
+		LocaleHistory:         []*MgoCustomerStringValueHistory{},
+		AcceptLanguageHistory: []*MgoCustomerStringValueHistory{},
+	}
+
+	for _, v := range m.Identity {
+		mgoIdentity := &MgoCustomerIdentity{
+			MerchantId: bson.ObjectIdHex(v.MerchantId),
+			ProjectId:  bson.ObjectIdHex(v.ProjectId),
+			Type:       v.Type,
+			Value:      v.Value,
+			Verified:   v.Verified,
+		}
+
+		mgoIdentity.CreatedAt, _ = ptypes.Timestamp(v.CreatedAt)
+		st.Identity = append(st.Identity, mgoIdentity)
+	}
+
+	for _, v := range m.IpHistory {
+		mgoIdentity := &MgoCustomerIpHistory{Ip: v.Ip}
+		mgoIdentity.CreatedAt, _ = ptypes.Timestamp(v.CreatedAt)
+		st.IpHistory = append(st.IpHistory, mgoIdentity)
+	}
+
+	for _, v := range m.AddressHistory {
+		mgoIdentity := &MgoCustomerAddressHistory{
+			Country:    v.Country,
+			City:       v.City,
+			PostalCode: v.PostalCode,
+			State:      v.State,
+		}
+		mgoIdentity.CreatedAt, _ = ptypes.Timestamp(v.CreatedAt)
+		st.AddressHistory = append(st.AddressHistory, mgoIdentity)
+	}
+
+	for _, v := range m.LocaleHistory {
+		mgoIdentity := &MgoCustomerStringValueHistory{Value: v.Value}
+		mgoIdentity.CreatedAt, _ = ptypes.Timestamp(v.CreatedAt)
+		st.LocaleHistory = append(st.LocaleHistory, mgoIdentity)
+	}
+
+	for _, v := range m.AcceptLanguageHistory {
+		mgoIdentity := &MgoCustomerStringValueHistory{Value: v.Value}
+		mgoIdentity.CreatedAt, _ = ptypes.Timestamp(v.CreatedAt)
+		st.AcceptLanguageHistory = append(st.AcceptLanguageHistory, mgoIdentity)
+	}
+
+	if m.CreatedAt != nil {
+		t, err := ptypes.Timestamp(m.CreatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.CreatedAt = t
+	} else {
+		st.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt != nil {
+		t, err := ptypes.Timestamp(m.UpdatedAt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		st.UpdatedAt = t
+	} else {
+		st.UpdatedAt = time.Now()
+	}
+
+	return st, nil
+}
+
+func (m *Customer) SetBSON(raw bson.Raw) error {
+	decoded := new(MgoCustomer)
+	err := raw.Unmarshal(decoded)
+
+	if err != nil {
+		return err
+	}
+
+	m.Id = decoded.Id.Hex()
+	m.TechEmail = decoded.TechEmail
+	m.ExternalId = decoded.ExternalId
+	m.Email = decoded.Email
+	m.EmailVerified = decoded.EmailVerified
+	m.Phone = decoded.Phone
+	m.PhoneVerified = decoded.PhoneVerified
+	m.Name = decoded.Name
+	m.Ip = decoded.Ip
+	m.Locale = decoded.Locale
+	m.AcceptLanguage = decoded.AcceptLanguage
+	m.UserAgent = decoded.UserAgent
+	m.Address = decoded.Address
+	m.Identity = []*CustomerIdentity{}
+	m.IpHistory = []*CustomerIpHistory{}
+	m.AddressHistory = []*CustomerAddressHistory{}
+	m.LocaleHistory = []*CustomerStringValueHistory{}
+	m.AcceptLanguageHistory = []*CustomerStringValueHistory{}
+	m.Metadata = decoded.Metadata
+
+	for _, v := range decoded.Identity {
+		identity := &CustomerIdentity{
+			MerchantId: v.MerchantId.Hex(),
+			ProjectId:  v.ProjectId.Hex(),
+			Type:       v.Type,
+			Value:      v.Value,
+			Verified:   v.Verified,
+		}
+
+		identity.CreatedAt, _ = ptypes.TimestampProto(v.CreatedAt)
+		m.Identity = append(m.Identity, identity)
+	}
+
+	for _, v := range decoded.IpHistory {
+		identity := &CustomerIpHistory{Ip: v.Ip}
+		identity.CreatedAt, _ = ptypes.TimestampProto(v.CreatedAt)
+		m.IpHistory = append(m.IpHistory, identity)
+	}
+
+	for _, v := range decoded.AddressHistory {
+		identity := &CustomerAddressHistory{
+			Country:    v.Country,
+			City:       v.City,
+			PostalCode: v.PostalCode,
+			State:      v.State,
+		}
+		identity.CreatedAt, _ = ptypes.TimestampProto(v.CreatedAt)
+		m.AddressHistory = append(m.AddressHistory, identity)
+	}
+
+	for _, v := range decoded.LocaleHistory {
+		identity := &CustomerStringValueHistory{Value: v.Value}
+		identity.CreatedAt, _ = ptypes.TimestampProto(v.CreatedAt)
+		m.LocaleHistory = append(m.LocaleHistory, identity)
+	}
+
+	for _, v := range decoded.AcceptLanguageHistory {
+		identity := &CustomerStringValueHistory{Value: v.Value}
+		identity.CreatedAt, _ = ptypes.TimestampProto(v.CreatedAt)
+		m.AcceptLanguageHistory = append(m.AcceptLanguageHistory, identity)
+	}
+
+	m.CreatedAt, err = ptypes.TimestampProto(decoded.CreatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	m.UpdatedAt, err = ptypes.TimestampProto(decoded.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

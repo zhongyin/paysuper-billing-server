@@ -317,7 +317,7 @@ func (suite *OnboardingTestSuite) SetupTest() {
 	suite.log, err = zap.NewProduction()
 	assert.NoError(suite.T(), err, "Logger initialization failed")
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil, nil)
 	err = suite.service.Init()
 	assert.NoError(suite.T(), err, "Billing service initialization failed")
 

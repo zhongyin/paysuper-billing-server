@@ -212,6 +212,7 @@ func (suite *SystemFeesTestSuite) SetupTest() {
 		mock.NewRepositoryServiceOk(),
 		mock.NewTaxServiceOkMock(),
 		broker,
+		nil,
 	)
 	err = suite.service.Init()
 	assert.NoError(suite.T(), err, "Billing service initialization failed")
