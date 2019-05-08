@@ -4527,12 +4527,12 @@ func (m *Refund) GetSalesTax() float32 {
 }
 
 type SystemFee struct {
-	// @inject_tag: json:"percent" validate:"required,numeric,gte=0,lte=100"
-	Percent float64 `protobuf:"fixed64,1,opt,name=percent,proto3" json:"percent" validate:"required,numeric,gte=0,lte=100"`
+	// @inject_tag: json:"percent" validate:"numeric,gte=0,lte=100"
+	Percent float64 `protobuf:"fixed64,1,opt,name=percent,proto3" json:"percent" validate:"numeric,gte=0,lte=100"`
 	// @inject_tag: json:"percent_currency" validate:"omitempty,alpha,len=3"
 	PercentCurrency string `protobuf:"bytes,2,opt,name=percent_currency,json=percentCurrency,proto3" json:"percent_currency" validate:"omitempty,alpha,len=3"`
-	// @inject_tag: json:"fix_amount" validate:"required,numeric,gte=0"
-	FixAmount float64 `protobuf:"fixed64,3,opt,name=fix_amount,json=fixAmount,proto3" json:"fix_amount" validate:"required,numeric,gte=0"`
+	// @inject_tag: json:"fix_amount" validate:"numeric,gte=0"
+	FixAmount float64 `protobuf:"fixed64,3,opt,name=fix_amount,json=fixAmount,proto3" json:"fix_amount" validate:"numeric,gte=0"`
 	// @inject_tag: json:"fix_currency" validate:"required,alpha,len=3"
 	FixCurrency          string   `protobuf:"bytes,4,opt,name=fix_currency,json=fixCurrency,proto3" json:"fix_currency" validate:"required,alpha,len=3"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-" bson:"-" structure:"-" validate:"-"`

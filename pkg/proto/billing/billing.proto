@@ -778,11 +778,11 @@ message Refund {
 }
 
 message SystemFee {
-    // @inject_tag: json:"percent" validate:"required,numeric,gte=0,lte=100"
+    // @inject_tag: json:"percent" validate:"numeric,gte=0,lte=100"
     double percent = 1;
     // @inject_tag: json:"percent_currency" validate:"omitempty,alpha,len=3"
     string percent_currency = 2;
-    // @inject_tag: json:"fix_amount" validate:"required,numeric,gte=0"
+    // @inject_tag: json:"fix_amount" validate:"numeric,gte=0"
     double fix_amount = 3;
     // @inject_tag: json:"fix_currency" validate:"required,alpha,len=3"
     string fix_currency = 4;
