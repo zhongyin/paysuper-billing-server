@@ -1050,6 +1050,7 @@ func (v *OrderCreateRequestProcessor) prepareOrder() (*billing.Order, error) {
 			UrlProcessPayment: v.checked.project.UrlProcessPayment,
 			CallbackProtocol:  v.checked.project.CallbackProtocol,
 			MerchantId:        v.checked.merchant.Id,
+			Status:            v.checked.project.Status,
 		},
 		Description:                        fmt.Sprintf(orderDefaultDescription, id),
 		ProjectOrderId:                     v.request.OrderId,

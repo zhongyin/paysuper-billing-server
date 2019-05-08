@@ -184,6 +184,7 @@ type MgoOrderProject struct {
 	UrlCancelPayment     string            `bson:"url_cancel_payment"`
 	UrlFraudPayment      string            `bson:"url_fraud_payment"`
 	UrlRefundPayment     string            `bson:"url_refund_payment"`
+	Status               int32             `bson:"status"`
 }
 
 type MgoOrderNotificationPaymentMethod struct {
@@ -855,6 +856,7 @@ func (m *Order) GetBSON() (interface{}, error) {
 			UrlCheckAccount:   m.Project.UrlCheckAccount,
 			UrlProcessPayment: m.Project.UrlProcessPayment,
 			CallbackProtocol:  m.Project.CallbackProtocol,
+			Status:            m.Project.Status,
 		},
 		ProjectOrderId:                          m.ProjectOrderId,
 		ProjectAccount:                          m.ProjectAccount,
@@ -1025,6 +1027,7 @@ func (m *Order) SetBSON(raw bson.Raw) error {
 		UrlCheckAccount:   decoded.Project.UrlCheckAccount,
 		UrlProcessPayment: decoded.Project.UrlProcessPayment,
 		CallbackProtocol:  decoded.Project.CallbackProtocol,
+		Status:            decoded.Project.Status,
 	}
 
 	m.ProjectOrderId = decoded.ProjectOrderId

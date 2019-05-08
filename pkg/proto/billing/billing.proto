@@ -149,6 +149,7 @@ message ProjectOrder {
     string url_cancel_payment = 13;
     string url_fraud_payment = 14;
     string url_refund_payment = 15;
+    int32 status = 16;
 }
 
 message MerchantContact {
@@ -1155,56 +1156,6 @@ message OrderIssuer {
     string url = 1;
     //@inject_tag: json:"embedded"
     bool embedded = 2;
-}
-
-message OrderNotificationPaymentMethod {
-    //@inject_tag: json:"type"
-    string type = 1;
-    //@inject_tag: json:"title"
-    string title = 2;
-    //@inject_tag: json:"saved"
-    bool saved = 3;
-    //@inject_tag: json:"fee"
-    CalculatedFeeItem fee = 4;
-    //@inject_tag: json:"card;omitempty"
-    OrderNotificationPaymentMethodCard card = 5;
-    //@inject_tag: json:"wallet;omitempty"
-    OrderNotificationPaymentMethodWallet wallet = 6;
-    //@inject_tag: json:"crypto_currency;omitempty"
-    OrderNotificationPaymentMethodCrypto crypto_currency = 7;
-}
-
-message OrderNotificationPaymentMethodCard {
-    //@inject_tag: json:"first6"
-    string first6 = 1;
-    //@inject_tag: json:"last4"
-    string last4 = 2;
-    //@inject_tag: json:"masked"
-    string masked = 3;
-    //@inject_tag: json:"expiry_month"
-    string expiry_month = 4;
-    //@inject_tag: json:"expiry_year"
-    string expiry_year = 5;
-    //@inject_tag: json:"brand"
-    string brand = 6;
-    //@inject_tag: json:"fingerprint"
-    string fingerprint = 7;
-    //@inject_tag: json:"secure3d"
-    bool secure3d = 8;
-}
-
-message OrderNotificationPaymentMethodWallet {
-    //@inject_tag: json:"brand"
-    string brand = 1;
-    //@inject_tag: json:"account"
-    string account = 2;
-}
-
-message OrderNotificationPaymentMethodCrypto {
-    //@inject_tag: json:"brand"
-    string brand = 1;
-    //@inject_tag: json:"address"
-    string address = 2;
 }
 
 message OrderNotificationRefund {
