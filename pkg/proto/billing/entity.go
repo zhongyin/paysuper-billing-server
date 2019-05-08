@@ -2,14 +2,9 @@ package billing
 
 import (
 	"github.com/globalsign/mgo/bson"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-recurring-repository/pkg/constant"
-	"strconv"
 	"time"
 )
 
@@ -141,9 +136,6 @@ func (m *Order) GetCountry() string {
 	if m.User != nil && m.User.Address != nil && m.User.Address.Country != "" {
 		return m.User.Address.Country
 	}
-	if m.PayerData != nil && m.PayerData.Country != "" {
-		return m.PayerData.Country
-	}
 	return ""
 }
 
@@ -153,9 +145,6 @@ func (m *Order) GetState() string {
 	}
 	if m.User != nil && m.User.Address != nil && m.User.Address.State != "" {
 		return m.User.Address.State
-	}
-	if m.PayerData != nil && m.PayerData.State != "" {
-		return m.PayerData.State
 	}
 	return ""
 }

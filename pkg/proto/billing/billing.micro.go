@@ -77,6 +77,8 @@ It has these top-level messages:
 	TokenSettingsReturnUrl
 	TokenSettingsItem
 	TokenSettings
+	OrderIssuer
+	OrderNotificationRefund
 */
 package billing
 
