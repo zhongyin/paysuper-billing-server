@@ -2,6 +2,7 @@
 # Declare variables to be passed into your templates.
 
 enableCertIssuer: false
+enableRedis: true
 
 ingress:
   hostname: 
