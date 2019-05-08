@@ -890,24 +890,6 @@ func (s *Service) saveRecurringCard(order *billing.Order, recurringId string) {
 }
 
 func (s *Service) orderNotifyMerchant(order *billing.Order) {
-
-	ps := order.GetPublicStatus()
-	if (ps == "processed" || ps == "refunded") && order.GetCountry() == CountryCodeUSA {
-
-		topicName := constant.TaxjarTransactionsTopicName
-		if ps == "refunded" {
-			topicName = constant.TaxjarRefundsTopicName
-		}
-
-		err := s.broker.Publish(topicName, order, amqp.Table{"x-retry-count": int32(0)})
-
-		if err != nil {
-			s.logError("Publish notify message to queue failed", []interface{}{
-				"err", err.Error(), "order", order, "topic", topicName,
-			})
-		}
-	}
-
 	err := s.broker.Publish(constant.PayOneTopicNotifyMerchantName, order, amqp.Table{"x-retry-count": int32(0)})
 
 	if err != nil {
