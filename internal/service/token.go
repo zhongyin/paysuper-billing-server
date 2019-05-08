@@ -5,6 +5,7 @@ import (
 	cryptoRand "crypto/rand"
 	"crypto/rsa"
 	"crypto/sha512"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -601,12 +602,19 @@ func (s *Service) generateBrowserCookie(customer *BrowserCookieCustomer) (string
 		return "", err
 	}
 
-	return string(cookie), nil
+	return base64.StdEncoding.EncodeToString(cookie), nil
 }
 
 func (s *Service) decryptBrowserCookie(cookie string) (*BrowserCookieCustomer, error) {
+	bCookie, err := base64.StdEncoding.DecodeString(cookie)
+
+	if err != nil {
+		s.logError("Customer cookie base64 decode failed", []interface{}{"error", err})
+		return nil, err
+	}
+
 	hash := sha512.New()
-	res, err := rsa.DecryptOAEP(hash, cryptoRand.Reader, s.cfg.CookiePrivateKey, []byte(cookie), nil)
+	res, err := rsa.DecryptOAEP(hash, cryptoRand.Reader, s.cfg.CookiePrivateKey, bCookie, nil)
 
 	if err != nil {
 		s.logError("Customer cookie decrypt failed", []interface{}{"error", err})
