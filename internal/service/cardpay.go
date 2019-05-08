@@ -577,8 +577,7 @@ func (h *cardPay) getToken(pmKey string) *cardPayToken {
 }
 
 func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]string) (*CardPayOrder, error) {
-
-	items := []*CardPayItem{}
+	var items []*CardPayItem
 
 	for _, it := range order.Items {
 		items = append(items, &CardPayItem{
@@ -602,9 +601,9 @@ func (h *cardPay) getCardPayOrder(order *billing.Order, requisites map[string]st
 		Description:   order.Description,
 		PaymentMethod: order.PaymentMethod.Params.ExternalId,
 		Customer: &CardPayCustomer{
-			Email:   order.PayerData.Email,
-			Ip:      order.PayerData.Ip,
-			Account: order.ProjectAccount,
+			Ip:      order.User.Ip,
+			Account: order.User.Id,
+			Email:   order.User.TechEmail,
 		},
 	}
 
@@ -672,7 +671,7 @@ func (h *cardPay) geBankCardCardPayOrder(cpo *CardPayOrder, requisites map[strin
 	cpo.CardAccount = &CardPayCardAccount{
 		Card: &CardPayBankCardAccount{
 			Pan:        requisites[pkg.PaymentCreateFieldPan],
-			HolderName: requisites[pkg.PaymentCreateFieldHolder],
+			HolderName: strings.ToUpper(requisites[pkg.PaymentCreateFieldHolder]),
 			Cvv:        requisites[pkg.PaymentCreateFieldCvv],
 			Expire:     expire,
 		},

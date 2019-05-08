@@ -63,6 +63,20 @@ It has these top-level messages:
 	GetSystemFeesRequest
 	CalculatedFeeItem
 	MerchantPaymentMethodHistory
+	CustomerIdentity
+	CustomerIpHistory
+	CustomerAddressHistory
+	CustomerStringValueHistory
+	Customer
+	TokenUserEmailValue
+	TokenUserPhoneValue
+	TokenUserIpValue
+	TokenUserLocaleValue
+	TokenUserValue
+	TokenUser
+	TokenSettingsReturnUrl
+	TokenSettingsItem
+	TokenSettings
 */
 package billing
 

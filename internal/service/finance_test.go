@@ -267,7 +267,7 @@ func (suite *FinanceTestSuite) SetupTest() {
 		suite.FailNow("Logger initialization failed", "%v", err)
 	}
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil, nil)
 	err = suite.service.Init()
 
 	if err != nil {

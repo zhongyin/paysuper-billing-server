@@ -156,7 +156,7 @@ func (suite *ProjectCRUDTestSuite) SetupTest() {
 	err = db.Collection(pkg.CollectionProduct).Insert(products...)
 	assert.NoError(suite.T(), err, "Insert product test data failed")
 
-	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil)
+	suite.service = NewBillingService(db, cfg, make(chan bool, 1), nil, nil, nil, nil, nil)
 	err = suite.service.Init()
 	assert.NoError(suite.T(), err, "Billing service initialization failed")
 

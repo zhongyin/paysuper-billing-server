@@ -30,6 +30,8 @@ backend:
     - CENTRIFUGO_SECRET
     - CARD_PAY_API_URL
     - BROKER_ADDRESS
+    - CUSTOMER_COOKIE_PUBLIC_KEY
+    - CUSTOMER_COOKIE_PRIVATE_KEY
     
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

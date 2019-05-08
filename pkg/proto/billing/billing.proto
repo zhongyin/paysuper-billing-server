@@ -23,11 +23,11 @@ message OrderCreateRequest {
     string currency = 4;
     // @inject_tag: "PO_ACCOUNT" form:"PO_ACCOUNT" json:"account"`
     string account = 5;
-    // @inject_tag: query:"PO_ORDER_ID" form:"PO_ORDER_ID" json:"order_id" validate:"omitempty,len=255"
+    // @inject_tag: query:"PO_ORDER_ID" form:"PO_ORDER_ID" json:"order_id" validate:"omitempty,max=255"
     string order_id = 6;
-    // @inject_tag: query:"PO_DESCRIPTION" form:"PO_DESCRIPTION" json:"description" validate:"omitempty,len=255"
+    // @inject_tag: query:"PO_DESCRIPTION" form:"PO_DESCRIPTION" json:"description" validate:"omitempty,max=255"
     string description = 7;
-    // @inject_tag: query:"PO_PAYMENT_METHOD" form:"PO_PAYMENT_METHOD" json:"payment_method" validate:"omitempty,len=255"
+    // @inject_tag: query:"PO_PAYMENT_METHOD" form:"PO_PAYMENT_METHOD" json:"payment_method" validate:"omitempty,max=255"
     string payment_method = 8;
     // @inject_tag: query:"PO_URL_VERIFY" form:"PO_URL_VERIFY" json:"url_verify" validate:"omitempty,url"
     string url_verify = 9;
@@ -39,7 +39,7 @@ message OrderCreateRequest {
     string url_fail = 12;
     // @inject_tag: query:"PO_PAYER_EMAIL" form:"PO_PAYER_EMAIL" json:"payer_email" validate:"omitempty,email"
     string payer_email = 13;
-    // @inject_tag: query:"PO_PAYER_PHONE" form:"PO_PAYER_PHONE" json:"payer_phone" validate:"omitempty,len=255"
+    // @inject_tag: query:"PO_PAYER_PHONE" form:"PO_PAYER_PHONE" json:"payer_phone" validate:"omitempty,max=255"
     string payer_phone = 14;
     // @inject_tag: query:"PO_REGION" form:"PO_REGION" json:"region" validate:"omitempty,alpha,len=2"
     string region = 15;
@@ -59,6 +59,9 @@ message OrderCreateRequest {
     map<string, string> metadata = 23;
     // @inject_tag: json:"-"
     map<string, string> private_metadata = 24;
+
+    string token = 25;
+    OrderUser user = 26;
 }
 
 message Project {
@@ -279,6 +282,7 @@ message OrderTax {
 }
 
 message OrderBillingAddress {
+    // @inject_tag: validate:"omitempty,alpha,len=2"
     string country = 1;
     string city = 2;
     string postal_code = 3;
@@ -286,28 +290,32 @@ message OrderBillingAddress {
 }
 
 message OrderUser {
-    // @inject_tag: bson:"uuid"
+    // @inject_tag: json:"id"
     string id = 1;
-    // @inject_tag: bson:"object"
+    // @inject_tag: json:"object"
     string object = 2;
-    // @inject_tag: bson:"name"
-    string name = 3;
-    // @inject_tag: bson:"email"
-    string email = 4;
-    // @inject_tag: bson:"email_verified"
-    bool email_verified = 5;
-    // @inject_tag: bson:"phone"
-    string phone = 6;
-    // @inject_tag: bson:"phone_verified"
-    bool phone_verified = 7;
-    // @inject_tag: bson:"ip"
-    string ip = 8;
-    // @inject_tag: bson:"locale"
-    string locale = 9;
-    // @inject_tag: bson:"address"
-    OrderBillingAddress address = 10;
-    // @inject_tag: bson:"metadata"
-    map<string, string> metadata = 11;
+    // @inject_tag: json:"external_id"
+    string external_id = 3;
+    // @inject_tag: json:"name"
+    string name = 4;
+    // @inject_tag: json:"email" validate:"omitempty,email"
+    string email = 5;
+    // @inject_tag: json:"email_verified"
+    bool email_verified = 6;
+    // @inject_tag: json:"phone" validate:"omitempty,phone"
+    string phone = 7;
+    // @inject_tag: json:"phone_verified"
+    bool phone_verified = 8;
+    // @inject_tag: json:"ip" validate:"omitempty,ip"
+    string ip = 9;
+    // @inject_tag: json:"locale" validate:"omitempty,alpha,len=2"
+    string locale = 10;
+    // @inject_tag: json:"address"
+    OrderBillingAddress address = 11;
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 12;
+    // @inject_tag: json:"-"
+    string tech_email = 13;
 }
 
 message Order {
@@ -332,8 +340,6 @@ message Order {
     google.protobuf.Timestamp project_last_requested_at = 10; // date of last notification request to project
     // @inject_tag: bson:"project_params" structure:"project_params"
     map<string, string> project_params = 11; // any project params which received from project in request of create of order
-    // @inject_tag: bson:"payer_data" structure:"payer_data"
-    PayerData payer_data = 12; // information about payer, for example: ip, email,phone and etc
     // @inject_tag: bson:"payment_method" structure:"payment_method"
     PaymentMethodOrder payment_method = 13; // payment method unique identifier
     // @inject_tag: bson:"pm_order_id" structure:"pm_order_id"
@@ -869,4 +875,141 @@ message MerchantPaymentMethodHistory {
     google.protobuf.Timestamp created_at = 4;
     // @inject_tag: validate:"required,hexadecimal,len=24"
     string user_id = 5;
+}
+
+message CustomerIdentity {
+    string merchant_id = 1;
+    string project_id = 2;
+    string type = 3;
+    string value = 4;
+    bool verified = 5;
+    google.protobuf.Timestamp created_at = 6;
+}
+
+message CustomerIpHistory {
+    bytes ip = 1;
+    google.protobuf.Timestamp created_at = 2;
+}
+
+message CustomerAddressHistory {
+    string country = 1;
+    string city = 2;
+    string postal_code = 3;
+    string state = 4;
+    google.protobuf.Timestamp created_at = 5;
+}
+
+message CustomerStringValueHistory {
+    string value = 1;
+    google.protobuf.Timestamp created_at = 2;
+}
+
+message Customer {
+    string id = 1;
+    string tech_email = 2;
+    string external_id = 3;
+    string email = 4;
+    bool email_verified = 5;
+    string phone = 6;
+    bool phone_verified = 7;
+    string name = 8;
+    bytes ip = 9;
+    string locale = 10;
+    string accept_language = 11;
+    // @inject_tag: json:"-"
+    string user_agent = 12;
+    OrderBillingAddress address = 13;
+    repeated CustomerIdentity identity = 14;
+    // @inject_tag: json:"-"
+    repeated CustomerIpHistory ip_history = 15;
+    // @inject_tag: json:"-"
+    repeated CustomerAddressHistory address_history = 16;
+    // @inject_tag: json:"-"
+    repeated CustomerStringValueHistory locale_history = 17;
+    // @inject_tag: json:"-"
+    repeated CustomerStringValueHistory accept_language_history = 18;
+    // @inject_tag: json:"metadata"
+    map<string, string> metadata = 19;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp created_at = 20;
+    // @inject_tag: json:"-"
+    google.protobuf.Timestamp updated_at = 21;
+}
+
+message TokenUserEmailValue {
+    //@inject_tag: validate:"omitempty,email"
+    string value = 1;
+    bool verified = 2;
+}
+
+message TokenUserPhoneValue {
+    //@inject_tag: validate:"omitempty,phone"
+    string value = 1;
+    bool verified = 2;
+}
+
+message TokenUserIpValue {
+    //@inject_tag: validate:"omitempty,ip"
+    string value = 1;
+}
+
+message TokenUserLocaleValue {
+    //@inject_tag: validate:"omitempty,alpha,len=2"
+    string value = 1;
+}
+
+message TokenUserValue {
+    string value = 1;
+}
+
+message TokenUser {
+    string id = 1;
+    TokenUserEmailValue email = 2;
+    TokenUserPhoneValue phone = 4;
+    TokenUserValue name = 6;
+    TokenUserIpValue ip = 7;
+    TokenUserLocaleValue locale = 8;
+    OrderBillingAddress address = 9;
+    map<string, string> metadata = 10;
+    //@inject_tag: json:"-"
+    string user_agent = 11;
+    //@inject_tag: json:"-"
+    string accept_language = 12;
+}
+
+message TokenSettingsReturnUrl {
+    //@inject_tag: validate:"omitempty,url"
+    string success = 1;
+    //@inject_tag: validate:"omitempty,url"
+    string fail = 2;
+}
+
+message TokenSettingsItem {
+    //@inject_tag: validate:"required"
+    string sku = 1;
+    //@inject_tag: validate:"required,numeric,gt=0"
+    double amount = 5;
+    //@inject_tag: validate:"required,alpha,len=3"
+    string currency = 4;
+}
+
+message TokenSettings {
+    //@inject_tag: json:"project_id" validate:"required,hexadecimal,len=24"
+    string project_id = 2;
+    //@inject_tag: json:"return_url"
+    TokenSettingsReturnUrl return_url = 3;
+    //@inject_tag: json:"currency" validate:"omitempty,alpha,len=3"
+    string currency = 4;
+    //@inject_tag: json:"amount" validate:"omitempty,numeric,gt=0"
+    double amount = 5;
+    //@inject_tag: json:"payment_method"
+    string payment_method = 6;
+    //@inject_tag: json:"items"
+    repeated TokenSettingsItem items = 7;
+    //@inject_tag: json:"description"
+    string description = 8;
+    //@inject_tag: json:"products_ids"
+    repeated string products_ids = 9;
+    //@inject_tag: json:"metadata"
+    map<string, string> metadata = 10;
 }

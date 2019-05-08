@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/centrifugal/gocent"
 	"github.com/globalsign/mgo/bson"
+	"github.com/go-redis/redis"
 	"github.com/paysuper/paysuper-billing-server/internal/config"
 	"github.com/paysuper/paysuper-billing-server/internal/database"
 	"github.com/paysuper/paysuper-billing-server/pkg"
@@ -74,6 +77,7 @@ type Service struct {
 	tax              tax_service.TaxService
 	broker           *rabbitmq.Broker
 	centrifugoClient *gocent.Client
+	redis            *redis.Client
 
 	accountingCurrency *billing.Currency
 
@@ -108,6 +112,7 @@ func NewBillingService(
 	rep repository.RepositoryService,
 	tax tax_service.TaxService,
 	broker *rabbitmq.Broker,
+	redis *redis.Client,
 ) *Service {
 	return &Service{
 		db:     db,
@@ -117,6 +122,7 @@ func NewBillingService(
 		rep:    rep,
 		tax:    tax,
 		broker: broker,
+		redis:  redis,
 	}
 }
 
@@ -330,4 +336,41 @@ func (s *Service) mgoPipeSort(query []bson.M, sort []string) []bson.M {
 	}
 
 	return query
+}
+
+func (s *Service) CheckProjectRequestSignature(
+	ctx context.Context,
+	req *grpc.CheckProjectRequestSignatureRequest,
+	rsp *grpc.CheckProjectRequestSignatureResponse,
+) error {
+	p := &OrderCreateRequestProcessor{
+		Service: s,
+		request: &billing.OrderCreateRequest{ProjectId: req.ProjectId},
+		checked: &orderCreateRequestProcessorChecked{},
+	}
+
+	err := p.processProject()
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = err.Error()
+
+		return nil
+	}
+
+	hashString := req.Body + p.checked.project.SecretKey
+
+	h := sha512.New()
+	h.Write([]byte(hashString))
+
+	if hex.EncodeToString(h.Sum(nil)) != req.Signature {
+		rsp.Status = pkg.ResponseStatusBadData
+		rsp.Message = orderErrorSignatureInvalid
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
+
+	return nil
 }

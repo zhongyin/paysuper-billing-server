@@ -1,6 +1,9 @@
 package service
 
 import (
+	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"errors"
 	"github.com/ProtocolONE/rabbitmq/pkg"
 	"github.com/globalsign/mgo/bson"
@@ -10,6 +13,7 @@ import (
 	"github.com/paysuper/paysuper-billing-server/internal/mock"
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
+	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -467,6 +471,7 @@ func (suite *BillingServiceTestSuite) SetupTest() {
 		mock.NewRepositoryServiceOk(),
 		mock.NewTaxServiceOkMock(),
 		broker,
+		nil,
 	)
 
 	if _, ok := handlers["unit"]; ok {
@@ -492,7 +497,7 @@ func (suite *BillingServiceTestSuite) TearDownTest() {
 }
 
 func (suite *BillingServiceTestSuite) TestNewBillingService() {
-	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -509,7 +514,7 @@ func (suite *BillingServiceTestSuite) TestNewBillingService() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
-	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	key := "unit"
 	err := svc.cache(key, newGetAllErrorTest(svc))
@@ -519,7 +524,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_GetAllError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
-	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
+	svc := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	key := "unit"
 	handlers[key] = newGetAllErrorTest
@@ -531,7 +536,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_InitCacheError() {
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheExit() {
-	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -562,7 +567,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_RebuildCacheByTimer() {
 	cfg := suite.cfg
 	cfg.CacheConfig.CurrencyTimeout = 3
 
-	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -599,7 +604,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitE
 
 	cfg.AccountingCurrency = "AUD"
 
-	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil)
+	service := NewBillingService(suite.db, cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -610,7 +615,7 @@ func (suite *BillingServiceTestSuite) TestBillingService_AccountingCurrencyInitE
 }
 
 func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment() {
-	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil)
+	service := NewBillingService(suite.db, suite.cfg, suite.exCh, nil, nil, nil, nil, nil)
 
 	if _, ok := handlers["unit"]; ok {
 		delete(handlers, "unit")
@@ -621,4 +626,54 @@ func (suite *BillingServiceTestSuite) TestBillingService_IsProductionEnvironment
 
 	isProd := service.isProductionEnvironment()
 	assert.False(suite.T(), isProd)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_CheckProjectRequestSignature_Ok() {
+	req := &grpc.CheckProjectRequestSignatureRequest{
+		Body:      `{"field1": "val1", "field2": "val2", "field3": "val3"}`,
+		ProjectId: suite.project.Id,
+	}
+	rsp := &grpc.CheckProjectRequestSignatureResponse{}
+
+	hashString := req.Body + suite.project.SecretKey
+	h := sha512.New()
+	h.Write([]byte(hashString))
+
+	req.Signature = hex.EncodeToString(h.Sum(nil))
+
+	err := suite.service.CheckProjectRequestSignature(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_CheckProjectRequestSignature_ProjectNotFound_Error() {
+	req := &grpc.CheckProjectRequestSignatureRequest{
+		Body:      `{"field1": "val1", "field2": "val2", "field3": "val3"}`,
+		ProjectId: bson.NewObjectId().Hex(),
+	}
+	rsp := &grpc.CheckProjectRequestSignatureResponse{}
+
+	err := suite.service.CheckProjectRequestSignature(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), orderErrorProjectNotFound, rsp.Message)
+}
+
+func (suite *BillingServiceTestSuite) TestBillingService_CheckProjectRequestSignature_IncorrectSignature_Error() {
+	req := &grpc.CheckProjectRequestSignatureRequest{
+		Body:      `{"field1": "val1", "field2": "val2", "field3": "val3"}`,
+		ProjectId: suite.project.Id,
+	}
+	rsp := &grpc.CheckProjectRequestSignatureResponse{}
+
+	hashString := req.Body + "some_random_string"
+	h := sha512.New()
+	h.Write([]byte(hashString))
+
+	req.Signature = hex.EncodeToString(h.Sum(nil))
+
+	err := suite.service.CheckProjectRequestSignature(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
+	assert.Equal(suite.T(), orderErrorSignatureInvalid, rsp.Message)
 }
