@@ -9,7 +9,8 @@ import (
 	"github.com/paysuper/paysuper-billing-server/pkg"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/billing"
 	"github.com/paysuper/paysuper-billing-server/pkg/proto/grpc"
-	"sort"
+    "github.com/paysuper/paysuper-recurring-repository/tools"
+    "sort"
 )
 
 type kv struct {
@@ -85,6 +86,18 @@ func (s *Service) AddSystemFees(
 		s.logError(errorSystemFeeRequiredFeeset, []interface{}{"data", req})
 		return errors.New(errorSystemFeeRequiredFeeset)
 	}
+
+    // formatting values
+	for _, f := range req.Fees {
+        f.TransactionCost.Percent = tools.FormatAmount(f.TransactionCost.Percent)
+        f.TransactionCost.FixAmount = tools.FormatAmount(f.TransactionCost.FixAmount)
+        f.AuthorizationFee.Percent = tools.FormatAmount(f.AuthorizationFee.Percent)
+        f.AuthorizationFee.FixAmount = tools.FormatAmount(f.AuthorizationFee.FixAmount)
+
+        for c, v := range f.MinAmounts {
+            f.MinAmounts[c] = tools.FormatAmount(v)
+        }
+    }
 
 	fees := &billing.SystemFees{
 		Id:        bson.NewObjectId().Hex(),
