@@ -549,18 +549,25 @@ func (s *Service) MarkNotificationAsRead(
 func (s *Service) GetMerchantPaymentMethod(
 	ctx context.Context,
 	req *grpc.GetMerchantPaymentMethodRequest,
-	rsp *billing.MerchantPaymentMethod,
+	rsp *grpc.GetMerchantPaymentMethodResponse,
 ) error {
+	_, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
+
+	if err != nil {
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = merchantErrorNotFound
+
+		return nil
+	}
+
+	rsp.Status = pkg.ResponseStatusOk
 	pms, ok := s.merchantPaymentMethods[req.MerchantId]
 
 	if ok {
 		pm, ok := pms[req.PaymentMethodId]
 
 		if ok {
-			rsp.PaymentMethod = pm.PaymentMethod
-			rsp.Commission = pm.Commission
-			rsp.Integration = pm.Integration
-			rsp.IsActive = pm.IsActive
+			rsp.Item = pm
 
 			return nil
 		}
@@ -576,22 +583,22 @@ func (s *Service) GetMerchantPaymentMethod(
 				"id", req.PaymentMethodId,
 			},
 		)
-		return errors.New(orderErrorPaymentMethodNotFound)
+
+		rsp.Status = pkg.ResponseStatusNotFound
+		rsp.Message = orderErrorPaymentMethodNotFound
+
+		return nil
 	}
 
-	rsp.PaymentMethod = &billing.MerchantPaymentMethodIdentification{
-		Id:   pm.Id,
-		Name: pm.Name,
-	}
-	rsp.Commission = &billing.MerchantPaymentMethodCommissions{
-		Fee: DefaultPaymentMethodFee,
-		PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
-			Fee:      DefaultPaymentMethodPerTransactionFee,
-			Currency: DefaultPaymentMethodCurrency,
+	rsp.Item = &billing.MerchantPaymentMethod{
+		PaymentMethod: &billing.MerchantPaymentMethodIdentification{
+			Id:   pm.Id,
+			Name: pm.Name,
 		},
+		Commission:  s.getDefaultPaymentMethodCommissions(),
+		Integration: &billing.MerchantPaymentMethodIntegration{},
+		IsActive:    true,
 	}
-	rsp.Integration = &billing.MerchantPaymentMethodIntegration{}
-	rsp.IsActive = true
 
 	return nil
 }
@@ -601,6 +608,12 @@ func (s *Service) ListMerchantPaymentMethods(
 	req *grpc.ListMerchantPaymentMethodsRequest,
 	rsp *grpc.ListingMerchantPaymentMethod,
 ) error {
+	_, err := s.getMerchantBy(bson.M{"_id": bson.ObjectIdHex(req.MerchantId)})
+
+	if err != nil {
+		return nil
+	}
+
 	var pms []*billing.PaymentMethod
 
 	query := bson.M{"is_active": true}
@@ -609,7 +622,7 @@ func (s *Service) ListMerchantPaymentMethods(
 		query["name"] = bson.RegEx{Pattern: ".*" + req.PaymentMethodName + ".*", Options: "i"}
 	}
 
-	err := s.db.Collection(pkg.CollectionPaymentMethod).Find(query).Sort(req.Sort...).All(&pms)
+	err = s.db.Collection(pkg.CollectionPaymentMethod).Find(query).Sort(req.Sort...).All(&pms)
 
 	if err != nil {
 		s.logError("Query to find payment methods failed", []interface{}{"error", err.Error(), "query", query})
@@ -630,13 +643,7 @@ func (s *Service) ListMerchantPaymentMethods(
 				Id:   pm.Id,
 				Name: pm.Name,
 			},
-			Commission: &billing.MerchantPaymentMethodCommissions{
-				Fee: DefaultPaymentMethodFee,
-				PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
-					Fee:      DefaultPaymentMethodPerTransactionFee,
-					Currency: DefaultPaymentMethodCurrency,
-				},
-			},
+			Commission:  s.getDefaultPaymentMethodCommissions(),
 			Integration: &billing.MerchantPaymentMethodIntegration{},
 			IsActive:    true,
 		}

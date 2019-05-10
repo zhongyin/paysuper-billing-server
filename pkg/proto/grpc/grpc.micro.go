@@ -30,6 +30,7 @@ It has these top-level messages:
 	ListingNotificationRequest
 	ListingMerchantPaymentMethod
 	GetMerchantPaymentMethodRequest
+	GetMerchantPaymentMethodResponse
 	ListMerchantPaymentMethodsRequest
 	MerchantPaymentMethodRequest
 	MerchantPaymentMethodResponse
@@ -123,7 +124,7 @@ type BillingService interface {
 	ListNotifications(ctx context.Context, in *ListingNotificationRequest, opts ...client.CallOption) (*Notifications, error)
 	MarkNotificationAsRead(ctx context.Context, in *GetNotificationRequest, opts ...client.CallOption) (*billing.Notification, error)
 	ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, opts ...client.CallOption) (*ListingMerchantPaymentMethod, error)
-	GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*billing.MerchantPaymentMethod, error)
+	GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*GetMerchantPaymentMethodResponse, error)
 	ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, opts ...client.CallOption) (*MerchantPaymentMethodResponse, error)
 	CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...client.CallOption) (*CreateRefundResponse, error)
 	ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...client.CallOption) (*ListRefundsResponse, error)
@@ -356,9 +357,9 @@ func (c *billingService) ListMerchantPaymentMethods(ctx context.Context, in *Lis
 	return out, nil
 }
 
-func (c *billingService) GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*billing.MerchantPaymentMethod, error) {
+func (c *billingService) GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, opts ...client.CallOption) (*GetMerchantPaymentMethodResponse, error) {
 	req := c.c.NewRequest(c.name, "BillingService.GetMerchantPaymentMethod", in)
-	out := new(billing.MerchantPaymentMethod)
+	out := new(GetMerchantPaymentMethodResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -608,7 +609,7 @@ type BillingServiceHandler interface {
 	ListNotifications(context.Context, *ListingNotificationRequest, *Notifications) error
 	MarkNotificationAsRead(context.Context, *GetNotificationRequest, *billing.Notification) error
 	ListMerchantPaymentMethods(context.Context, *ListMerchantPaymentMethodsRequest, *ListingMerchantPaymentMethod) error
-	GetMerchantPaymentMethod(context.Context, *GetMerchantPaymentMethodRequest, *billing.MerchantPaymentMethod) error
+	GetMerchantPaymentMethod(context.Context, *GetMerchantPaymentMethodRequest, *GetMerchantPaymentMethodResponse) error
 	ChangeMerchantPaymentMethod(context.Context, *MerchantPaymentMethodRequest, *MerchantPaymentMethodResponse) error
 	CreateRefund(context.Context, *CreateRefundRequest, *CreateRefundResponse) error
 	ListRefunds(context.Context, *ListRefundsRequest, *ListRefundsResponse) error
@@ -654,7 +655,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		ListNotifications(ctx context.Context, in *ListingNotificationRequest, out *Notifications) error
 		MarkNotificationAsRead(ctx context.Context, in *GetNotificationRequest, out *billing.Notification) error
 		ListMerchantPaymentMethods(ctx context.Context, in *ListMerchantPaymentMethodsRequest, out *ListingMerchantPaymentMethod) error
-		GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *billing.MerchantPaymentMethod) error
+		GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *GetMerchantPaymentMethodResponse) error
 		ChangeMerchantPaymentMethod(ctx context.Context, in *MerchantPaymentMethodRequest, out *MerchantPaymentMethodResponse) error
 		CreateRefund(ctx context.Context, in *CreateRefundRequest, out *CreateRefundResponse) error
 		ListRefunds(ctx context.Context, in *ListRefundsRequest, out *ListRefundsResponse) error
@@ -765,7 +766,7 @@ func (h *billingServiceHandler) ListMerchantPaymentMethods(ctx context.Context, 
 	return h.BillingServiceHandler.ListMerchantPaymentMethods(ctx, in, out)
 }
 
-func (h *billingServiceHandler) GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *billing.MerchantPaymentMethod) error {
+func (h *billingServiceHandler) GetMerchantPaymentMethod(ctx context.Context, in *GetMerchantPaymentMethodRequest, out *GetMerchantPaymentMethodResponse) error {
 	return h.BillingServiceHandler.GetMerchantPaymentMethod(ctx, in, out)
 }
 

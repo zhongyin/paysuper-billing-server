@@ -30,7 +30,7 @@ service BillingService {
     rpc MarkNotificationAsRead (GetNotificationRequest) returns (billing.Notification) {}
 
     rpc ListMerchantPaymentMethods (ListMerchantPaymentMethodsRequest) returns (ListingMerchantPaymentMethod) {}
-    rpc GetMerchantPaymentMethod (GetMerchantPaymentMethodRequest) returns (billing.MerchantPaymentMethod) {}
+    rpc GetMerchantPaymentMethod (GetMerchantPaymentMethodRequest) returns (GetMerchantPaymentMethodResponse) {}
     rpc ChangeMerchantPaymentMethod (MerchantPaymentMethodRequest) returns (MerchantPaymentMethodResponse) {}
 
     rpc CreateRefund (CreateRefundRequest) returns (CreateRefundResponse) {}
@@ -253,6 +253,12 @@ message GetMerchantPaymentMethodRequest {
     string merchant_id = 1;
     // @inject_tag: query:"payment_method_id", validate:"required,hexadecimal,len=24"
     string payment_method_id = 2;
+}
+
+message GetMerchantPaymentMethodResponse {
+    int32 status = 1;
+    string message = 2;
+    billing.MerchantPaymentMethod item = 3;
 }
 
 message ListMerchantPaymentMethodsRequest {

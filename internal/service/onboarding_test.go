@@ -1699,33 +1699,45 @@ func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_Sort
 	assert.Equal(suite.T(), suite.pmQiwi.Name, pm.PaymentMethod.Name)
 }
 
+func (suite *OnboardingTestSuite) TestOnboarding_ListMerchantPaymentMethods_MerchantNotFound_EmptyResult() {
+	req := &grpc.ListMerchantPaymentMethodsRequest{
+		MerchantId: bson.NewObjectId().Hex(),
+	}
+	rsp := &grpc.ListingMerchantPaymentMethod{}
+	err := suite.service.ListMerchantPaymentMethods(context.TODO(), req, rsp)
+	assert.Nil(suite.T(), err)
+	assert.Empty(suite.T(), rsp.PaymentMethods)
+}
+
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_ExistPaymentMethod_Ok() {
 	req := &grpc.GetMerchantPaymentMethodRequest{
 		MerchantId:      suite.merchant.Id,
 		PaymentMethodId: suite.pmBankCard.Id,
 	}
-	rsp := &billing.MerchantPaymentMethod{}
+	rsp := &grpc.GetMerchantPaymentMethodResponse{}
 	err := suite.service.GetMerchantPaymentMethod(context.TODO(), req, rsp)
-
 	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), rsp.PaymentMethod)
-	assert.NotNil(suite.T(), rsp.Commission)
-	assert.NotNil(suite.T(), rsp.Commission.PerTransaction)
-	assert.NotNil(suite.T(), rsp.Integration)
-	assert.True(suite.T(), rsp.IsActive)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+	assert.NotNil(suite.T(), rsp.Item.PaymentMethod)
+	assert.NotNil(suite.T(), rsp.Item.Commission)
+	assert.NotNil(suite.T(), rsp.Item.Commission.PerTransaction)
+	assert.NotNil(suite.T(), rsp.Item.Integration)
+	assert.True(suite.T(), rsp.Item.IsActive)
 
 	pm, ok := suite.merchant.PaymentMethods[suite.pmBankCard.Id]
 	assert.True(suite.T(), ok)
 
-	assert.Equal(suite.T(), pm.PaymentMethod.Id, rsp.PaymentMethod.Id)
-	assert.Equal(suite.T(), pm.PaymentMethod.Name, rsp.PaymentMethod.Name)
-	assert.Equal(suite.T(), pm.Commission.Fee, rsp.Commission.Fee)
-	assert.Equal(suite.T(), pm.Commission.PerTransaction.Fee, rsp.Commission.PerTransaction.Fee)
-	assert.Equal(suite.T(), pm.Commission.PerTransaction.Currency, rsp.Commission.PerTransaction.Currency)
-	assert.Equal(suite.T(), pm.Integration.TerminalId, rsp.Integration.TerminalId)
-	assert.Equal(suite.T(), pm.Integration.TerminalPassword, rsp.Integration.TerminalPassword)
-	assert.Equal(suite.T(), pm.Integration.Integrated, rsp.Integration.Integrated)
-	assert.Equal(suite.T(), pm.IsActive, rsp.IsActive)
+	assert.Equal(suite.T(), pm.PaymentMethod.Id, rsp.Item.PaymentMethod.Id)
+	assert.Equal(suite.T(), pm.PaymentMethod.Name, rsp.Item.PaymentMethod.Name)
+	assert.Equal(suite.T(), pm.Commission.Fee, rsp.Item.Commission.Fee)
+	assert.Equal(suite.T(), pm.Commission.PerTransaction.Fee, rsp.Item.Commission.PerTransaction.Fee)
+	assert.Equal(suite.T(), pm.Commission.PerTransaction.Currency, rsp.Item.Commission.PerTransaction.Currency)
+	assert.Equal(suite.T(), pm.Integration.TerminalId, rsp.Item.Integration.TerminalId)
+	assert.Equal(suite.T(), pm.Integration.TerminalPassword, rsp.Item.Integration.TerminalPassword)
+	assert.Equal(suite.T(), pm.Integration.Integrated, rsp.Item.Integration.Integrated)
+	assert.Equal(suite.T(), pm.IsActive, rsp.Item.IsActive)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_NotExistPaymentMethod_Ok() {
@@ -1733,37 +1745,51 @@ func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_NotExi
 		MerchantId:      suite.merchant.Id,
 		PaymentMethodId: suite.pmQiwi.Id,
 	}
-	rsp := &billing.MerchantPaymentMethod{}
+	rsp := &grpc.GetMerchantPaymentMethodResponse{}
 	err := suite.service.GetMerchantPaymentMethod(context.TODO(), req, rsp)
-
 	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), rsp.PaymentMethod)
-	assert.NotNil(suite.T(), rsp.Commission)
-	assert.NotNil(suite.T(), rsp.Commission.PerTransaction)
-	assert.NotNil(suite.T(), rsp.Integration)
-	assert.True(suite.T(), rsp.IsActive)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Empty(suite.T(), rsp.Message)
+	assert.NotNil(suite.T(), rsp.Item)
+	assert.NotNil(suite.T(), rsp.Item.PaymentMethod)
+	assert.NotNil(suite.T(), rsp.Item.Commission)
+	assert.NotNil(suite.T(), rsp.Item.Commission.PerTransaction)
+	assert.NotNil(suite.T(), rsp.Item.Integration)
+	assert.True(suite.T(), rsp.Item.IsActive)
 
-	assert.Equal(suite.T(), suite.pmQiwi.Id, rsp.PaymentMethod.Id)
-	assert.Equal(suite.T(), suite.pmQiwi.Name, rsp.PaymentMethod.Name)
-	assert.Equal(suite.T(), DefaultPaymentMethodFee, rsp.Commission.Fee)
-	assert.Equal(suite.T(), DefaultPaymentMethodPerTransactionFee, rsp.Commission.PerTransaction.Fee)
-	assert.Equal(suite.T(), DefaultPaymentMethodCurrency, rsp.Commission.PerTransaction.Currency)
-	assert.Equal(suite.T(), "", rsp.Integration.TerminalId)
-	assert.Equal(suite.T(), "", rsp.Integration.TerminalPassword)
-	assert.False(suite.T(), rsp.Integration.Integrated)
-	assert.True(suite.T(), rsp.IsActive)
+	assert.Equal(suite.T(), suite.pmQiwi.Id, rsp.Item.PaymentMethod.Id)
+	assert.Equal(suite.T(), suite.pmQiwi.Name, rsp.Item.PaymentMethod.Name)
+	assert.Equal(suite.T(), DefaultPaymentMethodFee, rsp.Item.Commission.Fee)
+	assert.Equal(suite.T(), DefaultPaymentMethodPerTransactionFee, rsp.Item.Commission.PerTransaction.Fee)
+	assert.Equal(suite.T(), DefaultPaymentMethodCurrency, rsp.Item.Commission.PerTransaction.Currency)
+	assert.Equal(suite.T(), "", rsp.Item.Integration.TerminalId)
+	assert.Equal(suite.T(), "", rsp.Item.Integration.TerminalPassword)
+	assert.False(suite.T(), rsp.Item.Integration.Integrated)
+	assert.True(suite.T(), rsp.Item.IsActive)
 }
 
-func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_Error() {
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_PaymentMethodNotFound_Error() {
 	req := &grpc.GetMerchantPaymentMethodRequest{
 		MerchantId:      suite.merchant.Id,
 		PaymentMethodId: bson.NewObjectId().Hex(),
 	}
-	rsp := &billing.MerchantPaymentMethod{}
+	rsp := &grpc.GetMerchantPaymentMethodResponse{}
 	err := suite.service.GetMerchantPaymentMethod(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp.Status)
+	assert.Equal(suite.T(), orderErrorPaymentMethodNotFound, rsp.Message)
+}
 
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), orderErrorPaymentMethodNotFound, err.Error())
+func (suite *OnboardingTestSuite) TestOnboarding_GetMerchantPaymentMethod_MerchantNotFound_Error() {
+	req := &grpc.GetMerchantPaymentMethodRequest{
+		MerchantId:      bson.NewObjectId().Hex(),
+		PaymentMethodId: suite.pmBankCard.Id,
+	}
+	rsp := &grpc.GetMerchantPaymentMethodResponse{}
+	err := suite.service.GetMerchantPaymentMethod(context.TODO(), req, rsp)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), pkg.ResponseStatusNotFound, rsp.Status)
+	assert.Equal(suite.T(), merchantErrorNotFound, rsp.Message)
 }
 
 func (suite *OnboardingTestSuite) TestOnboarding_ChangeMerchantPaymentMethod_PaymentMethodNotFound_Error() {
