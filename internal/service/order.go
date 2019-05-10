@@ -346,15 +346,17 @@ func (s *Service) PaymentFormJsonDataProcess(
 				}
 
 				if browserCustomer.CustomerId != "" {
-					_, err := s.processCustomerData(browserCustomer.CustomerId, order, req, browserCustomer, loc)
+					customer, err := s.processCustomerData(browserCustomer.CustomerId, order, req, browserCustomer, loc)
 
 					if err != nil {
 						s.logError("Customer by identifier in browser cookie not processed", []interface{}{"error", err.Error()})
 					}
+
+					order.User.TechEmail = customer.TechEmail
 				}
 			}
 		} else {
-			order.User.Id = s.getTokenString(s.cfg.CookieLength)
+			order.User.Id = s.getTokenString(s.cfg.Length)
 		}
 
 		order.User.Ip = p1.checked.user.Ip
@@ -364,6 +366,10 @@ func (s *Service) PaymentFormJsonDataProcess(
 			City:       p1.checked.user.Address.City,
 			PostalCode: p1.checked.user.Address.PostalCode,
 			State:      p1.checked.user.Address.State,
+		}
+
+		if order.User.TechEmail == "" {
+			order.User.TechEmail = order.User.Id + pkg.TechEmailDomain
 		}
 	}
 
