@@ -169,13 +169,7 @@ func (h *Commission) getAll() (recs []interface{}, err error) {
 						continue
 					}
 
-					commission[v1.Id][k] = &billing.MerchantPaymentMethodCommissions{
-						Fee: DefaultPaymentMethodFee,
-						PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
-							Fee:      DefaultPaymentMethodPerTransactionFee,
-							Currency: DefaultPaymentMethodCurrency,
-						},
-					}
+					commission[v1.Id][k] = h.svc.getDefaultPaymentMethodCommissions()
 				}
 			}
 

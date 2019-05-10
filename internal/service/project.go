@@ -314,6 +314,16 @@ func (s *Service) createProject(req *billing.Project) (*billing.Project, error) 
 		return nil, errors.New(orderErrorUnknown)
 	}
 
+	// Add payment methods default commissions to created project
+	s.mx.Lock()
+	defer s.mx.Unlock()
+
+	s.commissionCache[project.Id] = make(map[string]*billing.MerchantPaymentMethodCommissions)
+
+	for k := range s.paymentMethodIdCache {
+		s.commissionCache[project.Id][k] = s.getDefaultPaymentMethodCommissions()
+	}
+
 	return project, nil
 }
 

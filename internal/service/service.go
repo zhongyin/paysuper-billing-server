@@ -338,6 +338,16 @@ func (s *Service) mgoPipeSort(query []bson.M, sort []string) []bson.M {
 	return query
 }
 
+func (s *Service) getDefaultPaymentMethodCommissions() *billing.MerchantPaymentMethodCommissions {
+	return &billing.MerchantPaymentMethodCommissions{
+		Fee: DefaultPaymentMethodFee,
+		PerTransaction: &billing.MerchantPaymentMethodPerTransactionCommission{
+			Fee:      DefaultPaymentMethodPerTransactionFee,
+			Currency: DefaultPaymentMethodCurrency,
+		},
+	}
+}
+
 func (s *Service) CheckProjectRequestSignature(
 	ctx context.Context,
 	req *grpc.CheckProjectRequestSignatureRequest,
