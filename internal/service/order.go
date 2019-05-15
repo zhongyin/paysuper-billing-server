@@ -1578,7 +1578,7 @@ func (v *PaymentFormProcessor) processPaymentMethodsData(pm *billing.PaymentForm
 			zap.S().Errorw(
 				"[PAYONE_BILLING] Get saved cards from repository failed",
 				"error", err,
-				"account", v.order.ProjectAccount,
+				"token", v.order.User.Id,
 				"project_id", v.order.Project.Id,
 				"order_id", v.order.Id,
 			)
