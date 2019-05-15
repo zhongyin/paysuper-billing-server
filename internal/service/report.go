@@ -20,3 +20,11 @@ func (s *Service) SetSettlementReportLoadToPause(
 ) error {
 	return nil
 }
+
+func (s *Service) IsSettlementReportLoadOnPause(
+	ctx context.Context,
+	req *grpc.SettlementRequest,
+	rsp *grpc.IsSettlementReportLoadOnPauseResponse,
+) error {
+	return nil
+}

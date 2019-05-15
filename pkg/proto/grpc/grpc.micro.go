@@ -72,6 +72,7 @@ It has these top-level messages:
 	CheckProjectRequestSignatureResponse
 	ProcessSettlementReportRequest
 	SettlementRequest
+	IsSettlementReportLoadOnPauseResponse
 */
 package grpc
 
@@ -151,6 +152,7 @@ type BillingService interface {
 	CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
 	ProcessSettlementReport(ctx context.Context, in *ProcessSettlementReportRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
 	SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
+	IsSettlementReportLoadOnPause(ctx context.Context, in *SettlementRequest, opts ...client.CallOption) (*IsSettlementReportLoadOnPauseResponse, error)
 }
 
 type billingService struct {
@@ -611,6 +613,16 @@ func (c *billingService) SetSettlementReportLoadToPause(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *billingService) IsSettlementReportLoadOnPause(ctx context.Context, in *SettlementRequest, opts ...client.CallOption) (*IsSettlementReportLoadOnPauseResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.IsSettlementReportLoadOnPause", in)
+	out := new(IsSettlementReportLoadOnPauseResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -658,6 +670,7 @@ type BillingServiceHandler interface {
 	CheckProjectRequestSignature(context.Context, *CheckProjectRequestSignatureRequest, *CheckProjectRequestSignatureResponse) error
 	ProcessSettlementReport(context.Context, *ProcessSettlementReportRequest, *CheckProjectRequestSignatureResponse) error
 	SetSettlementReportLoadToPause(context.Context, *SettlementRequest, *CheckProjectRequestSignatureResponse) error
+	IsSettlementReportLoadOnPause(context.Context, *SettlementRequest, *IsSettlementReportLoadOnPauseResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -706,6 +719,7 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error
 		ProcessSettlementReport(ctx context.Context, in *ProcessSettlementReportRequest, out *CheckProjectRequestSignatureResponse) error
 		SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, out *CheckProjectRequestSignatureResponse) error
+		IsSettlementReportLoadOnPause(ctx context.Context, in *SettlementRequest, out *IsSettlementReportLoadOnPauseResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -892,4 +906,8 @@ func (h *billingServiceHandler) ProcessSettlementReport(ctx context.Context, in 
 
 func (h *billingServiceHandler) SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, out *CheckProjectRequestSignatureResponse) error {
 	return h.BillingServiceHandler.SetSettlementReportLoadToPause(ctx, in, out)
+}
+
+func (h *billingServiceHandler) IsSettlementReportLoadOnPause(ctx context.Context, in *SettlementRequest, out *IsSettlementReportLoadOnPauseResponse) error {
+	return h.BillingServiceHandler.IsSettlementReportLoadOnPause(ctx, in, out)
 }

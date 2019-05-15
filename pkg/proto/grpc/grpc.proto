@@ -62,6 +62,7 @@ service BillingService {
 
     rpc ProcessSettlementReport (ProcessSettlementReportRequest) returns (CheckProjectRequestSignatureResponse) {}
     rpc SetSettlementReportLoadToPause(SettlementRequest) returns (CheckProjectRequestSignatureResponse) {}
+    rpc IsSettlementReportLoadOnPause(SettlementRequest) returns (IsSettlementReportLoadOnPauseResponse) {}
 }
 
 message EmptyRequest {}
@@ -611,4 +612,8 @@ message ProcessSettlementReportRequest {
 
 message SettlementRequest {
     string wallet_id = 1;
+}
+
+message IsSettlementReportLoadOnPauseResponse {
+    bool result = 1;
 }
