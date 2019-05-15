@@ -59,12 +59,14 @@ service BillingService {
 
     rpc CreateToken(TokenRequest) returns (TokenResponse) {}
     rpc CheckProjectRequestSignature(CheckProjectRequestSignatureRequest) returns (CheckProjectRequestSignatureResponse) {}
+
+    rpc ProcessSettlementReport (ProcessSettlementReportRequest) returns (CheckProjectRequestSignatureResponse) {}
+    rpc SetSettlementReportLoadToPause(SettlementRequest) returns (CheckProjectRequestSignatureResponse) {}
 }
 
-message EmptyRequest {
-}
-message EmptyResponse {
-}
+message EmptyRequest {}
+
+message EmptyResponse {}
 
 message PaymentCreateRequest {
     map<string, string> data = 1;
@@ -601,4 +603,12 @@ message CheckProjectRequestSignatureRequest {
 message CheckProjectRequestSignatureResponse {
     int32 status = 1;
     string message = 2;
+}
+
+message ProcessSettlementReportRequest {
+    repeated billing.SettlementReportItem item = 1;
+}
+
+message SettlementRequest {
+    string wallet_id = 1;
 }

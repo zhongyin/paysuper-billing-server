@@ -70,6 +70,8 @@ It has these top-level messages:
 	TokenResponse
 	CheckProjectRequestSignatureRequest
 	CheckProjectRequestSignatureResponse
+	ProcessSettlementReportRequest
+	SettlementRequest
 */
 package grpc
 
@@ -147,6 +149,8 @@ type BillingService interface {
 	DeleteProject(ctx context.Context, in *GetProjectRequest, opts ...client.CallOption) (*ChangeProjectResponse, error)
 	CreateToken(ctx context.Context, in *TokenRequest, opts ...client.CallOption) (*TokenResponse, error)
 	CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
+	ProcessSettlementReport(ctx context.Context, in *ProcessSettlementReportRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
+	SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error)
 }
 
 type billingService struct {
@@ -587,6 +591,26 @@ func (c *billingService) CheckProjectRequestSignature(ctx context.Context, in *C
 	return out, nil
 }
 
+func (c *billingService) ProcessSettlementReport(ctx context.Context, in *ProcessSettlementReportRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.ProcessSettlementReport", in)
+	out := new(CheckProjectRequestSignatureResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingService) SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, opts ...client.CallOption) (*CheckProjectRequestSignatureResponse, error) {
+	req := c.c.NewRequest(c.name, "BillingService.SetSettlementReportLoadToPause", in)
+	out := new(CheckProjectRequestSignatureResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for BillingService service
 
 type BillingServiceHandler interface {
@@ -632,6 +656,8 @@ type BillingServiceHandler interface {
 	DeleteProject(context.Context, *GetProjectRequest, *ChangeProjectResponse) error
 	CreateToken(context.Context, *TokenRequest, *TokenResponse) error
 	CheckProjectRequestSignature(context.Context, *CheckProjectRequestSignatureRequest, *CheckProjectRequestSignatureResponse) error
+	ProcessSettlementReport(context.Context, *ProcessSettlementReportRequest, *CheckProjectRequestSignatureResponse) error
+	SetSettlementReportLoadToPause(context.Context, *SettlementRequest, *CheckProjectRequestSignatureResponse) error
 }
 
 func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, opts ...server.HandlerOption) error {
@@ -678,6 +704,8 @@ func RegisterBillingServiceHandler(s server.Server, hdlr BillingServiceHandler, 
 		DeleteProject(ctx context.Context, in *GetProjectRequest, out *ChangeProjectResponse) error
 		CreateToken(ctx context.Context, in *TokenRequest, out *TokenResponse) error
 		CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error
+		ProcessSettlementReport(ctx context.Context, in *ProcessSettlementReportRequest, out *CheckProjectRequestSignatureResponse) error
+		SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, out *CheckProjectRequestSignatureResponse) error
 	}
 	type BillingService struct {
 		billingService
@@ -856,4 +884,12 @@ func (h *billingServiceHandler) CreateToken(ctx context.Context, in *TokenReques
 
 func (h *billingServiceHandler) CheckProjectRequestSignature(ctx context.Context, in *CheckProjectRequestSignatureRequest, out *CheckProjectRequestSignatureResponse) error {
 	return h.BillingServiceHandler.CheckProjectRequestSignature(ctx, in, out)
+}
+
+func (h *billingServiceHandler) ProcessSettlementReport(ctx context.Context, in *ProcessSettlementReportRequest, out *CheckProjectRequestSignatureResponse) error {
+	return h.BillingServiceHandler.ProcessSettlementReport(ctx, in, out)
+}
+
+func (h *billingServiceHandler) SetSettlementReportLoadToPause(ctx context.Context, in *SettlementRequest, out *CheckProjectRequestSignatureResponse) error {
+	return h.BillingServiceHandler.SetSettlementReportLoadToPause(ctx, in, out)
 }
