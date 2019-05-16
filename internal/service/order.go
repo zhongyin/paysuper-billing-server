@@ -556,7 +556,7 @@ func (s *Service) PaymentCreateProcess(
 	rsp.RedirectUrl = url
 	rsp.NeedRedirect = true
 
-	if _, ok := req.Data[pkg.PaymentCreateFieldRecurringId]; ok {
+	if _, ok := req.Data[pkg.PaymentCreateFieldRecurringId]; ok && url == "" {
 		rsp.NeedRedirect = false
 	}
 
