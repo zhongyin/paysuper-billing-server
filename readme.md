@@ -25,7 +25,6 @@ This service contain all business logic for payment processing
 | CACHE_VAT_TIMEOUT                    | -        | 2592000               | Timeout in seconds to refresh VAT list cache                                                                                        |
 | CACHE_PAYMENT_METHOD_TIMEOUT         | -        | 2592000               | Timeout in seconds to refresh payment methods list cache                                                                            |
 | CACHE_COMMISSION_TIMEOUT             | -        | 86400                 | Timeout in seconds to refresh commissions list cache                                                                                |
-| CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT | -        | 86400                 | Timeout in seconds to refresh cache of payment methods linked to projects                                                           |
 | CUSTOMER_COOKIE_PUBLIC_KEY           | true     | -                     | Base64 encoded RSA public key - used for encrypt customer browser cookies content. Minimal length of RSA public key must be 4096    |
 | CUSTOMER_COOKIE_PRIVATE_KEY          | true     | -                     | Base64 encoded RSA private key - used for decrypt customer browser cookies content. Minimal length of RSA private key must be 4096  |
 | REDIS_HOST                           | -        | 127.0.0.1:6379        | Redis server host                                                                                                                   |

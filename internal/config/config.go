@@ -9,15 +9,14 @@ import (
 )
 
 type CacheConfig struct {
-	CurrencyTimeout             int64 `envconfig:"CACHE_CURRENCY_TIMEOUT" default:"15552000"`
-	CountryTimeout              int64 `envconfig:"CACHE_COUNTRY_TIMEOUT" default:"15552000"`
-	ProjectTimeout              int64 `envconfig:"CACHE_PROJECT_TIMEOUT" default:"10800"`
-	CurrencyRateTimeout         int64 `envconfig:"CACHE_CURRENCY_RATE_TIMEOUT" default:"86400"`
-	PaymentMethodTimeout        int64 `envconfig:"CACHE_PAYMENT_METHOD_TIMEOUT" default:"2592000"`
-	CommissionTimeout           int64 `envconfig:"CACHE_COMMISSION_TIMEOUT" default:"86400"`
-	ProjectPaymentMethodTimeout int64 `envconfig:"CACHE_PROJECT_PAYMENT_METHOD_TIMEOUT" default:"86400"`
-	OrderProductsTimeout        int64 `envconfig:"CACHE_ORDER_PRODUCTS_TIMEOUT" default:"86400"`
-	SystemFeesTimeout           int64 `envconfig:"CACHE_SYSTEM_FEES_TIMEOUT" default:"86400"`
+	CurrencyTimeout      int64 `envconfig:"CACHE_CURRENCY_TIMEOUT" default:"15552000"`
+	CountryTimeout       int64 `envconfig:"CACHE_COUNTRY_TIMEOUT" default:"15552000"`
+	ProjectTimeout       int64 `envconfig:"CACHE_PROJECT_TIMEOUT" default:"10800"`
+	CurrencyRateTimeout  int64 `envconfig:"CACHE_CURRENCY_RATE_TIMEOUT" default:"86400"`
+	PaymentMethodTimeout int64 `envconfig:"CACHE_PAYMENT_METHOD_TIMEOUT" default:"2592000"`
+	CommissionTimeout    int64 `envconfig:"CACHE_COMMISSION_TIMEOUT" default:"86400"`
+	OrderProductsTimeout int64 `envconfig:"CACHE_ORDER_PRODUCTS_TIMEOUT" default:"86400"`
+	SystemFeesTimeout    int64 `envconfig:"CACHE_SYSTEM_FEES_TIMEOUT" default:"86400"`
 }
 
 type PaymentSystemConfig struct {

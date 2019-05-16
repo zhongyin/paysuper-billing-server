@@ -91,9 +91,8 @@ type Service struct {
 	merchantCache          map[string]*billing.Merchant
 	merchantPaymentMethods map[string]map[string]*billing.MerchantPaymentMethod
 
-	commissionCache           map[string]map[string]*billing.MerchantPaymentMethodCommissions
-	projectPaymentMethodCache map[string][]*billing.PaymentFormPaymentMethod
-	systemFeesCache           map[string]map[string]map[string]*billing.SystemFees
+	commissionCache map[string]map[string]*billing.MerchantPaymentMethodCommissions
+	systemFeesCache map[string]map[string]map[string]*billing.SystemFees
 
 	rebuild      bool
 	rebuildError error
@@ -141,7 +140,6 @@ func (s *Service) Init() (err error) {
 		},
 	)
 
-	s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
 	s.accountingCurrency, err = s.GetCurrencyByCodeA3(s.cfg.AccountingCurrency)
 
 	if err != nil {
@@ -163,7 +161,6 @@ func (s *Service) reBuildCache() {
 	currencyRateTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CurrencyRateTimeout))
 	paymentMethodTicker := time.NewTicker(time.Second * time.Duration(s.cfg.PaymentMethodTimeout))
 	commissionTicker := time.NewTicker(time.Second * time.Duration(s.cfg.CommissionTimeout))
-	projectPaymentMethodTimer := time.NewTicker(time.Second * time.Duration(s.cfg.ProjectPaymentMethodTimeout))
 	systemFeesTimer := time.NewTicker(time.Second * time.Duration(s.cfg.SystemFeesTimeout))
 
 	s.rebuild = true
@@ -188,10 +185,6 @@ func (s *Service) reBuildCache() {
 		case <-commissionTicker.C:
 			err = s.cache(pkg.CollectionCommission, handlers[pkg.CollectionCommission](s))
 			key = pkg.CollectionCommission
-		case <-projectPaymentMethodTimer.C:
-			s.mx.Lock()
-			s.projectPaymentMethodCache = make(map[string][]*billing.PaymentFormPaymentMethod)
-			s.mx.Unlock()
 		case <-systemFeesTimer.C:
 			s.mx.Lock()
 			s.systemFeesCache = make(map[string]map[string]map[string]*billing.SystemFees)

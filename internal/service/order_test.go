@@ -2734,56 +2734,6 @@ func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_DevEnviro
 	assert.True(suite.T(), len(pms) > 0)
 }
 
-func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_Cache_Ok() {
-	req := &billing.OrderCreateRequest{
-		ProjectId:     suite.project.Id,
-		PaymentMethod: suite.paymentMethod.Group,
-		Currency:      "RUB",
-		Amount:        100,
-		Account:       "unit test",
-		Description:   "unit test",
-		OrderId:       bson.NewObjectId().Hex(),
-		User: &billing.OrderUser{
-			Email: "test@unit.unit",
-			Ip:    "127.0.0.1",
-		},
-	}
-
-	order := &billing.Order{}
-	err := suite.service.OrderCreateProcess(context.TODO(), req, order)
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(order.Id) > 0)
-
-	processor := &PaymentFormProcessor{
-		service: suite.service,
-		order:   order,
-		request: &grpc.PaymentFormJsonDataRequest{
-			OrderId: order.Id,
-			Scheme:  "http",
-			Host:    "unit.test",
-		},
-	}
-
-	_, ok := suite.service.projectPaymentMethodCache[order.Project.Id]
-	assert.False(suite.T(), ok)
-
-	pms, err := processor.processRenderFormPaymentMethods()
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(pms) > 0)
-
-	cachePms, ok := suite.service.projectPaymentMethodCache[order.Project.Id]
-	assert.True(suite.T(), ok)
-	assert.True(suite.T(), len(cachePms) > 0)
-
-	pms1, err := processor.processRenderFormPaymentMethods()
-
-	assert.Nil(suite.T(), err)
-	assert.True(suite.T(), len(pms1) > 0)
-	assert.Equal(suite.T(), pms, pms1)
-}
-
 func (suite *OrderTestSuite) TestOrder_ProcessRenderFormPaymentMethods_ProdEnvironment_Ok() {
 	req := &billing.OrderCreateRequest{
 		ProjectId:     suite.project.Id,

@@ -1504,10 +1504,6 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 		return projectPms, errors.New(orderErrorProjectNotFound)
 	}
 
-	if projectPms, ok := v.service.projectPaymentMethodCache[project.Id]; ok {
-		return projectPms, nil
-	}
-
 	for _, val := range v.service.paymentMethodCache {
 		pm, ok := val[v.order.PaymentMethodOutcomeCurrency.CodeInt]
 
@@ -1559,10 +1555,6 @@ func (v *PaymentFormProcessor) processRenderFormPaymentMethods() ([]*billing.Pay
 	if len(projectPms) <= 0 {
 		return projectPms, errors.New(orderErrorPaymentMethodNotAllowed)
 	}
-
-	v.service.mx.Lock()
-	v.service.projectPaymentMethodCache[v.order.Project.Id] = projectPms
-	v.service.mx.Unlock()
 
 	return projectPms, nil
 }
