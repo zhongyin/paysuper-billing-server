@@ -75,8 +75,9 @@ message PaymentCreateRequest {
 
 message PaymentCreateResponse {
     int32 status = 1;
-    string redirect_url = 2;
-    string error = 3;
+    string message = 2;
+    string redirect_url = 3;
+    bool need_redirect = 4;
 }
 
 message PaymentFormJsonDataRequest {

@@ -450,8 +450,8 @@ func (s *Service) PaymentCreateProcess(
 	err := processor.processPaymentFormData()
 
 	if err != nil {
-		rsp.Error = err.Error()
-		rsp.Status = pkg.StatusErrorValidation
+		rsp.Message = err.Error()
+		rsp.Status = pkg.ResponseStatusBadData
 
 		return nil
 	}
@@ -463,8 +463,9 @@ func (s *Service) PaymentCreateProcess(
 		if pid := order.PrivateMetadata["PaylinkId"]; pid != "" {
 			s.notifyPaylinkError(pid, err, req, order)
 		}
-		rsp.Error = err.Error()
-		rsp.Status = pkg.StatusErrorValidation
+
+		rsp.Message = err.Error()
+		rsp.Status = pkg.ResponseStatusBadData
 
 		return nil
 	}
@@ -481,8 +482,8 @@ func (s *Service) PaymentCreateProcess(
 	err = commissionProcessor.processOrderCommissions(order)
 
 	if err != nil {
-		rsp.Error = err.Error()
-		rsp.Status = pkg.StatusErrorValidation
+		rsp.Message = err.Error()
+		rsp.Status = pkg.ResponseStatusBadData
 
 		return nil
 	}
@@ -490,8 +491,8 @@ func (s *Service) PaymentCreateProcess(
 	err = processor.processPaymentAmounts()
 
 	if err != nil {
-		rsp.Error = orderCurrencyConvertationError
-		rsp.Status = pkg.StatusErrorSystem
+		rsp.Message = orderCurrencyConvertationError
+		rsp.Status = pkg.ResponseStatusSystemError
 
 		return nil
 	}
@@ -506,8 +507,8 @@ func (s *Service) PaymentCreateProcess(
 	if err != nil {
 		s.logError("Update order data failed", []interface{}{"err", err.Error(), "order", order})
 
-		rsp.Error = orderErrorUnknown
-		rsp.Status = pkg.StatusErrorSystem
+		rsp.Message = orderErrorUnknown
+		rsp.Status = pkg.ResponseStatusSystemError
 
 		return nil
 	}
@@ -524,8 +525,8 @@ func (s *Service) PaymentCreateProcess(
 	h, err := s.NewPaymentSystem(s.cfg.PaymentSystemConfig, order)
 
 	if err != nil {
-		rsp.Error = err.Error()
-		rsp.Status = pkg.StatusErrorSystem
+		rsp.Message = err.Error()
+		rsp.Status = pkg.ResponseStatusSystemError
 
 		return nil
 	}
@@ -536,8 +537,8 @@ func (s *Service) PaymentCreateProcess(
 	if errDb != nil {
 		s.logError("Update order data failed", []interface{}{"err", errDb.Error(), "order", order})
 
-		rsp.Error = orderErrorUnknown
-		rsp.Status = pkg.StatusErrorSystem
+		rsp.Message = orderErrorUnknown
+		rsp.Status = pkg.ResponseStatusSystemError
 
 		return nil
 	}
@@ -545,14 +546,19 @@ func (s *Service) PaymentCreateProcess(
 	if err != nil {
 		s.logError("Order create in payment system failed", []interface{}{"err", err.Error(), "order", order})
 
-		rsp.Error = err.Error()
-		rsp.Status = pkg.StatusErrorPaymentSystem
+		rsp.Message = err.Error()
+		rsp.Status = pkg.ResponseStatusBadData
 
 		return nil
 	}
 
-	rsp.Status = pkg.StatusOK
+	rsp.Status = pkg.ResponseStatusOk
 	rsp.RedirectUrl = url
+	rsp.NeedRedirect = true
+
+	if _, ok := req.Data[pkg.PaymentCreateFieldRecurringId]; ok {
+		rsp.NeedRedirect = false
+	}
 
 	return nil
 }

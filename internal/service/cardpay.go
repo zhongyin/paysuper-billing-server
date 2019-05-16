@@ -200,6 +200,22 @@ type CardPayOrderResponse struct {
 	RedirectUrl string `json:"redirect_url"`
 }
 
+type CardPayOrderRecurringResponse struct {
+	RecurringData *CardPayOrderRecurringResponseRecurringData `json:"recurring_data"`
+}
+
+type CardPayOrderRecurringResponseRecurringData struct {
+	Id       string                      `json:"id"`
+	Filing   *CardPayRecurringDataFiling `json:"filing"`
+	Status   string                      `json:"status"`
+	Amount   float64                     `json:"amount"`
+	Currency string                      `json:"currency"`
+	Created  string                      `json:"created"`
+	Note     string                      `json:"note"`
+	Rrn      string                      `json:"rrn"`
+	Is3D     bool                        `json:"is_3d"`
+}
+
 type CardPayRefundData struct {
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
@@ -309,9 +325,23 @@ func (h *cardPay) CreatePayment(requisites map[string]string) (url string, err e
 		return
 	}
 
-	cpResponse := &CardPayOrderResponse{}
+	if cpOrder.RecurringData != nil && cpOrder.RecurringData.Filing != nil {
+		cpRsp := &CardPayOrderRecurringResponse{}
+		err = json.Unmarshal(b, &cpRsp)
 
-	if err = json.Unmarshal(b, &cpResponse); err != nil {
+		if err != nil {
+			return
+		}
+
+		if cpRsp.IsSuccessStatus() == false {
+			return "", errors.New(paymentSystemErrorRecurringFailed)
+		}
+	}
+
+	cpResponse := &CardPayOrderResponse{}
+	err = json.Unmarshal(b, &cpResponse)
+
+	if err != nil {
 		return
 	}
 
@@ -939,4 +969,15 @@ func (h *cardPay) ProcessRefund(refund *billing.Refund, message proto.Message, r
 	refund.UpdatedAt = ptypes.TimestampNow()
 
 	return
+}
+
+func (h *CardPayOrderRecurringResponse) IsSuccessStatus() bool {
+	if h.RecurringData == nil {
+		return false
+	}
+
+	status := h.RecurringData.Status
+
+	return status == pkg.CardPayPaymentResponseStatusInProgress || status == pkg.CardPayPaymentResponseStatusPending ||
+		status == pkg.CardPayPaymentResponseStatusAuthorized || status == pkg.CardPayPaymentResponseStatusCompleted
 }

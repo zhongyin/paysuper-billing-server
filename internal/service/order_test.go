@@ -3648,9 +3648,10 @@ func (suite *OrderTestSuite) TestOrder_ProcessPaymentFormData_ChangePaymentSyste
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
-	assert.Len(suite.T(), rsp.Error, 0)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
+	assert.Len(suite.T(), rsp.Message, 0)
 	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
+	assert.True(suite.T(), rsp.NeedRedirect)
 
 	var check *billing.Order
 	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&check)
@@ -3739,9 +3740,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_Ok() {
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
-	assert.Len(suite.T(), rsp.Error, 0)
+	assert.Len(suite.T(), rsp.Message, 0)
+	assert.True(suite.T(), rsp.NeedRedirect)
 
 	var order1 *billing.Order
 	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order1)
@@ -3801,10 +3803,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ProcessValidation_Er
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp.Status)
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
-	assert.True(suite.T(), len(rsp.Error) > 0)
-	assert.Equal(suite.T(), bankCardExpireYearIsRequired, rsp.Error)
+	assert.True(suite.T(), len(rsp.Message) > 0)
+	assert.Equal(suite.T(), bankCardExpireYearIsRequired, rsp.Message)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_Ok() {
@@ -3844,9 +3846,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_ChangeTerminalData_O
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 	assert.True(suite.T(), len(rsp.RedirectUrl) > 0)
-	assert.Len(suite.T(), rsp.Error, 0)
+	assert.Len(suite.T(), rsp.Message, 0)
+	assert.True(suite.T(), rsp.NeedRedirect)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemHandler_Error() {
@@ -3880,10 +3883,10 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_CreatePaymentSystemH
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusErrorSystem, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusSystemError, rsp.Status)
 	assert.Len(suite.T(), rsp.RedirectUrl, 0)
-	assert.True(suite.T(), len(rsp.Error) > 0)
-	assert.Equal(suite.T(), paymentSystemErrorHandlerNotFound, rsp.Error)
+	assert.True(suite.T(), len(rsp.Message) > 0)
+	assert.Equal(suite.T(), paymentSystemErrorHandlerNotFound, rsp.Message)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_FormInputTimeExpired_Error() {
@@ -3931,8 +3934,8 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_FormInputTimeExpired
 	rsp2 := &grpc.PaymentCreateResponse{}
 	err = suite.service.PaymentCreateProcess(context.TODO(), req2, rsp2)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp2.Status)
-	assert.Equal(suite.T(), orderErrorFormInputTimeExpired, rsp2.Error)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp2.Status)
+	assert.Equal(suite.T(), orderErrorFormInputTimeExpired, rsp2.Message)
 }
 
 func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
@@ -3973,7 +3976,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Ok() {
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 
 	var order1 *billing.Order
 	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order1)
@@ -4084,7 +4087,7 @@ func (suite *OrderTestSuite) TestOrder_PaymentCallbackProcess_Recurring_Ok() {
 	err = suite.service.PaymentCreateProcess(context.TODO(), createPaymentRequest, rsp)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp.Status)
 
 	var order1 *billing.Order
 	err = suite.service.db.Collection(pkg.CollectionOrder).FindId(bson.ObjectIdHex(order.Id)).One(&order1)
@@ -4724,9 +4727,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	err = suite.service.PaymentCreateProcess(context.TODO(), req1, rsp1)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusOK, rsp.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusOk, rsp1.Status)
 	assert.True(suite.T(), len(rsp1.RedirectUrl) > 0)
-	assert.Len(suite.T(), rsp1.Error, 0)
+	assert.Len(suite.T(), rsp1.Message, 0)
 
 	order1, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
@@ -4786,9 +4789,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	err = suite.service.PaymentCreateProcess(context.TODO(), req1, rsp1)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp1.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp1.Status)
 	assert.Empty(suite.T(), rsp1.RedirectUrl)
-	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldUserCountryNotFound, rsp1.Error)
+	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldUserCountryNotFound, rsp1.Message)
 
 	order1, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
@@ -4846,9 +4849,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	err = suite.service.PaymentCreateProcess(context.TODO(), req1, rsp1)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp1.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp1.Status)
 	assert.Empty(suite.T(), rsp1.RedirectUrl)
-	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldUserCityNotFound, rsp1.Error)
+	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldUserCityNotFound, rsp1.Message)
 
 	order1, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)
@@ -4907,9 +4910,9 @@ func (suite *OrderTestSuite) TestOrder_PaymentCreateProcess_UserAddressDataRequi
 	err = suite.service.PaymentCreateProcess(context.TODO(), req1, rsp1)
 
 	assert.Nil(suite.T(), err)
-	assert.Equal(suite.T(), pkg.StatusErrorValidation, rsp1.Status)
+	assert.Equal(suite.T(), pkg.ResponseStatusBadData, rsp1.Status)
 	assert.Empty(suite.T(), rsp1.RedirectUrl)
-	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldUserZipNotFound, rsp1.Error)
+	assert.Equal(suite.T(), orderErrorCreatePaymentRequiredFieldUserZipNotFound, rsp1.Message)
 
 	order1, err := suite.service.getOrderByUuid(rsp.Uuid)
 	assert.NoError(suite.T(), err)

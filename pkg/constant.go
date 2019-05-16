@@ -55,11 +55,10 @@ const (
 	TxnParamsFieldCryptoAmount            = "amount_crypto"
 	TxnParamsFieldCryptoCurrency          = "currency_crypto"
 
-	StatusOK                 = int32(0)
-	StatusErrorValidation    = int32(1)
-	StatusErrorSystem        = int32(2)
-	StatusErrorPaymentSystem = int32(3)
-	StatusTemporary          = int32(4)
+	StatusOK              = int32(0)
+	StatusErrorValidation = int32(1)
+	StatusErrorSystem     = int32(2)
+	StatusTemporary       = int32(4)
 
 	MerchantStatusDraft              = int32(0)
 	MerchantStatusAgreementRequested = int32(1)

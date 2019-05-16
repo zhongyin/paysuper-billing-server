@@ -25,6 +25,7 @@ const (
 	paymentSystemErrorRequestAmountOrCurrencyIsInvalid       = "amount or currency from request not match with value in order"
 	paymentSystemErrorRefundRequestAmountOrCurrencyIsInvalid = "amount or currency from request not match with value in refund"
 	paymentSystemErrorRequestTemporarySkipped                = "notification skipped with temporary status"
+	paymentSystemErrorRecurringFailed                        = "recurring payment failed"
 
 	defaultHttpClientTimeout = 10
 	defaultResponseBodyLimit = 512
