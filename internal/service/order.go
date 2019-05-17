@@ -73,6 +73,7 @@ const (
 	orderErrorNoDescriptionInDefaultLanguage           = "no description in default language %s"
 	orderErrorNoDescriptionInRequiredLanguage          = "no description in required language %s"
 	orderErrorProjectMerchantNotFound                  = "merchant for project with specified identifier not found"
+	orderErrorRecurringCardNotOwnToUser                = "you can't use not own bank card for payment"
 
 	orderErrorCreatePaymentRequiredFieldIdNotFound            = "required field with order identifier not found"
 	orderErrorCreatePaymentRequiredFieldPaymentMethodNotFound = "required field with payment method identifier not found"
@@ -352,7 +353,11 @@ func (s *Service) PaymentFormJsonDataProcess(
 						s.logError("Customer by identifier in browser cookie not processed", []interface{}{"error", err.Error()})
 					}
 
-					order.User.TechEmail = customer.TechEmail
+					if customer != nil {
+						order.User.TechEmail = customer.TechEmail
+					} else {
+						order.User.Id = s.getTokenString(s.cfg.Length)
+					}
 				}
 			}
 		} else {
@@ -1721,8 +1726,13 @@ func (v *PaymentCreateProcessor) processPaymentFormData() error {
 			}
 
 			if storedCard == nil {
-				v.service.logError("Get data about stored card failed", []interface{}{"err", "", "id", id})
+				v.service.logError("Get data about stored card failed", []interface{}{"id", id})
 				return errors.New(orderGetSavedCardError)
+			}
+
+			if storedCard.Token != order.User.Id {
+				v.service.logError("Alarm: user try use not own bank card for payment", []interface{}{"user_id", order.User.Id, "card_id", id})
+				return errors.New(orderErrorRecurringCardNotOwnToUser)
 			}
 
 			order.PaymentRequisites[pkg.PaymentCreateFieldPan] = storedCard.MaskedPan

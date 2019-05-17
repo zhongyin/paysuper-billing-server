@@ -75,7 +75,16 @@ func (r *RepositoryServiceOk) FindSavedCardById(
 	in *repository.FindByStringValue,
 	opts ...client.CallOption,
 ) (*entity.SavedCard, error) {
-	return &entity.SavedCard{}, nil
+	return &entity.SavedCard{
+		Id:          bson.NewObjectId().Hex(),
+		Token:       bson.NewObjectId().Hex(),
+		ProjectId:   bson.NewObjectId().Hex(),
+		MerchantId:  bson.NewObjectId().Hex(),
+		MaskedPan:   "400000******0002",
+		RecurringId: bson.NewObjectId().Hex(),
+		Expire:      &entity.CardExpire{Month: "12", Year: "2019"},
+		IsActive:    true,
+	}, nil
 }
 
 func (r *RepositoryServiceEmpty) InsertSavedCard(
